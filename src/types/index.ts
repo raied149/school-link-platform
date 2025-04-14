@@ -15,6 +15,7 @@ export interface Class {
   name: string;
   level: number;
   description?: string;
+  academicYearId?: string; // Link to academic year
   createdAt: string;
   updatedAt: string;
 }

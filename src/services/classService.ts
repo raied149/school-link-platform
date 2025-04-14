@@ -8,6 +8,7 @@ const mockClasses: Class[] = [
     name: 'Grade 1',
     level: 1,
     description: 'First grade elementary class',
+    academicYearId: '1', // 2023-2024
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
   },
@@ -16,6 +17,7 @@ const mockClasses: Class[] = [
     name: 'Grade 2',
     level: 2,
     description: 'Second grade elementary class',
+    academicYearId: '1', // 2023-2024
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
   },
@@ -24,6 +26,7 @@ const mockClasses: Class[] = [
     name: 'Grade 3',
     level: 3,
     description: 'Third grade elementary class',
+    academicYearId: '1', // 2023-2024
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
   },
@@ -32,6 +35,7 @@ const mockClasses: Class[] = [
     name: 'Grade 4',
     level: 4,
     description: 'Fourth grade elementary class',
+    academicYearId: '2', // 2022-2023
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
   },
@@ -40,6 +44,7 @@ const mockClasses: Class[] = [
     name: 'Grade 5',
     level: 5,
     description: 'Fifth grade elementary class',
+    academicYearId: '2', // 2022-2023
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01'
   }
@@ -51,6 +56,14 @@ export const classService = {
     // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockClasses]), 500);
+    });
+  },
+
+  getClassesByYear: async (yearId: string): Promise<Class[]> => {
+    // Simulate API call
+    return new Promise((resolve) => {
+      const classes = mockClasses.filter(c => c.academicYearId === yearId);
+      setTimeout(() => resolve([...classes]), 300);
     });
   },
   

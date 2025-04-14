@@ -1,17 +1,21 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, Trash, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash, Search, BookOpen, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ClassFormDialog } from "@/components/classes/ClassFormDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { classService } from "@/services/classService";
+import { academicYearService } from "@/services/academicYearService";
 import { Class } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useParams, useNavigate } from "react-router-dom";
 
 const ClassesPage = () => {
+  const { yearId } = useParams<{ yearId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -20,6 +24,13 @@ const ClassesPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  
+  // Fetch academic year details
+  const { data: academicYear } = useQuery({
+    queryKey: ['academicYear', yearId],
+    queryFn: () => academicYearService.getAcademicYearById(yearId!),
+    enabled: !!yearId
+  });
   
   // Fetch classes
   const { data: classes = [], isLoading } = useQuery({
@@ -30,7 +41,10 @@ const ClassesPage = () => {
   // Mutations
   const createMutation = useMutation({
     mutationFn: (classData: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>) => {
-      return classService.createClass(classData);
+      return classService.createClass({
+        ...classData,
+        academicYearId: yearId
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
@@ -55,11 +69,14 @@ const ClassesPage = () => {
     }
   });
   
-  // Filter classes based on search term
-  const filteredClasses = classes.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter classes based on search term and academic year
+  const filteredClasses = classes
+    .filter(c => 
+      c.academicYearId === yearId &&
+      (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase())))
+    )
+    .sort((a, b) => a.level - b.level);
   
   // Handlers
   const handleCreateClass = async (classData: Partial<Class>) => {
@@ -100,11 +117,20 @@ const ClassesPage = () => {
     setSelectedClass(classItem);
     setIsDeleteDialogOpen(true);
   };
+  
+  const navigateToSections = (classItem: Class) => {
+    navigate(`/classes/${yearId}/${classItem.id}`);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
+          <p className="text-muted-foreground">
+            Academic Year: {academicYear?.name || 'Loading...'}
+          </p>
+        </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Class
@@ -115,7 +141,7 @@ const ClassesPage = () => {
         <div className="flex justify-between items-center mb-4">
           <div>
             <h2 className="text-xl font-semibold">All Classes</h2>
-            <p className="text-muted-foreground">Manage all classes in the system</p>
+            <p className="text-muted-foreground">Manage all classes for {academicYear?.name}</p>
           </div>
           <div className="w-72">
             <div className="relative">
@@ -150,13 +176,26 @@ const ClassesPage = () => {
               <tbody>
                 {filteredClasses.map((classItem) => (
                   <tr key={classItem.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4 font-medium">{classItem.name}</td>
+                    <td className="py-3 px-4 font-medium">
+                      <div className="flex items-center space-x-2">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <span>{classItem.name}</span>
+                      </div>
+                    </td>
                     <td className="py-3 px-4">{classItem.level}</td>
                     <td className="py-3 px-4 text-muted-foreground">
                       {classItem.description || "No description"}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigateToSections(classItem)}
+                        >
+                          Sections
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
@@ -182,7 +221,7 @@ const ClassesPage = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No classes found. Create your first class!</p>
+            <p className="text-muted-foreground">No classes found for this academic year. Create your first class!</p>
           </div>
         )}
       </Card>
