@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from 'react-router-dom';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
   Users, 
@@ -13,6 +13,7 @@ import {
   LogOut 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -31,11 +33,21 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: BellRing, label: 'Notifications', path: '/notifications' },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen flex w-full">
       <Sidebar>
         <SidebarHeader className="border-b p-4">
           <h2 className="text-lg font-semibold">School ERP</h2>
+          {user && (
+            <div className="text-sm text-muted-foreground">
+              {user.name} ({user.role})
+            </div>
+          )}
         </SidebarHeader>
         <SidebarContent>
           <nav className="space-y-1">
@@ -53,7 +65,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           </nav>
         </SidebarContent>
         <div className="mt-auto p-4 border-t">
-          <Button variant="ghost" className="w-full justify-start text-left">
+          <Button variant="ghost" className="w-full justify-start text-left" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
