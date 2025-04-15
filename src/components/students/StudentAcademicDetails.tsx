@@ -11,15 +11,25 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StudentDetail } from "@/types";
 import { Eye, Search } from "lucide-react";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface StudentAcademicDetailsProps {
   classId?: string;
   sectionId?: string;
   studentId?: string;
+}
+
+type StudentAcademicRecord = {
+  id: string;
+  name: string;
+  academicResults: {
+    examName: string;
+    subject: string;
+    marks: number;
+    maxMarks: number;
+  }[];
 }
 
 export function StudentAcademicDetails({ 
@@ -28,7 +38,7 @@ export function StudentAcademicDetails({
   studentId 
 }: StudentAcademicDetailsProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentAcademicRecord | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: students, isLoading } = useQuery({
@@ -68,7 +78,6 @@ export function StudentAcademicDetails({
         }
       ];
       
-      // Filter by studentId if provided
       if (studentId) {
         return allStudents.filter(student => student.id === studentId);
       }
@@ -136,6 +145,9 @@ export function StudentAcademicDetails({
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Academic Records - {selectedStudent?.name}</DialogTitle>
+            <DialogDescription>
+              View the academic performance records for this student
+            </DialogDescription>
           </DialogHeader>
           <Table>
             <TableHeader>

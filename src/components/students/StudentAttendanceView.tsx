@@ -9,11 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Search } from "lucide-react";
 
 interface StudentAttendanceViewProps {
   classId?: string;
   sectionId?: string;
-  studentId?: string; // Added student ID for filtering
+  studentId?: string;
 }
 
 export function StudentAttendanceView({ 
@@ -21,7 +24,8 @@ export function StudentAttendanceView({
   sectionId, 
   studentId 
 }: StudentAttendanceViewProps) {
-  // This would be replaced with actual API call
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: attendance, isLoading } = useQuery({
     queryKey: ['attendance', classId, sectionId, studentId],
     queryFn: async () => {
@@ -71,37 +75,54 @@ export function StudentAttendanceView({
     }
   });
 
+  const filteredAttendance = attendance?.filter(record => 
+    record.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    record.studentName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Student Attendance Records</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Student ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Admission Number</TableHead>
-            <TableHead>Present Days</TableHead>
-            <TableHead>Absent Days</TableHead>
-            <TableHead>Attendance %</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {attendance?.map((record) => (
-            <TableRow key={record.studentId}>
-              <TableCell>{record.studentId}</TableCell>
-              <TableCell>{record.studentName}</TableCell>
-              <TableCell>{record.admissionNumber}</TableCell>
-              <TableCell>{record.attendance.present}</TableCell>
-              <TableCell>{record.attendance.absent}</TableCell>
-              <TableCell>{record.attendance.percentage}%</TableCell>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Student Attendance Records</h2>
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by ID or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Student ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Present Days</TableHead>
+              <TableHead>Absent Days</TableHead>
+              <TableHead>Attendance %</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredAttendance?.map((record) => (
+              <TableRow key={record.studentId}>
+                <TableCell>{record.studentId}</TableCell>
+                <TableCell>{record.studentName}</TableCell>
+                <TableCell>{record.attendance.present}</TableCell>
+                <TableCell>{record.attendance.absent}</TableCell>
+                <TableCell>{record.attendance.percentage}%</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </Card>
   );
 }
