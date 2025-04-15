@@ -1,12 +1,37 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { StudentDetail } from "@/types";
 
-export function StudentSearch() {
+interface StudentSearchProps {
+  onSearch: (filters: {
+    idSearch: string;
+    nameSearch: string;
+    globalSearch: string;
+  }) => void;
+}
+
+export function StudentSearch({ onSearch }: StudentSearchProps) {
   const [idSearch, setIdSearch] = useState("");
   const [nameSearch, setNameSearch] = useState("");
   const [globalSearch, setGlobalSearch] = useState("");
+
+  const handleSearch = (
+    type: "id" | "name" | "global",
+    value: string
+  ) => {
+    const newFilters = {
+      idSearch: type === "id" ? value : idSearch,
+      nameSearch: type === "name" ? value : nameSearch,
+      globalSearch: type === "global" ? value : globalSearch,
+    };
+    
+    if (type === "id") setIdSearch(value);
+    if (type === "name") setNameSearch(value);
+    if (type === "global") setGlobalSearch(value);
+    
+    onSearch(newFilters);
+  };
 
   return (
     <div className="space-y-4 mb-6">
@@ -21,7 +46,7 @@ export function StudentSearch() {
               id="studentId"
               placeholder="Enter Student ID..."
               value={idSearch}
-              onChange={(e) => setIdSearch(e.target.value)}
+              onChange={(e) => handleSearch("id", e.target.value)}
               className="pl-8"
             />
           </div>
@@ -36,7 +61,7 @@ export function StudentSearch() {
               id="studentName"
               placeholder="Enter Student Name..."
               value={nameSearch}
-              onChange={(e) => setNameSearch(e.target.value)}
+              onChange={(e) => handleSearch("name", e.target.value)}
               className="pl-8"
             />
           </div>
@@ -52,7 +77,7 @@ export function StudentSearch() {
             id="globalSearch"
             placeholder="Search anything..."
             value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
+            onChange={(e) => handleSearch("global", e.target.value)}
             className="pl-8"
           />
         </div>

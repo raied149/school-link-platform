@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -8,11 +7,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentDetail } from "@/types";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion } from "@/components/ui/accordion";
 import { StudentDetails } from "./StudentDetails";
 import { mockStudents } from "@/mocks/data";
+import { useMemo } from "react";
 
-export function StudentTable() {
+interface StudentTableProps {
+  searchFilters: {
+    idSearch: string;
+    nameSearch: string;
+    globalSearch: string;
+  };
+}
+
+export function StudentTable({ searchFilters }: StudentTableProps) {
+  const filteredStudents = useMemo(() => {
+    return mockStudents.filter((student) => {
+      if (searchFilters.idSearch && !student.admissionNumber.toLowerCase().includes(searchFilters.idSearch.toLowerCase())) {
+        return false;
+      }
+      if (searchFilters.nameSearch && !student.name.toLowerCase().includes(searchFilters.nameSearch.toLowerCase())) {
+        return false;
+      }
+      
+      if (searchFilters.globalSearch) {
+        const searchTerm = searchFilters.globalSearch.toLowerCase();
+        const searchableString = JSON.stringify(student).toLowerCase();
+        return searchableString.includes(searchTerm);
+      }
+      
+      return true;
+    });
+  }, [searchFilters]);
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -26,7 +53,7 @@ export function StudentTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockStudents.map((student) => (
+          {filteredStudents.map((student) => (
             <TableRow key={student.id}>
               <TableCell>{student.admissionNumber}</TableCell>
               <TableCell>{student.name}</TableCell>
