@@ -70,6 +70,16 @@ const mockTeachers: Teacher[] = [
       relationship: "Spouse",
       phone: "123-456-7891",
     },
+    performance: {
+      lastReviewDate: "2022-01-01",
+      rating: 4.5,
+      feedback: "Excellent teacher",
+      awards: ["Best Teacher 2021"]
+    },
+    medicalInformation: {
+      conditions: [],
+      allergies: []
+    },
     createdAt: "2019-01-01",
     updatedAt: "2022-01-01",
   },
@@ -113,6 +123,16 @@ const mockTeachers: Teacher[] = [
       contactName: "Mike Johnson",
       relationship: "Spouse",
       phone: "123-456-7893",
+    },
+    performance: {
+      lastReviewDate: "2022-01-01",
+      rating: 4.2,
+      feedback: "Good teaching methods",
+      awards: []
+    },
+    medicalInformation: {
+      conditions: [],
+      allergies: []
     },
     createdAt: "2020-01-01",
     updatedAt: "2022-01-01",

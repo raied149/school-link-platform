@@ -74,8 +74,10 @@ export function SubjectFormDialog({
   }, [subject, mode, open, form]);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    // Ensure name and code are always provided (they should be due to validation)
     onSubmit({
-      ...values,
+      name: values.name,
+      code: values.code,
       credits: values.credits || 0,
       description: values.description || undefined,
     });
