@@ -1,4 +1,3 @@
-
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentDetail } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
@@ -80,8 +79,24 @@ export function StudentDetails({ student }: StudentDetailsProps) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="p-4">
-            {/* Use the refactored StudentAcademicDetails component */}
-            <StudentAcademicDetails studentId={student.id} />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Exam</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Marks</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {student.academicResults?.map((result, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{result.examName}</TableCell>
+                    <TableCell>{result.subject}</TableCell>
+                    <TableCell>{result.marks}/{result.maxMarks}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </AccordionContent>
       </AccordionItem>
@@ -95,7 +110,6 @@ export function StudentDetails({ student }: StudentDetailsProps) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="p-4">
-            {/* Use the refactored StudentAttendanceView component */}
             <StudentAttendanceView studentId={student.id} />
           </div>
         </AccordionContent>
