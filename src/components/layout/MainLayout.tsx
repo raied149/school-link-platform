@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
@@ -21,6 +21,7 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout, user } = useAuth();
 
   const menuItems = [
@@ -54,8 +55,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             {menuItems.map((item) => (
               <Button
                 key={item.path}
-                variant="ghost"
-                className="w-full justify-start text-left px-4 py-2 hover:bg-accent"
+                variant={location.pathname === item.path ? "default" : "ghost"}
+                className={`w-full justify-start text-left px-4 py-2 ${
+                  location.pathname === item.path ? "bg-accent text-accent-foreground" : "hover:bg-accent"
+                }`}
                 onClick={() => navigate(item.path)}
               >
                 <item.icon className="mr-2 h-4 w-4" />

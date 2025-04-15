@@ -23,7 +23,7 @@ const UsersPage = () => {
           </p>
         </div>
 
-        <UserTabs defaultTab="students" />
+        <UserTabs defaultTab="students" showStudentsOnly={true} />
       </Card>
     </div>
   );
