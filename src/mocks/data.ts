@@ -1,4 +1,3 @@
-
 import { AcademicYear, Class, Student, Subject, TeacherAssignment, TimetableSlot, User } from '@/types';
 import { Section } from '@/types/section';
 
@@ -82,7 +81,7 @@ export const mockSections: Section[] = [
 ];
 
 // Mock Students
-export const mockStudents: Student[] = [
+export const mockStudents: StudentDetail[] = [
   {
     id: '1',
     name: 'John Doe',
@@ -91,6 +90,28 @@ export const mockStudents: Student[] = [
     dateOfBirth: '2018-05-15',
     gender: 'male',
     contactNumber: '1234567890',
+    currentClassId: '1',
+    currentSectionId: '1',
+    academicYearId: '1',
+    nationality: 'American',
+    language: 'English',
+    guardian: {
+      name: 'Robert Doe',
+      email: 'robert.doe@email.com',
+      phone: '9876543210',
+      relationship: 'Father'
+    },
+    medical: {
+      bloodGroup: 'A+',
+      allergies: ['Peanuts', 'Dairy'],
+      medicalHistory: 'Asthma',
+      medications: ['Inhaler'],
+      emergencyContact: {
+        name: 'Sarah Doe',
+        phone: '5555555555',
+        relationship: 'Mother'
+      }
+    },
     createdAt: '2023-01-01',
     updatedAt: '2023-01-01'
   },
@@ -102,6 +123,28 @@ export const mockStudents: Student[] = [
     dateOfBirth: '2018-06-20',
     gender: 'female',
     contactNumber: '0987654321',
+    currentClassId: '1',
+    currentSectionId: '2',
+    academicYearId: '1',
+    nationality: 'British',
+    language: 'English',
+    guardian: {
+      name: 'Michael Smith',
+      email: 'michael.smith@email.com',
+      phone: '1231231234',
+      relationship: 'Father'
+    },
+    medical: {
+      bloodGroup: 'O+',
+      allergies: [],
+      medicalHistory: 'None',
+      medications: [],
+      emergencyContact: {
+        name: 'Emily Smith',
+        phone: '4444444444',
+        relationship: 'Mother'
+      }
+    },
     createdAt: '2023-01-01',
     updatedAt: '2023-01-01'
   }

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { UserTabs } from "@/components/users/UserTabs";
 
 const UsersPage = () => {
   return (
@@ -21,13 +21,7 @@ const UsersPage = () => {
           <p className="text-muted-foreground">Manage all users in the system</p>
         </div>
 
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
+        <UserTabs />
       </Card>
     </div>
   );
