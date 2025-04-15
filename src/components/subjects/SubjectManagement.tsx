@@ -16,13 +16,16 @@ import { useToast } from "@/hooks/use-toast";
 import { SubjectFormDialog } from "./SubjectFormDialog";
 import { SubjectTeacherAssignment } from "./SubjectTeacherAssignment";
 import { subjectService } from "@/services/subjectService";
-import { Subject } from "@/types";
+import { Subject, TeacherAssignment } from "@/types";
 
 interface SubjectManagementProps {
   classId?: string;
   sectionId?: string;
   academicYearId?: string;
 }
+
+// Mock assignments - in a real app, these would come from an API
+const mockTeacherAssignments: TeacherAssignment[] = [];
 
 export function SubjectManagement({ 
   classId, 
@@ -42,6 +45,27 @@ export function SubjectManagement({
     enabled: !!classId,
   });
 
+  // Fetch teacher assignments
+  const { data: teacherAssignments = [] } = useQuery({
+    queryKey: ['teacherAssignments', sectionId],
+    queryFn: () => Promise.resolve(mockTeacherAssignments.filter(a => a.sectionId === sectionId)),
+    enabled: !!sectionId,
+  });
+
+  // Mock function to get teacher name - in a real app, you'd fetch this from the API
+  const getAssignedTeacherName = (subjectId: string) => {
+    const assignment = teacherAssignments.find(a => a.subjectId === subjectId);
+    if (!assignment) return "Not assigned";
+    
+    // In a real app, you'd fetch the teacher details here
+    if (assignment.teacherId === "1") {
+      return "John Smith";
+    } else if (assignment.teacherId === "2") {
+      return "Sarah Johnson";
+    }
+    return "Assigned (Unknown)";
+  };
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: Omit<Subject, 'id'>) => {
@@ -57,6 +81,22 @@ export function SubjectManagement({
         description: "The subject has been created successfully.",
       });
       setIsFormOpen(false);
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Subject> }) => {
+      return subjectService.updateSubject(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects', classId] });
+      toast({
+        title: "Subject updated",
+        description: "The subject has been updated successfully.",
+      });
+      setIsFormOpen(false);
+      setSelectedSubject(null);
     },
   });
 
@@ -83,6 +123,12 @@ export function SubjectManagement({
     setIsFormOpen(true);
   };
 
+  const handleUpdate = (data: Partial<Subject>) => {
+    if (selectedSubject) {
+      updateMutation.mutate({ id: selectedSubject.id, data });
+    }
+  };
+
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this subject?")) {
       deleteMutation.mutate(id);
@@ -104,7 +150,10 @@ export function SubjectManagement({
               Manage subjects for this class and assign teachers
             </p>
           </div>
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => {
+            setSelectedSubject(null);
+            setIsFormOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Add Subject
           </Button>
@@ -118,6 +167,7 @@ export function SubjectManagement({
               <TableRow>
                 <TableHead>Subject Name</TableHead>
                 <TableHead>Code</TableHead>
+                <TableHead>Credits</TableHead>
                 <TableHead>Assigned Teacher</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -127,9 +177,9 @@ export function SubjectManagement({
                 <TableRow key={subject.id}>
                   <TableCell className="font-medium">{subject.name}</TableCell>
                   <TableCell>{subject.code}</TableCell>
+                  <TableCell>{subject.credits}</TableCell>
                   <TableCell>
-                    {/* In a real app, you would fetch and display the assigned teacher */}
-                    Not assigned
+                    {getAssignedTeacherName(subject.id)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -171,7 +221,7 @@ export function SubjectManagement({
       <SubjectFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
-        onSubmit={handleCreate}
+        onSubmit={selectedSubject ? handleUpdate : handleCreate}
         subject={selectedSubject}
         mode={selectedSubject ? "edit" : "create"}
       />
