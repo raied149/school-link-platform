@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,13 @@ import { academicYearService } from "@/services/academicYearService";
 import { Class } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ClassesPage = () => {
   const { yearId } = useParams<{ yearId: string }>();
@@ -20,6 +26,7 @@ const ClassesPage = () => {
   const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -69,14 +76,23 @@ const ClassesPage = () => {
     }
   });
   
-  // Filter classes based on search term and academic year
+  // Filter classes based on search term, academic year, and selected grade
   const filteredClasses = classes
     .filter(c => 
       c.academicYearId === yearId &&
       (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase())))
+       (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase())))
     )
+    .filter(c => selectedGrade === "all" || c.id === selectedGrade)
     .sort((a, b) => a.level - b.level);
+  
+  // Get unique grades for dropdown
+  const uniqueGrades = [
+    { id: "all", name: "All Grades" },
+    ...classes
+      .filter(c => c.academicYearId === yearId)
+      .sort((a, b) => a.level - b.level)
+  ];
   
   // Handlers
   const handleCreateClass = async (classData: Partial<Class>) => {
@@ -143,8 +159,25 @@ const ClassesPage = () => {
             <h2 className="text-xl font-semibold">All Classes</h2>
             <p className="text-muted-foreground">Manage all classes for {academicYear?.name}</p>
           </div>
-          <div className="w-72">
-            <div className="relative">
+          <div className="flex gap-2">
+            <div className="w-48">
+              <Select
+                value={selectedGrade}
+                onValueChange={setSelectedGrade}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueGrades.map((grade) => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-72 relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search classes..."
@@ -167,8 +200,7 @@ const ClassesPage = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-left py-3 px-4">Grade Level</th>
+                  <th className="text-left py-3 px-4">Grade</th>
                   <th className="text-left py-3 px-4">Description</th>
                   <th className="text-right py-3 px-4">Actions</th>
                 </tr>
@@ -182,7 +214,6 @@ const ClassesPage = () => {
                         <span>{classItem.name}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">{classItem.level}</td>
                     <td className="py-3 px-4 text-muted-foreground">
                       {classItem.description || "No description"}
                     </td>

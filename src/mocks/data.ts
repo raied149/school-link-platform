@@ -1,5 +1,6 @@
 
-import { AcademicYear, Class, Section, Student, Subject, TeacherAssignment, TimetableSlot, User } from '@/types';
+import { AcademicYear, Class, Student, Subject, TeacherAssignment, TimetableSlot, User } from '@/types';
+import { Section } from '@/types/section';
 
 // Mock Academic Years
 export const mockAcademicYears: AcademicYear[] = [

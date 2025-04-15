@@ -1,4 +1,3 @@
-
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -83,3 +82,38 @@ export interface TimetableSlot {
   updatedAt: string;
 }
 
+// Extended User Types
+export interface Teacher extends User {
+  employeeId: string;
+  joinDate: string;
+  qualification: string;
+  specialization: string[];
+  contactNumber: string;
+  address: string;
+  subjects: string[]; // Array of subject IDs they can teach
+}
+
+export interface StudentDetail extends Student {
+  currentClassId?: string;
+  currentSectionId?: string;
+  academicYearId?: string;
+  nationality: string;
+  language: string;
+  guardian: {
+    name: string;
+    email: string;
+    phone: string;
+    relationship: string;
+  };
+  medical: {
+    bloodGroup?: string;
+    allergies?: string[];
+    medicalHistory?: string;
+    medications?: string[];
+    emergencyContact?: {
+      name: string;
+      phone: string;
+      relationship: string;
+    };
+  };
+}
