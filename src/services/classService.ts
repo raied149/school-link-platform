@@ -1,66 +1,16 @@
 
 import { Class } from '@/types';
-
-// Mock data for classes
-const mockClasses: Class[] = [
-  {
-    id: '1',
-    name: 'Grade 1',
-    level: 1,
-    description: 'First grade elementary class',
-    academicYearId: '1', // 2023-2024
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    name: 'Grade 2',
-    level: 2,
-    description: 'Second grade elementary class',
-    academicYearId: '1', // 2023-2024
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '3',
-    name: 'Grade 3',
-    level: 3,
-    description: 'Third grade elementary class',
-    academicYearId: '1', // 2023-2024
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '4',
-    name: 'Grade 4',
-    level: 4,
-    description: 'Fourth grade elementary class',
-    academicYearId: '2', // 2022-2023
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '5',
-    name: 'Grade 5',
-    level: 5,
-    description: 'Fifth grade elementary class',
-    academicYearId: '2', // 2022-2023
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  }
-];
+import { mockClasses } from '@/mocks/data';
 
 // Service methods
 export const classService = {
   getClasses: async (): Promise<Class[]> => {
-    // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockClasses]), 500);
     });
   },
-
+  
   getClassesByYear: async (yearId: string): Promise<Class[]> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const classes = mockClasses.filter(c => c.academicYearId === yearId);
       setTimeout(() => resolve([...classes]), 300);
@@ -68,14 +18,12 @@ export const classService = {
   },
   
   getClassById: async (id: string): Promise<Class | undefined> => {
-    // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockClasses.find(c => c.id === id)), 300);
     });
   },
   
   createClass: async (classData: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>): Promise<Class> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const newClass: Class = {
         id: Date.now().toString(),
@@ -90,7 +38,6 @@ export const classService = {
   },
   
   updateClass: async (id: string, classData: Partial<Omit<Class, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Class | undefined> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const index = mockClasses.findIndex(c => c.id === id);
       if (index !== -1) {
@@ -108,7 +55,6 @@ export const classService = {
   },
   
   deleteClass: async (id: string): Promise<boolean> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const index = mockClasses.findIndex(c => c.id === id);
       if (index !== -1) {

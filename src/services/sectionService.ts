@@ -1,63 +1,31 @@
 
 import { Section } from '@/types/section';
-
-// Mock data for sections
-const mockSections: Section[] = [
-  {
-    id: '1',
-    name: 'Section A',
-    classId: '1',
-    academicYearId: '1',
-    teacherId: '1',
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    name: 'Section B',
-    classId: '1',
-    academicYearId: '1',
-    teacherId: '2',
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-  {
-    id: '3',
-    name: 'Section A',
-    classId: '2',
-    academicYearId: '1',
-    teacherId: '3',
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01'
-  },
-];
+import { mockSections } from '@/mocks/data';
 
 // Service methods
 export const sectionService = {
   getSections: async (): Promise<Section[]> => {
-    // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockSections]), 500);
     });
   },
   
   getSectionsByClassAndYear: async (classId: string, academicYearId: string): Promise<Section[]> => {
-    // Simulate API call
     return new Promise((resolve) => {
-      const sections = mockSections.filter(s => s.classId === classId && s.academicYearId === academicYearId);
+      const sections = mockSections.filter(s => 
+        s.classId === classId && s.academicYearId === academicYearId
+      );
       setTimeout(() => resolve([...sections]), 300);
     });
   },
   
   getSectionById: async (id: string): Promise<Section | undefined> => {
-    // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockSections.find(s => s.id === id)), 300);
     });
   },
   
   createSection: async (sectionData: Omit<Section, 'id' | 'createdAt' | 'updatedAt'>): Promise<Section> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const newSection: Section = {
         id: Date.now().toString(),
@@ -72,7 +40,6 @@ export const sectionService = {
   },
   
   updateSection: async (id: string, sectionData: Partial<Omit<Section, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Section | undefined> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const index = mockSections.findIndex(s => s.id === id);
       if (index !== -1) {
@@ -90,7 +57,6 @@ export const sectionService = {
   },
   
   deleteSection: async (id: string): Promise<boolean> => {
-    // Simulate API call
     return new Promise((resolve) => {
       const index = mockSections.findIndex(s => s.id === id);
       if (index !== -1) {
