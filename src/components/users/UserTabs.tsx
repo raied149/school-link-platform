@@ -5,7 +5,11 @@ import { StudentSearch } from "./StudentSearch";
 import { TeacherTable } from "./TeacherTable";
 import { useState } from "react";
 
-export function UserTabs() {
+interface UserTabsProps {
+  defaultTab?: string;
+}
+
+export function UserTabs({ defaultTab = "students" }: UserTabsProps) {
   const [searchFilters, setSearchFilters] = useState({
     idSearch: "",
     nameSearch: "",
@@ -13,7 +17,7 @@ export function UserTabs() {
   });
 
   return (
-    <Tabs defaultValue="students" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList>
         <TabsTrigger value="students">Student Details</TabsTrigger>
         <TabsTrigger value="teachers">Teacher Details</TabsTrigger>

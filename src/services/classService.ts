@@ -28,11 +28,12 @@ export const classService = {
       const newClass: Class = {
         id: Date.now().toString(),
         ...classData,
+        academicYearId: classData.academicYearId || "default",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       
-      mockClasses.push(newClass);
+      mockClasses.push(newClass as any);
       setTimeout(() => resolve(newClass), 500);
     });
   },

@@ -19,11 +19,11 @@ const UsersPage = () => {
         <div className="mb-4">
           <h2 className="text-xl font-semibold">Student Details</h2>
           <p className="text-muted-foreground">
-            Manage and view student and teacher details
+            Manage student information and records
           </p>
         </div>
 
-        <UserTabs />
+        <UserTabs defaultTab="students" />
       </Card>
     </div>
   );

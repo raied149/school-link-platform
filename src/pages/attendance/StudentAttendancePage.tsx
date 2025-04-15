@@ -91,6 +91,23 @@ const StudentAttendancePage = () => {
                   </div>
                 </td>
               </tr>
+              <tr className="border-b">
+                <td className="p-4">Emma Smith</td>
+                <td className="p-4">Grade 2</td>
+                <td className="p-4">EN10012</td>
+                <td className="p-4">B</td>
+                <td className="p-4">
+                  <Badge variant="outline" className="bg-green-50 text-green-600">Present</Badge>
+                </td>
+                <td className="p-4">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700" disabled>Present</Button>
+                    <Button size="sm" variant="outline" className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700">Absent</Button>
+                    <Button size="sm" variant="outline" className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700">Late</Button>
+                    <Button size="sm" variant="outline" className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700">Excused</Button>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

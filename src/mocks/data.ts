@@ -1,5 +1,4 @@
-
-import { StudentDetail } from "@/types";
+import { StudentDetail, Teacher } from "@/types";
 
 export const mockStudents: StudentDetail[] = [
   {
@@ -72,7 +71,6 @@ export const mockStudents: StudentDetail[] = [
   }
 ];
 
-// Add mock classes and sections for other services to use
 export const mockClasses = [
   { id: "class1", name: "Grade 1", level: 1, academicYearId: "year2024", createdAt: "2024-01-01", updatedAt: "2024-01-01" },
   { id: "class2", name: "Grade 2", level: 2, academicYearId: "year2024", createdAt: "2024-01-01", updatedAt: "2024-01-01" }
@@ -83,11 +81,12 @@ export const mockSections = [
   { id: "section2", name: "Section B", classId: "class1", academicYearId: "year2024", createdAt: "2024-01-01", updatedAt: "2024-01-01" }
 ];
 
-// Add mock teachers data
-export const mockTeachers = [
+export const mockTeachers: Teacher[] = [
   {
     id: "1",
     name: "Sarah Johnson",
+    email: "s.johnson@school.edu",
+    role: "teacher",
     firstName: "Sarah",
     middleName: "",
     lastName: "Johnson",
@@ -157,6 +156,8 @@ export const mockTeachers = [
   {
     id: "2",
     name: "David Miller",
+    email: "d.miller@school.edu",
+    role: "teacher",
     firstName: "David",
     middleName: "Robert",
     lastName: "Miller",
