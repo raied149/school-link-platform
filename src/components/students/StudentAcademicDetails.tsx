@@ -9,7 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StudentDetail } from "@/types";
+import { ChevronDown } from "lucide-react";
 
 interface StudentAcademicDetailsProps {
   classId?: string;
@@ -75,27 +77,41 @@ export function StudentAcademicDetails({
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Academic Records</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Exam</TableHead>
-            <TableHead>Subject</TableHead>
-            <TableHead>Marks</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {students?.flatMap((student) => 
-            student.academicResults.map((result, index) => (
-              <TableRow key={`${student.id}-${index}`}>
-                <TableCell>{result.examName}</TableCell>
-                <TableCell>{result.subject}</TableCell>
-                <TableCell>{result.marks}/{result.maxMarks}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+      <h2 className="text-xl font-semibold mb-4">Students Academic Records</h2>
+      <div className="space-y-4">
+        {students?.map((student) => (
+          <Accordion type="single" collapsible key={student.id}>
+            <AccordionItem value={student.id}>
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-4">
+                  <span className="font-medium">ID: {student.id}</span>
+                  <span className="font-medium">Name: {student.name}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Exam</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Marks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {student.academicResults.map((result, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{result.examName}</TableCell>
+                        <TableCell>{result.subject}</TableCell>
+                        <TableCell>{result.marks}/{result.maxMarks}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ))}
+      </div>
     </Card>
   );
 }
