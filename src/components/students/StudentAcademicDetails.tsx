@@ -9,9 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StudentDetail } from "@/types";
-import { ChevronDown } from "lucide-react";
+import { Eye, Search } from "lucide-react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface StudentAcademicDetailsProps {
   classId?: string;
@@ -24,7 +27,10 @@ export function StudentAcademicDetails({
   sectionId, 
   studentId 
 }: StudentAcademicDetailsProps) {
-  // This would be replaced with actual API call
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const { data: students, isLoading } = useQuery({
     queryKey: ['students', classId, sectionId, studentId],
     queryFn: async () => {
@@ -71,47 +77,86 @@ export function StudentAcademicDetails({
     }
   });
 
+  const filteredStudents = students?.filter(student => 
+    student.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Students Academic Records</h2>
-      <div className="space-y-4">
-        {students?.map((student) => (
-          <Accordion type="single" collapsible key={student.id}>
-            <AccordionItem value={student.id}>
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-4">
-                  <span className="font-medium">ID: {student.id}</span>
-                  <span className="font-medium">Name: {student.name}</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Exam</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Marks</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {student.academicResults.map((result, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{result.examName}</TableCell>
-                        <TableCell>{result.subject}</TableCell>
-                        <TableCell>{result.marks}/{result.maxMarks}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        ))}
+    <Card className="p-6 space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Students Academic Records</h2>
+        <div className="relative w-full max-w-sm mb-6">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by ID or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Student ID</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredStudents?.map((student) => (
+            <TableRow key={student.id}>
+              <TableCell>{student.id}</TableCell>
+              <TableCell>{student.name}</TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedStudent(student);
+                    setIsDialogOpen(true);
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Records
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Academic Records - {selectedStudent?.name}</DialogTitle>
+          </DialogHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Exam</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Marks</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {selectedStudent?.academicResults.map((result, index) => (
+                <TableRow key={index}>
+                  <TableCell>{result.examName}</TableCell>
+                  <TableCell>{result.subject}</TableCell>
+                  <TableCell>{result.marks}/{result.maxMarks}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
