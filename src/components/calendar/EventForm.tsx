@@ -55,12 +55,24 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
     defaultValues: {
       date: date.toISOString().split('T')[0],
       type: "meeting",
+      name: "", // Add default empty value for required field
       teacherIds: [],
     },
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values);
+    // Ensure all required properties are present
+    const eventData: Omit<SchoolEvent, "id"> = {
+      name: values.name,
+      type: values.type,
+      date: values.date,
+      startTime: values.startTime,
+      endTime: values.endTime,
+      description: values.description,
+      teacherIds: values.teacherIds,
+    };
+    
+    onSubmit(eventData);
     setOpen(false);
     form.reset();
   };

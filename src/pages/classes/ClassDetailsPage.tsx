@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -6,9 +7,11 @@ import { sectionService } from "@/services/sectionService";
 import { classService } from "@/services/classService";
 import { academicYearService } from "@/services/academicYearService";
 import { useParams } from "react-router-dom";
-import { Users, BookOpen, Calendar, Clock } from "lucide-react";
+import { Users, BookOpen, Calendar, Clock, Plus } from "lucide-react";
 import { StudentAcademicDetails } from "@/components/students/StudentAcademicDetails";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
+import { SubjectManagement } from "@/components/subjects/SubjectManagement";
+import { Button } from "@/components/ui/button";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -71,12 +74,11 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="subjects" className="py-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Subjects</h2>
-            <p className="text-muted-foreground">
-              This tab will contain the list of subjects taught in this section and their assigned teachers.
-            </p>
-          </Card>
+          <SubjectManagement 
+            classId={classId} 
+            sectionId={sectionId} 
+            academicYearId={yearId} 
+          />
         </TabsContent>
         
         <TabsContent value="timetable" className="py-4">

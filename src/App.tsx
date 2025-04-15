@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UsersPage from "./pages/users/UsersPage";
 import ClassesPage from "./pages/classes/ClassesPage";
-import SubjectsPage from "./pages/subjects/SubjectsPage";
 import ClassYearsPage from "./pages/classes/ClassYearsPage";
 import ClassDetailsPage from "./pages/classes/ClassDetailsPage";
 import SectionsPage from "./pages/classes/SectionsPage";
@@ -56,7 +54,6 @@ const AuthRoutes = () => (
       <Route path="classes/:yearId" element={<ClassesPage />} />
       <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
       <Route path="classes/:yearId/:classId/:sectionId" element={<ClassDetailsPage />} />
-      <Route path="subjects" element={<SubjectsPage />} />
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="exams" element={<ExamsPage />} />
       <Route path="exams/:examId" element={<ExamDetailPage />} />
