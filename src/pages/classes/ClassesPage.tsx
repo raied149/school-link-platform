@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -33,21 +32,18 @@ const ClassesPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   
-  // Fetch academic year details
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
     queryFn: () => academicYearService.getAcademicYearById(yearId!),
     enabled: !!yearId
   });
   
-  // Fetch classes for the selected academic year
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes', yearId],
     queryFn: () => classService.getClassesByYear(yearId!),
     enabled: !!yearId
   });
   
-  // Mutations
   const createMutation = useMutation({
     mutationFn: (classData: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>) => {
       return classService.createClass({
@@ -78,7 +74,6 @@ const ClassesPage = () => {
     }
   });
   
-  // Filter classes based on search term and selected grade
   const filteredClasses = classes
     .filter(c => 
       (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -87,14 +82,12 @@ const ClassesPage = () => {
     .filter(c => selectedGrade === "all" || c.id === selectedGrade)
     .sort((a, b) => a.level - b.level);
   
-  // Get unique grades for dropdown
   const uniqueGrades = [
     { id: "all", name: "All Grades" },
     ...classes
       .sort((a, b) => a.level - b.level)
   ];
   
-  // Handlers
   const handleCreateClass = async (classData: Partial<Class>) => {
     await createMutation.mutateAsync(classData as Omit<Class, 'id' | 'createdAt' | 'updatedAt'>);
     toast({
@@ -209,7 +202,6 @@ const ClassesPage = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4">Grade</th>
-                  <th className="text-left py-3 px-4">Description</th>
                   <th className="text-right py-3 px-4">Actions</th>
                 </tr>
               </thead>
@@ -221,9 +213,6 @@ const ClassesPage = () => {
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
                         <span>{classItem.name}</span>
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {classItem.description || "No description"}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">
@@ -265,7 +254,6 @@ const ClassesPage = () => {
         )}
       </Card>
       
-      {/* Create Dialog */}
       <ClassFormDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
@@ -273,7 +261,6 @@ const ClassesPage = () => {
         mode="create"
       />
       
-      {/* Edit Dialog */}
       {selectedClass && (
         <ClassFormDialog
           open={isEditDialogOpen}
@@ -284,7 +271,6 @@ const ClassesPage = () => {
         />
       )}
       
-      {/* Delete Confirmation */}
       <ConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

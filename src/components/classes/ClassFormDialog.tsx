@@ -2,11 +2,33 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Class } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const gradeOptions = [
+  'LKG',
+  'UKG',
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
+  '11',
+  '12'
+];
 
 interface ClassFormDialogProps {
   open: boolean;
@@ -18,16 +40,18 @@ interface ClassFormDialogProps {
 
 export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }: ClassFormDialogProps) {
   const [formData, setFormData] = useState<Partial<Class>>(
-    classData || { name: '', level: 1, description: '' }
+    classData || { name: '', level: 1 }
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleGradeChange = (value: string) => {
+    const level = value === 'LKG' ? 0 : value === 'UKG' ? 0.5 : parseInt(value);
+    const name = `Grade ${value}`;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'level' ? parseInt(value) || 0 : value
+      level,
+      name
     }));
   };
 
@@ -70,42 +94,22 @@ export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }:
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Class Name *</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter class name (e.g. Grade 1, Class 10)"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="level">Grade Level *</Label>
-            <Input
-              id="level"
-              name="level"
-              type="number"
-              min="1"
-              max="12"
-              value={formData.level}
-              onChange={handleChange}
-              placeholder="Enter grade level (e.g. 1, 2, 3)"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description || ''}
-              onChange={handleChange}
-              placeholder="Enter class description (optional)"
-              rows={3}
-            />
+            <Label htmlFor="grade">Grade *</Label>
+            <Select
+              value={formData.level === 0 ? 'LKG' : formData.level === 0.5 ? 'UKG' : formData.level?.toString()}
+              onValueChange={handleGradeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select grade" />
+              </SelectTrigger>
+              <SelectContent>
+                {gradeOptions.map((grade) => (
+                  <SelectItem key={grade} value={grade}>
+                    Grade {grade}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <DialogFooter>

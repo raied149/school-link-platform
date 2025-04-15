@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -8,6 +7,8 @@ import { classService } from "@/services/classService";
 import { academicYearService } from "@/services/academicYearService";
 import { useParams } from "react-router-dom";
 import { Users, BookOpen, Calendar, Clock } from "lucide-react";
+import { StudentAcademicDetails } from "@/components/students/StudentAcademicDetails";
+import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -16,21 +17,18 @@ const ClassDetailsPage = () => {
     sectionId: string
   }>();
   
-  // Fetch academic year details
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
     queryFn: () => academicYearService.getAcademicYearById(yearId!),
     enabled: !!yearId
   });
   
-  // Fetch class details
   const { data: classDetails } = useQuery({
     queryKey: ['class', classId],
     queryFn: () => classService.getClassById(classId!),
     enabled: !!classId
   });
   
-  // Fetch section details
   const { data: sectionDetails } = useQuery({
     queryKey: ['section', sectionId],
     queryFn: () => sectionService.getSectionById(sectionId!),
@@ -69,12 +67,7 @@ const ClassDetailsPage = () => {
         </TabsList>
         
         <TabsContent value="students" className="py-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Students</h2>
-            <p className="text-muted-foreground">
-              This tab will contain the list of students enrolled in this section.
-            </p>
-          </Card>
+          <StudentAcademicDetails classId={classId} sectionId={sectionId} />
         </TabsContent>
         
         <TabsContent value="subjects" className="py-4">
@@ -96,12 +89,7 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="attendance" className="py-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Attendance</h2>
-            <p className="text-muted-foreground">
-              This tab will contain attendance records for this section.
-            </p>
-          </Card>
+          <StudentAttendanceView classId={classId} sectionId={sectionId} />
         </TabsContent>
       </Tabs>
     </div>
