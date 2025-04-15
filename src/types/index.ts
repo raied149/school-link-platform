@@ -1,4 +1,3 @@
-
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -151,6 +150,13 @@ export interface Teacher extends User {
   updatedAt: string;
 }
 
+interface AcademicResult {
+  examName: string;
+  subject: string;
+  marks: number;
+  maxMarks: number;
+}
+
 export interface StudentDetail extends Student {
   currentClassId?: string;
   currentSectionId?: string;
@@ -163,6 +169,7 @@ export interface StudentDetail extends Student {
     phone: string;
     relationship: string;
   };
+  academicResults?: AcademicResult[];
   medical: {
     bloodGroup?: string;
     allergies?: string[];

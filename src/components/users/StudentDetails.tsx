@@ -2,8 +2,8 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/
 import { StudentDetail } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
 import { Book, Heart, User } from "lucide-react";
-import { StudentAcademicDetails } from "@/components/students/StudentAcademicDetails";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface StudentDetailsProps {
   student: StudentDetail;
@@ -79,24 +79,28 @@ export function StudentDetails({ student }: StudentDetailsProps) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="p-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Exam</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Marks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {student.academicResults?.map((result, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{result.examName}</TableCell>
-                    <TableCell>{result.subject}</TableCell>
-                    <TableCell>{result.marks}/{result.maxMarks}</TableCell>
+            {student.academicResults && student.academicResults.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exam/Test</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Marks</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {student.academicResults.map((result, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{result.examName}</TableCell>
+                      <TableCell>{result.subject}</TableCell>
+                      <TableCell>{result.marks}/{result.maxMarks}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-sm">No academic records found</p>
+            )}
           </div>
         </AccordionContent>
       </AccordionItem>
