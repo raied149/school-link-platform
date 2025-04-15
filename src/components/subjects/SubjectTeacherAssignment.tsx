@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -66,12 +65,6 @@ const mockTeachers: Teacher[] = [
       casual: 5,
       vacation: 15,
     },
-    performance: {
-      // Added missing field
-      lastReviewDate: "2022-06-01",
-      rating: 4.5,
-      feedback: "Excellent teaching skills",
-    },
     emergency: {
       contactName: "Jane Smith",
       relationship: "Spouse",
@@ -116,12 +109,6 @@ const mockTeachers: Teacher[] = [
       casual: 5,
       vacation: 15,
     },
-    performance: {
-      // Added missing field
-      lastReviewDate: "2022-05-15",
-      rating: 4.2,
-      feedback: "Great classroom management",
-    },
     emergency: {
       contactName: "Mike Johnson",
       relationship: "Spouse",
@@ -131,9 +118,6 @@ const mockTeachers: Teacher[] = [
     updatedAt: "2022-01-01",
   },
 ];
-
-// Mock assignments data - in a real app, this would be stored in a database
-const mockAssignments: TeacherAssignment[] = [];
 
 export function SubjectTeacherAssignment({
   open,
@@ -152,71 +136,12 @@ export function SubjectTeacherAssignment({
     queryFn: () => Promise.resolve(mockTeachers),
   });
 
-  // Get existing assignment if any
-  const { data: currentAssignment } = useQuery({
-    queryKey: ['teacherAssignment', subject?.id, sectionId],
-    queryFn: () => {
-      return Promise.resolve(
-        mockAssignments.find(
-          a => a.subjectId === subject?.id && a.sectionId === sectionId
-        )
-      );
-    },
-    enabled: !!subject && !!sectionId,
-  });
-
-  // Reset selected teacher when dialog opens or when there's an existing assignment
+  // Reset selected teacher when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedTeacherId(currentAssignment?.teacherId || "");
+      setSelectedTeacherId("");
     }
-  }, [open, currentAssignment]);
-
-  // Filter teachers by subject expertise
-  const eligibleTeachers = teachers.filter(teacher => 
-    teacher.professionalDetails.subjects.some(s => 
-      s.toLowerCase() === subject?.name.toLowerCase()
-    )
-  );
-
-  // Create or update assignment mutation
-  const assignMutation = useMutation({
-    mutationFn: (data: Omit<TeacherAssignment, 'id' | 'createdAt' | 'updatedAt'>) => {
-      // In a real app, this would call an API
-      const existingIndex = mockAssignments.findIndex(
-        a => a.subjectId === data.subjectId && a.sectionId === data.sectionId
-      );
-      
-      if (existingIndex !== -1) {
-        // Update existing assignment
-        mockAssignments[existingIndex] = {
-          ...mockAssignments[existingIndex],
-          teacherId: data.teacherId,
-          updatedAt: new Date().toISOString(),
-        };
-        return Promise.resolve(mockAssignments[existingIndex]);
-      } else {
-        // Create new assignment
-        const newAssignment: TeacherAssignment = {
-          id: Date.now().toString(),
-          ...data,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        mockAssignments.push(newAssignment);
-        return Promise.resolve(newAssignment);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teacherAssignment'] });
-      queryClient.invalidateQueries({ queryKey: ['subjects'] });
-      toast({
-        title: "Teacher Assigned",
-        description: `Teacher has been assigned to ${subject?.name}`,
-      });
-      onOpenChange(false);
-    },
-  });
+  }, [open]);
 
   const handleAssign = () => {
     if (!selectedTeacherId || !subject || !sectionId || !academicYearId) {
@@ -228,16 +153,13 @@ export function SubjectTeacherAssignment({
       return;
     }
 
-    assignMutation.mutate({
-      teacherId: selectedTeacherId,
-      subjectId: subject.id,
-      sectionId: sectionId,
-      academicYearId: academicYearId,
+    // In a real app, you'd send this to an API
+    toast({
+      title: "Teacher Assigned",
+      description: `Teacher has been assigned to ${subject.name}`,
     });
-  };
-
-  const getAssignedTeacher = (teacherId: string) => {
-    return teachers.find(t => t.id === teacherId);
+    
+    onOpenChange(false);
   };
 
   return (
@@ -247,26 +169,12 @@ export function SubjectTeacherAssignment({
           <DialogTitle>
             Assign Teacher to {subject?.name}
           </DialogTitle>
-          <DialogDescription>
-            Select a teacher who specializes in this subject area
-          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4 space-y-4">
-          {currentAssignment && (
-            <div className="bg-muted p-4 rounded-md mb-4">
-              <p className="font-medium">Currently Assigned:</p>
-              <p className="text-sm">
-                {getAssignedTeacher(currentAssignment.teacherId)?.firstName} 
-                {" "}
-                {getAssignedTeacher(currentAssignment.teacherId)?.lastName}
-              </p>
-            </div>
-          )}
-          
           <div className="space-y-2">
             <label htmlFor="teacher" className="text-sm font-medium">
-              {currentAssignment ? "Reassign Teacher" : "Select Teacher"}
+              Select Teacher
             </label>
             <Select
               value={selectedTeacherId}
@@ -276,24 +184,13 @@ export function SubjectTeacherAssignment({
                 <SelectValue placeholder="Select a teacher" />
               </SelectTrigger>
               <SelectContent>
-                {eligibleTeachers.length > 0 ? (
-                  eligibleTeachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.firstName} {teacher.lastName} ({teacher.professionalDetails.department})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem disabled value="none">
-                    No eligible teachers found for this subject
+                {teachers.map((teacher) => (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    {teacher.firstName} {teacher.lastName} ({teacher.professionalDetails.department})
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
             </Select>
-            {eligibleTeachers.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                There are no teachers who specialize in this subject. You may need to update teacher profiles.
-              </p>
-            )}
           </div>
         </div>
 
@@ -301,8 +198,8 @@ export function SubjectTeacherAssignment({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleAssign} disabled={!selectedTeacherId || assignMutation.isPending}>
-            {assignMutation.isPending ? "Assigning..." : "Assign Teacher"}
+          <Button onClick={handleAssign}>
+            Assign Teacher
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -75,10 +75,9 @@ export function SubjectFormDialog({
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     onSubmit({
-      name: values.name,
-      code: values.code,
+      ...values,
       credits: values.credits || 0,
-      description: values.description || "",
+      description: values.description || undefined,
     });
     form.reset();
   };
