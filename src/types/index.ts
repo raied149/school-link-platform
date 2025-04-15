@@ -182,3 +182,17 @@ export interface StudentDetail extends Student {
     };
   };
 }
+
+// Event Types
+export type EventType = 'meeting' | 'function' | 'holiday';
+
+export interface SchoolEvent {
+  id: string;
+  name: string;
+  type: EventType;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+  teacherIds?: string[];
+}

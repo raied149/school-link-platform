@@ -7,8 +7,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
-export function CalendarDatePicker() {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+interface CalendarDatePickerProps {
+  selected?: Date;
+  onSelect?: (date: Date | undefined) => void;
+}
+
+export function CalendarDatePicker({ selected, onSelect }: CalendarDatePickerProps) {
   const [month, setMonth] = React.useState<Date>(new Date());
 
   const handlePreviousMonth = () => {
@@ -54,8 +58,8 @@ export function CalendarDatePicker() {
       </div>
       <Calendar
         mode="single"
-        selected={date}
-        onSelect={setDate}
+        selected={selected}
+        onSelect={onSelect}
         month={month}
         onMonthChange={setMonth}
         className="rounded-md border shadow-sm"
