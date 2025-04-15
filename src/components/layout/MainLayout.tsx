@@ -32,6 +32,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
+    { icon: Calendar, label: 'Calendar', path: '/calendar' },
   ];
 
   const handleLogout = () => {

@@ -18,8 +18,8 @@ import LoginPage from "./pages/auth/LoginPage";
 import StudentAttendancePage from "./pages/attendance/StudentAttendancePage";
 import TeacherAttendancePage from "./pages/attendance/TeacherAttendancePage";
 import TeacherDetailsPage from "./pages/teachers/TeacherDetailsPage";
+import CalendarPage from "./pages/CalendarPage";
 
-// Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   
@@ -30,7 +30,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Auth routes component
 const AuthRoutes = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
@@ -55,6 +54,7 @@ const AuthRoutes = () => (
       <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
       <Route path="classes/:yearId/:classId/:sectionId" element={<ClassDetailsPage />} />
       <Route path="subjects" element={<SubjectsPage />} />
+      <Route path="calendar" element={<CalendarPage />} />
       <Route path="*" element={<NotFound />} />
     </Route>
   </Routes>
