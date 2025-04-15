@@ -1,3 +1,4 @@
+
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -195,4 +196,34 @@ export interface SchoolEvent {
   endTime?: string;
   description?: string;
   teacherIds?: string[];
+}
+
+// Incident Management Types
+export type IncidentType = 'disciplinary' | 'safety' | 'health' | 'bullying' | 'it_issue' | 'security' | 'other';
+export type IncidentSeverity = 'low' | 'medium' | 'high';
+export type IncidentStatus = 'reported' | 'under_investigation' | 'resolved' | 'closed';
+
+export interface Incident {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  type: IncidentType;
+  subType?: string;
+  description: string;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  reportedBy: string; // User ID
+  assignedTo?: string; // User ID
+  involvedPersons: {
+    userId: string;
+    role: 'student' | 'teacher' | 'staff' | 'visitor' | 'other';
+  }[];
+  investigationNotes?: string;
+  resolutionDetails?: string;
+  resolutionDate?: string;
+  escalatedTo?: string; // User ID 
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,7 +11,8 @@ import {
   CalendarCheck,
   Users,
   Calendar,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +35,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
+    { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
   ];
 
   const handleLogout = () => {

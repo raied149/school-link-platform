@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +21,8 @@ import TeacherDetailsPage from "./pages/teachers/TeacherDetailsPage";
 import CalendarPage from "./pages/CalendarPage";
 import ExamsPage from "./pages/exams/ExamsPage";
 import ExamDetailPage from "./pages/exams/ExamDetailPage";
+import IncidentsPage from "./pages/incidents/IncidentsPage";
+import IncidentDetailPage from "./pages/incidents/IncidentDetailPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -57,6 +60,8 @@ const AuthRoutes = () => (
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="exams" element={<ExamsPage />} />
       <Route path="exams/:examId" element={<ExamDetailPage />} />
+      <Route path="incidents" element={<IncidentsPage />} />
+      <Route path="incidents/:incidentId" element={<IncidentDetailPage />} />
       <Route path="*" element={<NotFound />} />
     </Route>
   </Routes>
