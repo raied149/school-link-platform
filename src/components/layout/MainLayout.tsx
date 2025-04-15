@@ -10,7 +10,9 @@ import {
   BellRing,
   LogOut,
   CalendarCheck,
-  Users
+  Users,
+  Calendar,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +35,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
+    { icon: FileText, label: 'Tests & Exams', path: '/exams' },
   ];
 
   const handleLogout = () => {
