@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,7 +24,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Users, label: 'Users', path: '/users' },
+    { icon: Users, label: 'Student Details', path: '/users' },
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: ClipboardList, label: 'Attendance', path: '/attendance' },

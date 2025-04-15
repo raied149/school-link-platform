@@ -17,9 +17,9 @@ const UsersPage = () => {
 
       <Card className="p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold">All Students</h2>
+          <h2 className="text-xl font-semibold">Student Details</h2>
           <p className="text-muted-foreground">
-            Manage and view all student details
+            Manage and view student and teacher details
           </p>
         </div>
 

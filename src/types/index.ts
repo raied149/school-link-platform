@@ -1,3 +1,4 @@
+
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -84,13 +85,67 @@ export interface TimetableSlot {
 
 // Extended User Types
 export interface Teacher extends User {
-  employeeId: string;
-  joinDate: string;
-  qualification: string;
-  specialization: string[];
-  contactNumber: string;
-  address: string;
-  subjects: string[]; // Array of subject IDs they can teach
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  gender: 'male' | 'female' | 'other';
+  dateOfBirth: string;
+  nationality: string;
+  religion?: string;
+  maritalStatus?: string;
+  bloodGroup?: string;
+  profilePicture?: string;
+  contactInformation: {
+    currentAddress: string;
+    permanentAddress?: string;
+    personalPhone: string;
+    schoolPhone?: string;
+    personalEmail: string;
+    schoolEmail: string;
+  };
+  professionalDetails: {
+    employeeId: string;
+    designation: string;
+    department: string;
+    subjects: string[];
+    classesAssigned: string[];
+    joiningDate: string;
+    previousExperience?: {
+      schoolName: string;
+      position: string;
+      duration: string;
+    }[];
+    qualifications: string[];
+    specializations?: string[];
+    certifications?: string[];
+    employmentType: 'Full-time' | 'Part-time' | 'Contractual';
+    salary?: number;
+  };
+  attendance: {
+    present: number;
+    absent: number;
+    leave: number;
+  };
+  leaveBalance: {
+    sick: number;
+    casual: number;
+    vacation: number;
+  };
+  performance: {
+    lastReviewDate?: string;
+    rating?: number;
+    feedback?: string;
+    awards?: string[];
+  };
+  emergency: {
+    contactName: string;
+    relationship: string;
+    phone: string;
+  };
+  medicalInformation?: {
+    conditions?: string[];
+    allergies?: string[];
+  };
 }
 
 export interface StudentDetail extends Student {
