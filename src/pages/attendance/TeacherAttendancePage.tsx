@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -58,7 +57,6 @@ const TeacherAttendancePage = () => {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="h-10 px-4 text-left align-middle font-medium">Name</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Subject</th>
                 <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
                 <th className="h-10 px-4 text-left align-middle font-medium">Check In</th>
                 <th className="h-10 px-4 text-left align-middle font-medium">Check Out</th>
@@ -66,38 +64,22 @@ const TeacherAttendancePage = () => {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b">
-                <td className="p-4">Michael Brown</td>
-                <td className="p-4">Mathematics</td>
-                <td className="p-4">
-                  <Badge variant="outline" className="bg-green-50 text-green-600">present</Badge>
-                </td>
-                <td className="p-4">23:58</td>
-                <td className="p-4">-</td>
-                <td className="p-4">
-                  <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-700">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Check Out
-                  </Button>
-                </td>
-              </tr>
-              <tr className="border-b">
-                <td className="p-4">Robert Wilson</td>
-                <td className="p-4">English</td>
-                <td className="p-4">
-                  <Badge variant="outline" className="bg-gray-50 text-gray-600">Not marked</Badge>
-                </td>
-                <td className="p-4">-</td>
-                <td className="p-4">-</td>
-                <td className="p-4">
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700">Present</Button>
-                    <Button size="sm" variant="outline" className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700">Absent</Button>
-                    <Button size="sm" variant="outline" className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700">Late</Button>
-                    <Button size="sm" variant="outline" className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700">Leave</Button>
-                  </div>
-                </td>
-              </tr>
+              {mockTeachers.map((teacher) => (
+                <tr key={teacher.id} className="border-b">
+                  <td className="p-4">{teacher.name}</td>
+                  <td className="p-4">
+                    <Badge variant="outline" className="bg-green-50 text-green-600">present</Badge>
+                  </td>
+                  <td className="p-4">23:58</td>
+                  <td className="p-4">-</td>
+                  <td className="p-4">
+                    <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-700">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Check Out
+                    </Button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

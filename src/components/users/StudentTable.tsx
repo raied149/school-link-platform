@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -23,7 +24,7 @@ interface StudentTableProps {
 export function StudentTable({ searchFilters }: StudentTableProps) {
   const filteredStudents = useMemo(() => {
     return mockStudents.filter((student) => {
-      if (searchFilters.idSearch && !student.admissionNumber.toLowerCase().includes(searchFilters.idSearch.toLowerCase())) {
+      if (searchFilters.idSearch && !student.id.toLowerCase().includes(searchFilters.idSearch.toLowerCase())) {
         return false;
       }
       if (searchFilters.nameSearch && !student.name.toLowerCase().includes(searchFilters.nameSearch.toLowerCase())) {
@@ -55,7 +56,7 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
         <TableBody>
           {filteredStudents.map((student) => (
             <TableRow key={student.id}>
-              <TableCell>{student.admissionNumber}</TableCell>
+              <TableCell>{student.id}</TableCell>
               <TableCell>{student.name}</TableCell>
               <TableCell>Grade 1</TableCell>
               <TableCell>Section A</TableCell>

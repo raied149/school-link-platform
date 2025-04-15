@@ -19,7 +19,6 @@ export function TeacherTable() {
           <TableRow>
             <TableHead>Teacher ID</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Department</TableHead>
             <TableHead>Designation</TableHead>
             <TableHead>Details</TableHead>
           </TableRow>
@@ -29,7 +28,6 @@ export function TeacherTable() {
             <TableRow key={teacher.id}>
               <TableCell>{teacher.professionalDetails.employeeId}</TableCell>
               <TableCell>{teacher.name}</TableCell>
-              <TableCell>{teacher.professionalDetails.department}</TableCell>
               <TableCell>{teacher.professionalDetails.designation}</TableCell>
               <TableCell className="w-1/2">
                 <Accordion type="single" collapsible>

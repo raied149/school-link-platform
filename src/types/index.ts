@@ -1,4 +1,3 @@
-
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -146,6 +145,8 @@ export interface Teacher extends User {
     conditions?: string[];
     allergies?: string[];
   };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface StudentDetail extends Student {
