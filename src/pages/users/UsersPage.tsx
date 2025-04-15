@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { UserTabs } from "@/components/users/UserTabs";
+import { useState } from "react";
 
 const UsersPage = () => {
+  const [activeTab, setActiveTab] = useState("students");
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

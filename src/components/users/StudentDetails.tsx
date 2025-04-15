@@ -3,6 +3,8 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/
 import { StudentDetail } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
 import { Book, Heart, User } from "lucide-react";
+import { StudentAcademicDetails } from "@/components/students/StudentAcademicDetails";
+import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 
 interface StudentDetailsProps {
   student: StudentDetail;
@@ -77,8 +79,24 @@ export function StudentDetails({ student }: StudentDetailsProps) {
           </div>
         </AccordionTrigger>
         <AccordionContent>
-          <div className="p-4 text-sm text-muted-foreground">
-            Academic details will be implemented soon...
+          <div className="p-4">
+            {/* Use the refactored StudentAcademicDetails component */}
+            <StudentAcademicDetails studentId={student.id} />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="attendance">
+        <AccordionTrigger className="hover:no-underline">
+          <div className="flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            <span>Attendance Details</span>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="p-4">
+            {/* Use the refactored StudentAttendanceView component */}
+            <StudentAttendanceView studentId={student.id} />
           </div>
         </AccordionContent>
       </AccordionItem>

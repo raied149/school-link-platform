@@ -12,17 +12,22 @@ import {
 import { StudentDetail } from "@/types";
 
 interface StudentAcademicDetailsProps {
-  classId: string;
-  sectionId: string;
+  classId?: string;
+  sectionId?: string;
+  studentId?: string; // Added student ID for filtering
 }
 
-export function StudentAcademicDetails({ classId, sectionId }: StudentAcademicDetailsProps) {
+export function StudentAcademicDetails({ 
+  classId, 
+  sectionId, 
+  studentId 
+}: StudentAcademicDetailsProps) {
   // This would be replaced with actual API call
   const { data: students, isLoading } = useQuery({
-    queryKey: ['students', classId, sectionId],
+    queryKey: ['students', classId, sectionId, studentId],
     queryFn: async () => {
       // Mock data for now
-      return [
+      const allStudents = [
         {
           id: "1",
           name: "John Doe",
@@ -30,10 +35,40 @@ export function StudentAcademicDetails({ classId, sectionId }: StudentAcademicDe
           academicResults: [
             { examName: "First Term", subject: "Mathematics", marks: 85, maxMarks: 100 },
             { examName: "First Term", subject: "Science", marks: 92, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Mathematics", marks: 78, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Science", marks: 88, maxMarks: 100 },
           ]
         },
-        // Add more mock students as needed
+        {
+          id: "2",
+          name: "Jane Smith",
+          admissionNumber: "2024002",
+          academicResults: [
+            { examName: "First Term", subject: "Mathematics", marks: 90, maxMarks: 100 },
+            { examName: "First Term", subject: "Science", marks: 85, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Mathematics", marks: 92, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Science", marks: 89, maxMarks: 100 },
+          ]
+        },
+        {
+          id: "3",
+          name: "Alex Johnson",
+          admissionNumber: "2024003",
+          academicResults: [
+            { examName: "First Term", subject: "Mathematics", marks: 75, maxMarks: 100 },
+            { examName: "First Term", subject: "Science", marks: 80, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Mathematics", marks: 82, maxMarks: 100 },
+            { examName: "Mid Term", subject: "Science", marks: 78, maxMarks: 100 },
+          ]
+        }
       ];
+      
+      // Filter by studentId if provided
+      if (studentId) {
+        return allStudents.filter(student => student.id === studentId);
+      }
+      
+      return allStudents;
     }
   });
 

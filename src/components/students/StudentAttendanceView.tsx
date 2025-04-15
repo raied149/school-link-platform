@@ -11,17 +11,22 @@ import {
 } from "@/components/ui/table";
 
 interface StudentAttendanceViewProps {
-  classId: string;
-  sectionId: string;
+  classId?: string;
+  sectionId?: string;
+  studentId?: string; // Added student ID for filtering
 }
 
-export function StudentAttendanceView({ classId, sectionId }: StudentAttendanceViewProps) {
+export function StudentAttendanceView({ 
+  classId, 
+  sectionId, 
+  studentId 
+}: StudentAttendanceViewProps) {
   // This would be replaced with actual API call
   const { data: attendance, isLoading } = useQuery({
-    queryKey: ['attendance', classId, sectionId],
+    queryKey: ['attendance', classId, sectionId, studentId],
     queryFn: async () => {
       // Mock data for now
-      return [
+      const allAttendance = [
         {
           studentId: "1",
           studentName: "John Doe",
@@ -33,8 +38,36 @@ export function StudentAttendanceView({ classId, sectionId }: StudentAttendanceV
             percentage: 93.75
           }
         },
-        // Add more mock attendance data as needed
+        {
+          studentId: "2",
+          studentName: "Jane Smith",
+          admissionNumber: "2024002",
+          attendance: {
+            present: 47,
+            absent: 1,
+            total: 48,
+            percentage: 97.92
+          }
+        },
+        {
+          studentId: "3",
+          studentName: "Alex Johnson",
+          admissionNumber: "2024003",
+          attendance: {
+            present: 42,
+            absent: 6,
+            total: 48,
+            percentage: 87.50
+          }
+        }
       ];
+      
+      // Filter by studentId if provided
+      if (studentId) {
+        return allAttendance.filter(record => record.studentId === studentId);
+      }
+      
+      return allAttendance;
     }
   });
 
