@@ -29,18 +29,18 @@ import {
   getIncidentStatusLabel,
   getIncidentTypeLabel,
 } from "@/services/incidentService";
-import { Incident } from "@/types";
+import { Incident, UserRole, User } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Mock users - in a real app, would come from a user service
-const mockUsers = [
-  { id: "t1", name: "John Smith", email: "john.smith@school.edu", role: "admin" },
-  { id: "t2", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" },
-  { id: "t3", name: "Robert Brown", email: "robert.brown@school.edu", role: "teacher" },
-  { id: "s1", name: "Alice Cooper", email: "alice.cooper@school.edu", role: "student" },
-  { id: "s2", name: "Bob Davis", email: "bob.davis@school.edu", role: "student" },
-  { id: "s3", name: "Charlie Evans", email: "charlie.evans@school.edu", role: "student" },
-  { id: "s4", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" },
+const mockUsers: User[] = [
+  { id: "t1", name: "John Smith", email: "john.smith@school.edu", role: "admin" as UserRole },
+  { id: "t2", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" as UserRole },
+  { id: "t3", name: "Robert Brown", email: "robert.brown@school.edu", role: "teacher" as UserRole },
+  { id: "s1", name: "Alice Cooper", email: "alice.cooper@school.edu", role: "student" as UserRole },
+  { id: "s2", name: "Bob Davis", email: "bob.davis@school.edu", role: "student" as UserRole },
+  { id: "s3", name: "Charlie Evans", email: "charlie.evans@school.edu", role: "student" as UserRole },
+  { id: "s4", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" as UserRole },
 ];
 
 export default function IncidentDetailPage() {
