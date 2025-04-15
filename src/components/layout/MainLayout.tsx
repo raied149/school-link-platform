@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
-  Users, 
   GraduationCap, 
   BookOpen,
   ClipboardList,
   BellRing,
-  LogOut 
+  LogOut,
+  CalendarCheck,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +25,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Users, label: 'Student Details', path: '/users' },
+    { icon: Users, label: 'Student Details', path: '/students' },
+    { icon: Users, label: 'Teacher Details', path: '/teachers' },
+    { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
+    { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: ClipboardList, label: 'Attendance', path: '/attendance' },

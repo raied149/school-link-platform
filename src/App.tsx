@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,9 @@ import ClassDetailsPage from "./pages/classes/ClassDetailsPage";
 import SectionsPage from "./pages/classes/SectionsPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./pages/auth/LoginPage";
+import StudentAttendancePage from "./pages/attendance/StudentAttendancePage";
+import TeacherAttendancePage from "./pages/attendance/TeacherAttendancePage";
+import TeacherDetailsPage from "./pages/teachers/TeacherDetailsPage";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -44,7 +46,10 @@ const AuthRoutes = () => (
     >
       <Route index element={<Navigate to="/dashboard" replace />} />
       <Route path="dashboard" element={<Dashboard />} />
-      <Route path="users" element={<UsersPage />} />
+      <Route path="students" element={<UsersPage />} />
+      <Route path="teachers" element={<TeacherDetailsPage />} />
+      <Route path="student-attendance" element={<StudentAttendancePage />} />
+      <Route path="teacher-attendance" element={<TeacherAttendancePage />} />
       <Route path="classes" element={<ClassYearsPage />} />
       <Route path="classes/:yearId" element={<ClassesPage />} />
       <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
