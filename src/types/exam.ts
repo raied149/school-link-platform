@@ -3,7 +3,7 @@ export interface TestExam {
   id: string;
   name: string;
   type: 'test' | 'exam';
-  classes: string[]; // Array of class IDs
+  grade: string;
   sections: string[]; // Array of section IDs
   subjects: string[]; // Array of subject IDs
   maxMarks: number;

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,44 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+// Mock data for grades
+const grades = [
+  { id: "lkg", name: "LKG" },
+  { id: "ukg", name: "UKG" },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    id: `grade${i + 1}`,
+    name: `${i + 1}${getOrdinalSuffix(i + 1)} Grade`
+  }))
+];
+
+function getOrdinalSuffix(i: number) {
+  const j = i % 10;
+  const k = i % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
+}
+
+// Mock data for sections
+const sections = [
+  { id: "secA", name: "Section A" },
+  { id: "secB", name: "Section B" },
+  { id: "secC", name: "Section C" }
+];
+
+// Mock data for subjects based on class and section
+const subjectsMap = {
+  "lkg": ["English", "Mathematics", "Environmental Science"],
+  "ukg": ["English", "Mathematics", "Environmental Science"],
+  "grade1": ["English", "Mathematics", "Science", "Social Studies"],
+  // ... add more subjects for other grades
+};
 
 interface TestExamFormDialogProps {
   open: boolean;
@@ -24,32 +59,19 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   const [testType, setTestType] = useState<'test' | 'exam'>('test');
   const [name, setName] = useState('');
   const [maxMarks, setMaxMarks] = useState(100);
-
-  // Mock data for selections
-  const classes = [
-    { id: "class1", name: "Class 1" },
-    { id: "class2", name: "Class 2" },
-    { id: "class3", name: "Class 3" },
-  ];
-  
-  const sections = [
-    { id: "sec1", name: "Section A" },
-    { id: "sec2", name: "Section B" },
-    { id: "sec3", name: "Section C" },
-  ];
-  
-  const subjects = [
-    { id: "sub1", name: "Mathematics" },
-    { id: "sub2", name: "Science" },
-    { id: "sub3", name: "English" },
-  ];
-
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedGrade) {
+      setAvailableSubjects(subjectsMap[selectedGrade as keyof typeof subjectsMap] || []);
+    }
+  }, [selectedGrade]);
 
   const handleSubmit = () => {
-    if (!name || !date || selectedClasses.length === 0 || selectedSections.length === 0 || selectedSubjects.length === 0) {
+    if (!name || !date || !selectedGrade || selectedSections.length === 0 || selectedSubjects.length === 0) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
@@ -62,7 +84,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
       id: Math.random().toString(36).substring(2, 9),
       name,
       type: testType,
-      classes: selectedClasses,
+      grade: selectedGrade,
       sections: selectedSections,
       subjects: selectedSubjects,
       maxMarks,
@@ -80,32 +102,17 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
     });
     
     onOpenChange(false);
-    // Reset form
+    resetForm();
+  };
+
+  const resetForm = () => {
     setName('');
     setTestType('test');
     setDate(undefined);
     setMaxMarks(100);
-    setSelectedClasses([]);
+    setSelectedGrade("");
     setSelectedSections([]);
     setSelectedSubjects([]);
-  };
-
-  const toggleClass = (id: string) => {
-    setSelectedClasses(prev => 
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSection = (id: string) => {
-    setSelectedSections(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSubject = (id: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
   };
 
   return (
@@ -119,6 +126,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
+          {/* Test Type Selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="test-type" className="text-right">Type</Label>
             <Select
@@ -135,6 +143,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             </Select>
           </div>
           
+          {/* Name Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">Name</Label>
             <Input
@@ -146,6 +155,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             />
           </div>
           
+          {/* Date Selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">Date</Label>
             <Popover>
@@ -172,6 +182,76 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             </Popover>
           </div>
           
+          {/* Grade Selection */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Grade</Label>
+            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  {grades.map((grade) => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.name}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Sections Selection */}
+          <div className="grid grid-cols-4 gap-4">
+            <Label className="text-right pt-2">Sections</Label>
+            <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
+              <div className="space-y-2">
+                {sections.map((section) => (
+                  <div key={section.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`section-${section.id}`}
+                      checked={selectedSections.includes(section.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedSections(prev =>
+                          checked
+                            ? [...prev, section.id]
+                            : prev.filter(id => id !== section.id)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+          
+          {/* Subjects Selection */}
+          <div className="grid grid-cols-4 gap-4">
+            <Label className="text-right pt-2">Subjects</Label>
+            <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
+              <div className="space-y-2">
+                {availableSubjects.map((subject) => (
+                  <div key={subject} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`subject-${subject}`}
+                      checked={selectedSubjects.includes(subject)}
+                      onCheckedChange={(checked) => {
+                        setSelectedSubjects(prev =>
+                          checked
+                            ? [...prev, subject]
+                            : prev.filter(s => s !== subject)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={`subject-${subject}`}>{subject}</Label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+          
+          {/* Max Marks Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="max-marks" className="text-right">Max Marks</Label>
             <Input
@@ -181,54 +261,6 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
               onChange={(e) => setMaxMarks(parseInt(e.target.value))}
               className="col-span-3"
             />
-          </div>
-          
-          <div className="grid grid-cols-4 gap-4">
-            <Label className="text-right pt-2">Classes</Label>
-            <div className="col-span-3 flex flex-col gap-2">
-              {classes.map((cls) => (
-                <div key={cls.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`class-${cls.id}`}
-                    checked={selectedClasses.includes(cls.id)}
-                    onCheckedChange={() => toggleClass(cls.id)}
-                  />
-                  <Label htmlFor={`class-${cls.id}`}>{cls.name}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-4">
-            <Label className="text-right pt-2">Sections</Label>
-            <div className="col-span-3 flex flex-col gap-2">
-              {sections.map((section) => (
-                <div key={section.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`section-${section.id}`}
-                    checked={selectedSections.includes(section.id)}
-                    onCheckedChange={() => toggleSection(section.id)}
-                  />
-                  <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-4">
-            <Label className="text-right pt-2">Subjects</Label>
-            <div className="col-span-3 flex flex-col gap-2">
-              {subjects.map((subject) => (
-                <div key={subject.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`subject-${subject.id}`}
-                    checked={selectedSubjects.includes(subject.id)}
-                    onCheckedChange={() => toggleSubject(subject.id)}
-                  />
-                  <Label htmlFor={`subject-${subject.id}`}>{subject.name}</Label>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
         
