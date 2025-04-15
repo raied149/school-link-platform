@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,11 @@ const ClassesPage = () => {
     enabled: !!yearId
   });
   
-  // Fetch classes
-  const { data: classes = [], isLoading } = useQuery({
-    queryKey: ['classes'],
-    queryFn: classService.getClasses
+  // Fetch classes for the selected academic year
+  const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
+    queryKey: ['classes', yearId],
+    queryFn: () => classService.getClassesByYear(yearId!),
+    enabled: !!yearId
   });
   
   // Mutations
@@ -54,7 +56,7 @@ const ClassesPage = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
   
@@ -63,7 +65,7 @@ const ClassesPage = () => {
       return classService.updateClass(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
   
@@ -72,14 +74,13 @@ const ClassesPage = () => {
       return classService.deleteClass(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
   
-  // Filter classes based on search term, academic year, and selected grade
+  // Filter classes based on search term and selected grade
   const filteredClasses = classes
     .filter(c => 
-      c.academicYearId === yearId &&
       (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
        (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase())))
     )
@@ -90,18 +91,25 @@ const ClassesPage = () => {
   const uniqueGrades = [
     { id: "all", name: "All Grades" },
     ...classes
-      .filter(c => c.academicYearId === yearId)
       .sort((a, b) => a.level - b.level)
   ];
   
   // Handlers
   const handleCreateClass = async (classData: Partial<Class>) => {
     await createMutation.mutateAsync(classData as Omit<Class, 'id' | 'createdAt' | 'updatedAt'>);
+    toast({
+      title: "Class Created",
+      description: `${classData.name} has been created successfully.`
+    });
   };
   
   const handleUpdateClass = async (classData: Partial<Class>) => {
     if (selectedClass) {
       await updateMutation.mutateAsync({ id: selectedClass.id, data: classData });
+      toast({
+        title: "Class Updated",
+        description: `${classData.name} has been updated successfully.`
+      });
     }
   };
   
@@ -189,7 +197,7 @@ const ClassesPage = () => {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoadingClasses ? (
           <div className="space-y-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-12 bg-muted rounded-md animate-pulse"></div>

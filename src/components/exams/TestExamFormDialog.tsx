@@ -13,40 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-// Mock data for grades
-const grades = [
-  { id: "lkg", name: "LKG" },
-  { id: "ukg", name: "UKG" },
-  ...Array.from({ length: 12 }, (_, i) => ({
-    id: `grade${i + 1}`,
-    name: `${i + 1}${getOrdinalSuffix(i + 1)} Grade`
-  }))
-];
-
-function getOrdinalSuffix(i: number) {
-  const j = i % 10;
-  const k = i % 100;
-  if (j === 1 && k !== 11) return "st";
-  if (j === 2 && k !== 12) return "nd";
-  if (j === 3 && k !== 13) return "rd";
-  return "th";
-}
-
-// Mock data for sections
-const sections = [
-  { id: "secA", name: "Section A" },
-  { id: "secB", name: "Section B" },
-  { id: "secC", name: "Section C" }
-];
-
-// Mock data for subjects based on class and section
-const subjectsMap = {
-  "lkg": ["English", "Mathematics", "Environmental Science"],
-  "ukg": ["English", "Mathematics", "Environmental Science"],
-  "grade1": ["English", "Mathematics", "Science", "Social Studies"],
-  // ... add more subjects for other grades
-};
+import { useQuery } from "@tanstack/react-query";
+import { mockClasses, mockSections, mockSubjects } from "@/mocks/data";
 
 interface TestExamFormDialogProps {
   open: boolean;
@@ -62,11 +30,29 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  
+  // Get available grades (classes)
+  const availableGrades = mockClasses;
+  
+  // Get sections for the selected grade
+  const [availableSections, setAvailableSections] = useState<typeof mockSections>([]);
+  
+  // Get subjects for the selected grade
+  const [availableSubjects, setAvailableSubjects] = useState<typeof mockSubjects>([]);
 
   useEffect(() => {
     if (selectedGrade) {
-      setAvailableSubjects(subjectsMap[selectedGrade as keyof typeof subjectsMap] || []);
+      // Filter sections by the selected grade
+      const sections = mockSections.filter(section => section.classId === selectedGrade);
+      setAvailableSections(sections);
+      
+      // Filter subjects by the selected grade
+      const subjects = mockSubjects.filter(subject => subject.classIds.includes(selectedGrade));
+      setAvailableSubjects(subjects);
+      
+      // Reset selections when grade changes
+      setSelectedSections([]);
+      setSelectedSubjects([]);
     }
   }, [selectedGrade]);
 
@@ -191,7 +177,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
               </SelectTrigger>
               <SelectContent>
                 <ScrollArea className="h-[200px]">
-                  {grades.map((grade) => (
+                  {availableGrades.map((grade) => (
                     <SelectItem key={grade.id} value={grade.id}>
                       {grade.name}
                     </SelectItem>
@@ -206,22 +192,28 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             <Label className="text-right pt-2">Sections</Label>
             <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
               <div className="space-y-2">
-                {sections.map((section) => (
-                  <div key={section.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`section-${section.id}`}
-                      checked={selectedSections.includes(section.id)}
-                      onCheckedChange={(checked) => {
-                        setSelectedSections(prev =>
-                          checked
-                            ? [...prev, section.id]
-                            : prev.filter(id => id !== section.id)
-                        );
-                      }}
-                    />
-                    <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
+                {availableSections.length > 0 ? (
+                  availableSections.map((section) => (
+                    <div key={section.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`section-${section.id}`}
+                        checked={selectedSections.includes(section.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedSections(prev =>
+                            checked
+                              ? [...prev, section.id]
+                              : prev.filter(id => id !== section.id)
+                          );
+                        }}
+                      />
+                      <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground text-sm py-2">
+                    {selectedGrade ? "No sections available for this grade" : "Select a grade first"}
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </div>
@@ -231,22 +223,28 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             <Label className="text-right pt-2">Subjects</Label>
             <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
               <div className="space-y-2">
-                {availableSubjects.map((subject) => (
-                  <div key={subject} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`subject-${subject}`}
-                      checked={selectedSubjects.includes(subject)}
-                      onCheckedChange={(checked) => {
-                        setSelectedSubjects(prev =>
-                          checked
-                            ? [...prev, subject]
-                            : prev.filter(s => s !== subject)
-                        );
-                      }}
-                    />
-                    <Label htmlFor={`subject-${subject}`}>{subject}</Label>
+                {availableSubjects.length > 0 ? (
+                  availableSubjects.map((subject) => (
+                    <div key={subject.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`subject-${subject.id}`}
+                        checked={selectedSubjects.includes(subject.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedSubjects(prev =>
+                            checked
+                              ? [...prev, subject.id]
+                              : prev.filter(s => s !== subject.id)
+                          );
+                        }}
+                      />
+                      <Label htmlFor={`subject-${subject.id}`}>{subject.name}</Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground text-sm py-2">
+                    {selectedGrade ? "No subjects available for this grade" : "Select a grade first"}
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </div>

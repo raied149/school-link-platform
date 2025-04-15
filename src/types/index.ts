@@ -1,3 +1,4 @@
+
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -30,6 +31,18 @@ export interface AcademicYear {
   updatedAt: string;
 }
 
+// Subject Types
+export interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  credits?: number;
+  classIds?: string[]; // Array of class IDs that this subject is taught in
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Student Types
 export interface Student {
   id: string;
@@ -41,17 +54,6 @@ export interface Student {
   contactNumber?: string;
   address?: string;
   parentId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Subject Types
-export interface Subject {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  credits?: number;
   createdAt: string;
   updatedAt: string;
 }
