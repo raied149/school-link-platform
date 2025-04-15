@@ -9,7 +9,7 @@ import {
   Edit,
   FileText,
   MapPin,
-  User,
+  User as UserIcon,
   Users,
   AlertTriangle,
   CheckCircle,
@@ -29,11 +29,11 @@ import {
   getIncidentStatusLabel,
   getIncidentTypeLabel,
 } from "@/services/incidentService";
-import { Incident, User } from "@/types";
+import { Incident } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Mock users - in a real app, would come from a user service
-const mockUsers: User[] = [
+const mockUsers = [
   { id: "t1", name: "John Smith", email: "john.smith@school.edu", role: "admin" },
   { id: "t2", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" },
   { id: "t3", name: "Robert Brown", email: "robert.brown@school.edu", role: "teacher" },
@@ -253,7 +253,7 @@ export default function IncidentDetailPage() {
                   {incident.involvedPersons.map((person) => (
                     <Card key={person.userId} className="bg-muted/25 border-muted-foreground/20">
                       <CardContent className="p-4 flex items-start gap-3">
-                        <User className="h-9 w-9 text-muted-foreground bg-muted p-1.5 rounded-full" />
+                        <UserIcon className="h-9 w-9 text-muted-foreground bg-muted p-1.5 rounded-full" />
                         <div>
                           <h4 className="font-medium">{getUserName(person.userId)}</h4>
                           <p className="text-sm text-muted-foreground capitalize">{person.role}</p>
@@ -283,7 +283,7 @@ export default function IncidentDetailPage() {
               </div>
 
               <div className="flex items-start gap-2">
-                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <UserIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
                   <h4 className="text-sm text-muted-foreground">Assigned To</h4>
                   <p>{incident.assignedTo ? getUserName(incident.assignedTo) : "Unassigned"}</p>
