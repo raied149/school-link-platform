@@ -1,8 +1,12 @@
 
-import { Users, GraduationCap, BookOpen, Calendar, ClipboardList, BellRing, MessageSquare } from 'lucide-react';
+import { Users, Calendar, ClipboardList, BellRing, MessageSquare, CalendarDays } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { CalendarDatePicker } from '@/components/calendar/CalendarDatePicker';
+import { DailyEvents } from '@/components/calendar/DailyEvents';
+import { useState } from 'react';
+import { SchoolEvent } from '@/types';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -24,6 +28,13 @@ const Dashboard = () => {
 
 // Admin Dashboard
 const AdminDashboard = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [events] = useState<SchoolEvent[]>([]); // In a real app, this would fetch from an API
+
+  const eventsForSelectedDate = events.filter(
+    (event) => event.date === selectedDate.toISOString().split('T')[0]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -32,39 +43,47 @@ const AdminDashboard = () => {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Students"
-          value="1,234"
+          title="Student Attendance"
+          value="95%"
+          description="Average attendance rate"
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
-          title="Total Classes"
-          value="24"
-          icon={<GraduationCap className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Total Subjects"
-          value="42"
-          icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
+          title="Teacher Attendance"
+          value="98%"
+          description="Average attendance rate"
+          icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Academic Year"
           value="2024-2025"
           icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
         />
+        <StatCard
+          title="Today's Events"
+          value="2"
+          icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Activities</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No recent activities</p>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Calendar</h2>
+            <p className="text-muted-foreground">Browse and view school calendar</p>
+          </div>
+          <div className="flex justify-center sm:justify-start">
+            <CalendarDatePicker 
+              onSelect={(date) => date && setSelectedDate(date)}
+              selected={selectedDate}
+            />
           </div>
         </Card>
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Upcoming Events</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No upcoming events</p>
-          </div>
+          <DailyEvents
+            date={selectedDate}
+            events={eventsForSelectedDate}
+          />
         </Card>
       </div>
     </div>
@@ -73,6 +92,13 @@ const AdminDashboard = () => {
 
 // Teacher Dashboard
 const TeacherDashboard = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [events] = useState<SchoolEvent[]>([]); // In a real app, this would fetch from an API
+
+  const eventsForSelectedDate = events.filter(
+    (event) => event.date === selectedDate.toISOString().split('T')[0]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -83,7 +109,7 @@ const TeacherDashboard = () => {
         <StatCard
           title="My Classes"
           value="5"
-          icon={<GraduationCap className="h-4 w-4 text-muted-foreground" />}
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Pending Assignments"
@@ -91,24 +117,30 @@ const TeacherDashboard = () => {
           icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
-          title="Upcoming Classes"
-          value="3 Today"
-          icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
+          title="Today's Events"
+          value="3"
+          icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Today's Schedule</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No classes scheduled for today</p>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Calendar</h2>
+            <p className="text-muted-foreground">Browse and view school calendar</p>
+          </div>
+          <div className="flex justify-center sm:justify-start">
+            <CalendarDatePicker 
+              onSelect={(date) => date && setSelectedDate(date)}
+              selected={selectedDate}
+            />
           </div>
         </Card>
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Pending Tasks</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No pending tasks</p>
-          </div>
+          <DailyEvents
+            date={selectedDate}
+            events={eventsForSelectedDate}
+          />
         </Card>
       </div>
     </div>
@@ -117,6 +149,13 @@ const TeacherDashboard = () => {
 
 // Student Dashboard
 const StudentDashboard = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [events] = useState<SchoolEvent[]>([]); // In a real app, this would fetch from an API
+
+  const eventsForSelectedDate = events.filter(
+    (event) => event.date === selectedDate.toISOString().split('T')[0]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -125,14 +164,15 @@ const StudentDashboard = () => {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
+          title="My Attendance"
+          value="95%"
+          description="Present days this month"
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        />
+        <StatCard
           title="Assignments Due"
           value="3"
           icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Today's Classes"
-          value="5"
-          icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Notifications"
@@ -143,16 +183,22 @@ const StudentDashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Today's Schedule</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No classes scheduled for today</p>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Calendar</h2>
+            <p className="text-muted-foreground">Browse and view school calendar</p>
+          </div>
+          <div className="flex justify-center sm:justify-start">
+            <CalendarDatePicker 
+              onSelect={(date) => date && setSelectedDate(date)}
+              selected={selectedDate}
+            />
           </div>
         </Card>
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Upcoming Assignments</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No upcoming assignments</p>
-          </div>
+          <DailyEvents
+            date={selectedDate}
+            events={eventsForSelectedDate}
+          />
         </Card>
       </div>
     </div>
@@ -161,6 +207,13 @@ const StudentDashboard = () => {
 
 // Parent Dashboard
 const ParentDashboard = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [events] = useState<SchoolEvent[]>([]); // In a real app, this would fetch from an API
+
+  const eventsForSelectedDate = events.filter(
+    (event) => event.date === selectedDate.toISOString().split('T')[0]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -171,7 +224,8 @@ const ParentDashboard = () => {
         <StatCard
           title="Child's Attendance"
           value="95%"
-          icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+          description="Present days this month"
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Upcoming Events"
@@ -187,16 +241,22 @@ const ParentDashboard = () => {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Child's Schedule Today</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No classes scheduled for today</p>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Calendar</h2>
+            <p className="text-muted-foreground">Browse and view school calendar</p>
+          </div>
+          <div className="flex justify-center sm:justify-start">
+            <CalendarDatePicker 
+              onSelect={(date) => date && setSelectedDate(date)}
+              selected={selectedDate}
+            />
           </div>
         </Card>
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Academic Performance</h3>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">No recent performance data</p>
-          </div>
+          <DailyEvents
+            date={selectedDate}
+            events={eventsForSelectedDate}
+          />
         </Card>
       </div>
     </div>
