@@ -1,5 +1,5 @@
 
-import { Users, Calendar, ClipboardList, BellRing, MessageSquare, CalendarDays } from 'lucide-react';
+import { Users, Calendar, ClipboardList, BellRing, MessageSquare, CalendarDays, CalendarCheck } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,7 +52,7 @@ const AdminDashboard = () => {
           title="Teacher Attendance"
           value="98%"
           description="Average attendance rate"
-          icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+          icon={<CalendarCheck className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Academic Year"
@@ -107,14 +107,16 @@ const TeacherDashboard = () => {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="My Classes"
-          value="5"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          title="My Attendance"
+          value="98%"
+          description="Present days this month"
+          icon={<CalendarCheck className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
-          title="Pending Assignments"
-          value="12"
-          icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+          title="Student Attendance"
+          value="95%"
+          description="Average for your classes"
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Today's Events"
@@ -167,7 +169,7 @@ const StudentDashboard = () => {
           title="My Attendance"
           value="95%"
           description="Present days this month"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          icon={<CalendarCheck className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Assignments Due"
@@ -225,7 +227,7 @@ const ParentDashboard = () => {
           title="Child's Attendance"
           value="95%"
           description="Present days this month"
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          icon={<CalendarCheck className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Upcoming Events"
