@@ -20,6 +20,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
 interface StudentAttendanceViewProps {
   classId?: string;
@@ -32,10 +33,7 @@ export function StudentAttendanceView({
   sectionId, 
   studentId 
 }: StudentAttendanceViewProps) {
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
   });
@@ -104,25 +102,31 @@ export function StudentAttendanceView({
                 variant={"outline"}
                 className={cn(
                   "w-[280px] justify-start text-left font-normal",
-                  !dateRange && "text-muted-foreground"
+                  !dateRange?.from && "text-muted-foreground"
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.from ? (
+                {dateRange?.from ? (
                   dateRange.to ? (
                     <>
-                      {format(dateRange.from, "LLL dd, y")} -{" "}
-                      {format(dateRange.to, "LLL dd, y")}
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
                     </>
                   ) : (
-                    format(dateRange.from, "LLL dd, y")
+                    format(dateRange.from, "MMM d, yyyy")
                   )
                 ) : (
-                  <span>Pick a date range</span>
+                  <span>Filter by date range</span>
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
+              <div className="p-3 border-b">
+                <h3 className="font-medium text-sm">Select date range</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose start and end dates to filter attendance
+                </p>
+              </div>
               <Calendar
                 initialFocus
                 mode="range"
@@ -130,8 +134,26 @@ export function StudentAttendanceView({
                 selected={dateRange}
                 onSelect={setDateRange}
                 numberOfMonths={2}
-                className={cn("p-3 pointer-events-auto")}
+                className="p-3"
               />
+              <div className="flex items-center justify-between p-3 border-t bg-muted/20">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setDateRange(undefined)}
+                >
+                  Reset
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    // This would typically trigger the data reload, 
+                    // but our hook already handles that
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
