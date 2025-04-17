@@ -2,12 +2,29 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/
 import { Teacher } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
 import { Book, Briefcase, Calendar, Heart, Home, Mail, Phone, Shield, User } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface TeacherDetailsProps {
   teacher: Teacher;
 }
 
 export function TeacherDetails({ teacher }: TeacherDetailsProps) {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: undefined,
+    to: undefined,
+  });
+
   const calculateAge = (dateOfBirth: string) => {
     return differenceInYears(new Date(), parseISO(dateOfBirth));
   };
@@ -184,6 +201,63 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="space-y-4 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal",
+                      !dateRange?.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      <span>Filter attendance by date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <div className="p-3 border-b">
+                    <h3 className="font-medium text-sm">Select date range</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Choose start and end dates to filter attendance records
+                    </p>
+                  </div>
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    className="p-3"
+                  />
+                  <div className="flex items-center justify-between p-3 border-t bg-muted/20">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setDateRange(undefined)}
+                    >
+                      Reset
+                    </Button>
+                    <Button size="sm">
+                      Apply Filter
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-sm font-medium">Present Days</p>
