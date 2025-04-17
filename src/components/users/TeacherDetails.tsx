@@ -2,7 +2,6 @@
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Teacher } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
-import { Book, Briefcase, CalendarIcon, Heart, Home, Mail, Phone, Shield, User } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -34,7 +33,10 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="personal">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
             <span>Personal Details</span>
           </div>
         </AccordionTrigger>
@@ -81,7 +83,10 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="contact">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <rect width="20" height="16" x="2" y="4" rx="2" />
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+            </svg>
             <span>Contact Information</span>
           </div>
         </AccordionTrigger>
@@ -120,7 +125,10 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="professional">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            </svg>
             <span>Professional Details</span>
           </div>
         </AccordionTrigger>
@@ -195,7 +203,12 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="attendance">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" x2="16" y1="2" y2="6" />
+              <line x1="8" x2="8" y1="2" y2="6" />
+              <line x1="3" x2="21" y1="10" y2="10" />
+            </svg>
             <span>Attendance & Leave Information</span>
           </div>
         </AccordionTrigger>
@@ -211,7 +224,12 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
                       !dateRange?.from && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" x2="16" y1="2" y2="6" />
+                      <line x1="8" x2="8" y1="2" y2="6" />
+                      <line x1="3" x2="21" y1="10" y2="10" />
+                    </svg>
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
@@ -296,7 +314,10 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="performance">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <Book className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
             <span>Performance & Awards</span>
           </div>
         </AccordionTrigger>
@@ -331,7 +352,12 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="emergency">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M12 22c4.97 0 9-2.69 9-6s-4.03-6-9-6-9 2.69-9 6 4.03 6 9 6Z" />
+              <path d="M12 16v6" />
+              <path d="M12 6a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+              <path d="M12 6v4" />
+            </svg>
             <span>Emergency Information</span>
           </div>
         </AccordionTrigger>
