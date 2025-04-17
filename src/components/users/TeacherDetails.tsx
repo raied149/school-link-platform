@@ -1,7 +1,8 @@
+
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Teacher } from "@/types";
 import { differenceInYears, parseISO } from "date-fns";
-import { Book, Briefcase, Calendar, Heart, Home, Mail, Phone, Shield, User } from "lucide-react";
+import { Book, Briefcase, CalendarIcon, Heart, Home, Mail, Phone, Shield, User } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -11,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -195,7 +195,7 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
       <AccordionItem value="attendance">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+            <CalendarIcon className="h-4 w-4" />
             <span>Attendance & Leave Information</span>
           </div>
         </AccordionTrigger>
@@ -238,7 +238,7 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
                     mode="range"
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
-                    onSelect={setDateRange}
+                    onSelect={(range) => setDateRange(range)}
                     numberOfMonths={2}
                     className="p-3"
                   />
