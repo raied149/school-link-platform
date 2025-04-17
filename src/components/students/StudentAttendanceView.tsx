@@ -9,9 +9,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StudentAttendanceViewProps {
   classId?: string;
@@ -24,10 +32,16 @@ export function StudentAttendanceView({
   sectionId, 
   studentId 
 }: StudentAttendanceViewProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
 
   const { data: attendance, isLoading } = useQuery({
-    queryKey: ['attendance', classId, sectionId, studentId],
+    queryKey: ['attendance', classId, sectionId, studentId, dateRange],
     queryFn: async () => {
       // Mock data for now
       const allAttendance = [
@@ -75,11 +89,6 @@ export function StudentAttendanceView({
     }
   });
 
-  const filteredAttendance = attendance?.filter(record => 
-    record.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    record.studentName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -87,15 +96,44 @@ export function StudentAttendanceView({
   return (
     <Card className="p-6">
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Student Attendance Records</h2>
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by ID or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Student Attendance Records</h2>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -111,7 +149,7 @@ export function StudentAttendanceView({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAttendance?.map((record) => (
+            {attendance?.map((record) => (
               <TableRow key={record.studentId}>
                 <TableCell>{record.studentId}</TableCell>
                 <TableCell>{record.studentName}</TableCell>
