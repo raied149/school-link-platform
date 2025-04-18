@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -10,7 +9,6 @@ import {
 import { StudentDetail } from "@/types";
 import { Accordion } from "@/components/ui/accordion";
 import { StudentDetails } from "./StudentDetails";
-import { mockStudents } from "@/mocks/data";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -83,6 +81,48 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
     );
   }
 
+  // Helper function to convert profile data to StudentDetail type
+  const mapProfileToStudentDetail = (profile: any): StudentDetail => {
+    return {
+      id: profile.id,
+      name: `${profile.first_name} ${profile.last_name}`,
+      email: profile.email || '',
+      role: profile.role,
+      // Required fields from StudentDetail that need default values
+      admissionNumber: profile.id.substring(0, 8),
+      createdAt: profile.created_at,
+      updatedAt: profile.created_at,
+      // Other StudentDetail fields with default values
+      dateOfBirth: '2000-01-01',
+      gender: 'other',
+      language: 'English',
+      nationality: 'Not specified',
+      contactNumber: '',
+      address: '',
+      currentClassId: '',
+      currentSectionId: '',
+      academicYearId: '',
+      parentId: '',
+      guardian: {
+        name: 'Not specified',
+        email: 'not.specified@example.com',
+        phone: 'Not specified',
+        relationship: 'Not specified'
+      },
+      medical: {
+        bloodGroup: '',
+        allergies: [],
+        medications: [],
+        medicalHistory: '',
+        emergencyContact: {
+          name: 'Not specified',
+          phone: 'Not specified',
+          relationship: 'Not specified'
+        }
+      }
+    };
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -102,31 +142,7 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
               <TableCell>{student.email || 'No email'}</TableCell>
               <TableCell className="w-1/2">
                 <Accordion type="single" collapsible>
-                  <StudentDetails student={{
-                    ...student,
-                    name: `${student.first_name} ${student.last_name}`,
-                    dateOfBirth: student.date_of_birth || '2000-01-01',
-                    gender: student.gender || 'other',
-                    language: student.language || 'English',
-                    nationality: student.nationality || 'Unknown',
-                    guardian: {
-                      name: student.guardian_name || 'Unknown',
-                      email: student.guardian_email || 'unknown@example.com',
-                      phone: student.guardian_phone || 'Unknown',
-                      relationship: student.guardian_relationship || 'Unknown'
-                    },
-                    medical: {
-                      bloodGroup: student.blood_group,
-                      allergies: student.allergies ? [student.allergies] : [],
-                      medications: [],
-                      medicalHistory: student.medical_history,
-                      emergencyContact: {
-                        name: student.emergency_contact_name || 'Unknown',
-                        phone: student.emergency_contact_phone || 'Unknown',
-                        relationship: student.emergency_contact_relationship || 'Unknown'
-                      }
-                    }
-                  }} />
+                  <StudentDetails student={mapProfileToStudentDetail(student)} />
                 </Accordion>
               </TableCell>
             </TableRow>
