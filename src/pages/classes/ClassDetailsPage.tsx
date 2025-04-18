@@ -12,6 +12,7 @@ import { StudentAcademicDetails } from "@/components/students/StudentAcademicDet
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 import { Button } from "@/components/ui/button";
+import { TimetableManagement } from "@/components/timetable/TimetableManagement";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -50,7 +51,7 @@ const ClassDetailsPage = () => {
       </div>
 
       <Tabs defaultValue="students">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="students">
             <Users className="h-4 w-4 mr-2" />
             Students
@@ -82,12 +83,11 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="timetable" className="py-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Timetable</h2>
-            <p className="text-muted-foreground">
-              This tab will contain the weekly timetable for this section.
-            </p>
-          </Card>
+          <TimetableManagement
+            classId={classId!}
+            sectionId={sectionId!}
+            academicYearId={yearId!}
+          />
         </TabsContent>
         
         <TabsContent value="attendance" className="py-4">
