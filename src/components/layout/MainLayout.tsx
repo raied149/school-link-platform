@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
@@ -42,7 +41,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
   };
 
   return (
@@ -52,7 +50,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <h2 className="text-lg font-semibold">School ERP</h2>
           {user && (
             <div className="text-sm text-muted-foreground">
-              {user.name} ({user.role})
+              {user.firstName} {user.lastName} ({user.role})
             </div>
           )}
         </SidebarHeader>

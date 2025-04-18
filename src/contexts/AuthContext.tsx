@@ -1,56 +1,51 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   isAuthenticated: boolean;
-  signOut: () => Promise<void>;
+  login: (role: UserRole) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-      }
-    );
+  const login = (role: UserRole) => {
+    const newUser: User = {
+      id: crypto.randomUUID(),
+      firstName: `Test ${role}`,
+      lastName: 'User',
+      role: role
+    };
+    setUser(newUser);
+    navigate('/dashboard');
+  };
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const logout = () => {
+    setUser(null);
+    navigate('/login');
   };
 
   const value = {
     user,
-    session,
     isAuthenticated: !!user,
-    signOut,
+    login,
+    logout
   };
-
-  if (isLoading) {
-    return null; // Or a loading spinner
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
