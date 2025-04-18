@@ -2,6 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const getStudentExams = async (studentId: string) => {
+  console.log("Fetching exams for student:", studentId);
+  
   const { data, error } = await supabase
     .from('exam_results')
     .select(`
@@ -10,6 +12,7 @@ export const getStudentExams = async (studentId: string) => {
         name,
         date,
         max_score,
+        subject_id,
         subjects (
           name,
           code
@@ -23,5 +26,6 @@ export const getStudentExams = async (studentId: string) => {
     throw error;
   }
 
+  console.log("Retrieved exam results:", data);
   return data;
 };

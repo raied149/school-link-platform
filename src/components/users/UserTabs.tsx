@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { StudentTable } from "./StudentTable";
 import { TeacherTable } from "./TeacherTable";
-import { Input } from "@/components/ui/input";
+import { StudentSearch } from "./StudentSearch";
 
 interface UserTabsProps {
   defaultTab: "students" | "teachers";
@@ -16,9 +16,19 @@ export function UserTabs({
   showStudentsOnly = false,
   showTeachersOnly = false 
 }: UserTabsProps) {
-  const [idSearch, setIdSearch] = useState("");
-  const [nameSearch, setNameSearch] = useState("");
-  const [globalSearch, setGlobalSearch] = useState("");
+  const [searchFilters, setSearchFilters] = useState({
+    idSearch: "",
+    nameSearch: "",
+    globalSearch: ""
+  });
+  
+  const handleSearch = (filters: {
+    idSearch: string;
+    nameSearch: string;
+    globalSearch: string;
+  }) => {
+    setSearchFilters(filters);
+  };
   
   return (
     <Tabs defaultValue={defaultTab}>
@@ -37,29 +47,8 @@ export function UserTabs({
       
       {!showTeachersOnly && (
         <TabsContent value="students" className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Input
-              placeholder="Search by ID"
-              value={idSearch}
-              onChange={(e) => setIdSearch(e.target.value)}
-              className="max-w-[200px]"
-            />
-            <Input
-              placeholder="Search by Name"
-              value={nameSearch}
-              onChange={(e) => setNameSearch(e.target.value)}
-              className="max-w-[200px]"
-            />
-            <Input
-              placeholder="Global Search"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              className="flex-1 min-w-[200px]"
-            />
-          </div>
-          <StudentTable
-            searchFilters={{ idSearch, nameSearch, globalSearch }}
-          />
+          <StudentSearch onSearch={handleSearch} />
+          <StudentTable searchFilters={searchFilters} />
         </TabsContent>
       )}
       
