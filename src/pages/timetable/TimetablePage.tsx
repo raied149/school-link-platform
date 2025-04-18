@@ -7,11 +7,11 @@ import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
 import { classService } from '@/services/classService';
 import { sectionService } from '@/services/sectionService';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TimetableFilter, WeekDay } from '@/types/timetable';
-import { Clock, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { DailyView } from '@/components/timetable/DailyView';
+import { WeeklyView } from '@/components/timetable/WeeklyView';
 
 const TimetablePage = () => {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ const TimetablePage = () => {
   if (selectedView === 'daily') {
     filter.dayOfWeek = selectedDay;
   }
-  
+
   const { data: timeSlots = [], isLoading } = useQuery({
     queryKey: ['timetable', selectedView, selectedDay, filter],
     queryFn: () => timetableService.getTimeSlots(filter)
@@ -58,7 +58,7 @@ const TimetablePage = () => {
     queryKey: ['sections'],
     queryFn: () => sectionService.getSections()
   });
-  
+
   const getSubjectName = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject ? subject.name : 'Unknown Subject';
@@ -75,116 +75,11 @@ const TimetablePage = () => {
   };
   
   const formatTime = (timeString: string) => {
-    // Convert HH:MM to a date object for formatting
     const [hours, minutes] = timeString.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10));
     date.setMinutes(parseInt(minutes, 10));
-    
-    return format(date, 'h:mm a'); // e.g., "2:30 PM"
-  };
-  
-  const renderDailyView = () => {
-    const filteredSlots = timeSlots.filter(slot => slot.dayOfWeek === selectedDay);
-    
-    if (filteredSlots.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Clock className="h-12 w-12 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">No time slots scheduled for {selectedDay}</p>
-        </div>
-      );
-    }
-    
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Time</TableHead>
-            <TableHead>Subject</TableHead>
-            {user?.role === 'student' ? <TableHead>Teacher</TableHead> : <TableHead>Class/Section</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (
-            <TableRow key={slot.id}>
-              <TableCell>{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</TableCell>
-              <TableCell className="flex items-center">
-                <BookOpen className="mr-2 h-4 w-4" />
-                {getSubjectName(slot.subjectId)}
-              </TableCell>
-              {user?.role === 'student' ? (
-                <TableCell>Teacher {slot.teacherId}</TableCell>
-              ) : (
-                <TableCell>{getClassName(slot.classId)} - {getSectionName(slot.sectionId)}</TableCell>
-              )}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    );
-  };
-  
-  const renderWeeklyView = () => {
-    if (timeSlots.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <Clock className="h-12 w-12 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">No time slots scheduled for this week</p>
-        </div>
-      );
-    }
-    
-    // Get unique time slots
-    const timeSet = new Set<string>();
-    timeSlots.forEach(slot => {
-      timeSet.add(slot.startTime);
-    });
-    
-    const timeArray = Array.from(timeSet).sort();
-    
-    return (
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              {weekDays.map(day => (
-                <TableHead key={day}>{day}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {timeArray.map(time => (
-              <TableRow key={time}>
-                <TableCell className="font-medium">{formatTime(time)}</TableCell>
-                {weekDays.map(day => {
-                  const slot = timeSlots.find(
-                    s => s.startTime === time && s.dayOfWeek === day
-                  );
-                  
-                  return (
-                    <TableCell key={day} className="min-w-[150px]">
-                      {slot ? (
-                        <div className="p-2 bg-primary/10 rounded-md">
-                          <p className="font-medium">{getSubjectName(slot.subjectId)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {user?.role === 'student' 
-                              ? `Teacher ${slot.teacherId}` 
-                              : `${getClassName(slot.classId)} - ${getSectionName(slot.sectionId)}`}
-                          </p>
-                          <p className="text-xs">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</p>
-                        </div>
-                      ) : null}
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
+    return format(date, 'h:mm a');
   };
 
   return (
@@ -227,19 +122,27 @@ const TimetablePage = () => {
           </div>
           
           <TabsContent value="daily">
-            {isLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <p className="text-muted-foreground">Loading...</p>
-              </div>
-            ) : renderDailyView()}
+            <DailyView
+              timeSlots={timeSlots}
+              selectedDay={selectedDay}
+              isLoading={isLoading}
+              formatTime={formatTime}
+              getSubjectName={getSubjectName}
+              user={user}
+            />
           </TabsContent>
           
           <TabsContent value="weekly">
-            {isLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <p className="text-muted-foreground">Loading...</p>
-              </div>
-            ) : renderWeeklyView()}
+            <WeeklyView
+              timeSlots={timeSlots}
+              weekDays={weekDays}
+              isLoading={isLoading}
+              formatTime={formatTime}
+              getSubjectName={getSubjectName}
+              getClassName={getClassName}
+              getSectionName={getSectionName}
+              user={user}
+            />
           </TabsContent>
         </Tabs>
       </Card>
