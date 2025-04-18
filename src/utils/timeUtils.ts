@@ -1,4 +1,3 @@
-
 export const generateTimeOptions = () => {
   const times = [];
   for (let hour = 1; hour <= 12; hour++) {
@@ -44,4 +43,18 @@ export const convertTo12Hour = (time: string) => {
     time: `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
     period
   };
+};
+
+export const validateHour = (hour: string): boolean => {
+  const hourNum = parseInt(hour);
+  return !isNaN(hourNum) && hourNum >= 1 && hourNum <= 12;
+};
+
+export const validateMinute = (minute: string): boolean => {
+  const minuteNum = parseInt(minute);
+  return !isNaN(minuteNum) && minuteNum >= 0 && minuteNum <= 59;
+};
+
+export const formatTimeFromParts = (hour: string, minute: string): string => {
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
 };

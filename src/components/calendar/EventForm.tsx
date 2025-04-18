@@ -29,15 +29,17 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
-import { generateTimeOptions, formatTimeDisplay, convertTo24Hour, convertTo12Hour } from "@/utils/timeUtils";
+import { validateHour, validateMinute, formatTimeFromParts, convertTo24Hour } from "@/utils/timeUtils";
 
 const formSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   type: z.enum(["meeting", "function", "holiday"] as const),
   date: z.string(),
-  startTime: z.string(),
+  startHour: z.string().refine(validateHour, { message: "Invalid hour (1-12)" }),
+  startMinute: z.string().refine(validateMinute, { message: "Invalid minute (0-59)" }),
   startPeriod: z.enum(['AM', 'PM']),
-  endTime: z.string(),
+  endHour: z.string().refine(validateHour, { message: "Invalid hour (1-12)" }),
+  endMinute: z.string().refine(validateMinute, { message: "Invalid minute (0-59)" }),
   endPeriod: z.enum(['AM', 'PM']),
   description: z.string().optional(),
   teacherIds: z.array(z.string()).optional(),
@@ -51,7 +53,6 @@ interface EventFormProps {
 
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
-  const timeOptions = generateTimeOptions();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,21 +60,26 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       date: date.toISOString().split('T')[0],
       type: "meeting",
       name: "",
-      startTime: "09:00",
+      startHour: "09",
+      startMinute: "00",
       startPeriod: "AM",
-      endTime: "10:00",
+      endHour: "10",
+      endMinute: "00",
       endPeriod: "AM",
       teacherIds: [],
     },
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    const startTime = formatTimeFromParts(values.startHour, values.startMinute);
+    const endTime = formatTimeFromParts(values.endHour, values.endMinute);
+
     const eventData: Omit<SchoolEvent, "id"> = {
       name: values.name,
       type: values.type,
       date: values.date,
-      startTime: convertTo24Hour(values.startTime, values.startPeriod),
-      endTime: convertTo24Hour(values.endTime, values.endPeriod),
+      startTime: convertTo24Hour(startTime, values.startPeriod),
+      endTime: convertTo24Hour(endTime, values.endPeriod),
       description: values.description,
       teacherIds: values.teacherIds,
     };
@@ -139,83 +145,127 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="HH:MM"
-                          pattern="^(0[1-9]|1[0-2]):[0-5][0-9]$"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="startPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>Start Time</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormField
+                    control={form.control}
+                    name="startHour"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
                         <FormControl>
-                          <SelectTrigger className="w-[80px]">
-                            <SelectValue placeholder="AM/PM" />
-                          </SelectTrigger>
+                          <Input
+                            type="text"
+                            placeholder="HH"
+                            maxLength={2}
+                            className="text-center"
+                            {...field}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="AM">AM</SelectItem>
-                          <SelectItem value="PM">PM</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <span className="text-lg">:</span>
+                  <FormField
+                    control={form.control}
+                    name="startMinute"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="MM"
+                            maxLength={2}
+                            className="text-center"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="startPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-[80px]">
+                              <SelectValue placeholder="AM/PM" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="HH:MM"
-                          pattern="^(0[1-9]|1[0-2]):[0-5][0-9]$"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>End Time</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormField
+                    control={form.control}
+                    name="endHour"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
                         <FormControl>
-                          <SelectTrigger className="w-[80px]">
-                            <SelectValue placeholder="AM/PM" />
-                          </SelectTrigger>
+                          <Input
+                            type="text"
+                            placeholder="HH"
+                            maxLength={2}
+                            className="text-center"
+                            {...field}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="AM">AM</SelectItem>
-                          <SelectItem value="PM">PM</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <span className="text-lg">:</span>
+                  <FormField
+                    control={form.control}
+                    name="endMinute"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="MM"
+                            maxLength={2}
+                            className="text-center"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-[80px]">
+                              <SelectValue placeholder="AM/PM" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
 
