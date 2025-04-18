@@ -4,6 +4,7 @@ import { differenceInYears, parseISO } from "date-fns";
 import { Book, Heart, User } from "lucide-react";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StudentExamResults } from "@/components/students/StudentExamResults";
 
 interface StudentDetailsProps {
   student: StudentDetail;
@@ -79,28 +80,7 @@ export function StudentDetails({ student }: StudentDetailsProps) {
         </AccordionTrigger>
         <AccordionContent>
           <div className="p-4">
-            {student.academicResults && student.academicResults.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Exam/Test</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Marks</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {student.academicResults.map((result, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{result.examName}</TableCell>
-                      <TableCell>{result.subject}</TableCell>
-                      <TableCell>{result.marks}/{result.maxMarks}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-muted-foreground text-sm">No academic records found</p>
-            )}
+            <StudentExamResults studentId={student.id} />
           </div>
         </AccordionContent>
       </AccordionItem>
