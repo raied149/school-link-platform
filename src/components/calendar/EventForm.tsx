@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,13 +29,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
+import { generateTimeOptions, formatTimeDisplay } from "@/utils/timeUtils";
 
 const formSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   type: z.enum(["meeting", "function", "holiday"] as const),
   date: z.string(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  startTime: z.string(),
+  endTime: z.string(),
   description: z.string().optional(),
   teacherIds: z.array(z.string()).optional(),
 });
@@ -49,19 +49,21 @@ interface EventFormProps {
 
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
+  const timeOptions = generateTimeOptions();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: date.toISOString().split('T')[0],
       type: "meeting",
-      name: "", // Add default empty value for required field
+      name: "",
+      startTime: "09:00",
+      endTime: "10:00",
       teacherIds: [],
     },
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    // Ensure all required properties are present
     const eventData: Omit<SchoolEvent, "id"> = {
       name: values.name,
       type: values.type,
@@ -138,9 +140,20 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Start Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select start time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {formatTimeDisplay(time)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -152,9 +165,20 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>End Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select end time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {formatTimeDisplay(time)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
