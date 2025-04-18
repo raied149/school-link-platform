@@ -1,24 +1,35 @@
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Download, LogIn } from "lucide-react";
-import { mockTeachers } from "@/mocks/data";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { TeacherAttendanceFilters } from "@/components/teachers/TeacherAttendanceFilters";
+import { TeacherAttendanceRecord } from "@/components/teachers/TeacherAttendanceRecord";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const TeacherAttendancePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+
+  // Fetch teachers from Supabase
+  const { data: teachers = [], isLoading } = useQuery({
+    queryKey: ['teachers-attendance'],
+    queryFn: async () => {
+      console.log("Fetching teachers for attendance");
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'teacher');
+        
+      if (error) {
+        console.error("Error fetching teachers:", error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  });
   
   const [teacherAttendance, setTeacherAttendance] = useState<Record<string, {
     status: 'present' | 'absent' | 'not-marked',
@@ -26,7 +37,7 @@ const TeacherAttendancePage = () => {
     checkOut: string | null
   }>>(() => {
     const initialAttendance: Record<string, any> = {};
-    mockTeachers.forEach(teacher => {
+    teachers.forEach(teacher => {
       initialAttendance[teacher.id] = {
         status: 'not-marked',
         checkIn: null,
@@ -36,13 +47,28 @@ const TeacherAttendancePage = () => {
     return initialAttendance;
   });
 
-  const filteredTeachers = mockTeachers.filter(teacher => {
-    const matchesSearch = teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        teacher.professionalDetails.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+  // Update teacherAttendance when teachers data changes
+  useState(() => {
+    const updatedAttendance: Record<string, any> = {};
+    teachers.forEach(teacher => {
+      updatedAttendance[teacher.id] = teacherAttendance[teacher.id] || {
+        status: 'not-marked',
+        checkIn: null,
+        checkOut: null
+      };
+    });
+    setTeacherAttendance(updatedAttendance);
+  });
+
+  const filteredTeachers = teachers.filter(teacher => {
+    const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+    const matchesSearch = searchTerm === "" || 
+                          fullName.includes(searchTerm.toLowerCase()) || 
+                          teacher.id.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "present" && teacherAttendance[teacher.id].status === "present") ||
-                         (statusFilter === "absent" && teacherAttendance[teacher.id].status === "absent");
+                         (statusFilter === "present" && teacherAttendance[teacher.id]?.status === "present") ||
+                         (statusFilter === "absent" && teacherAttendance[teacher.id]?.status === "absent");
     
     return matchesSearch && matchesStatus;
   });
@@ -100,6 +126,10 @@ const TeacherAttendancePage = () => {
     });
   };
 
+  if (isLoading) {
+    return <div className="text-center py-8">Loading teachers...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -112,35 +142,12 @@ const TeacherAttendancePage = () => {
       </div>
 
       <Card className="p-6">
-        <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              <span>April 15th, 2025</span>
-            </div>
-            <Select defaultValue="all" onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="present">Present</SelectItem>
-                <SelectItem value="absent">Absent</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              className="w-[300px]"
-              placeholder="Search teachers..."
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export to Excel
-          </Button>
-        </div>
+        <TeacherAttendanceFilters
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          onSearchChange={setSearchTerm}
+          onStatusChange={setStatusFilter}
+        />
 
         <div className="rounded-md border">
           <table className="w-full">
@@ -154,42 +161,23 @@ const TeacherAttendancePage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredTeachers.map((teacher) => (
-                <tr key={teacher.id} className="border-b">
-                  <td className="p-4">{teacher.name}</td>
-                  <td className="p-4">
-                    {teacherAttendance[teacher.id].status === 'present' ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-600">Present</Badge>
-                    ) : teacherAttendance[teacher.id].status === 'absent' ? (
-                      <Badge variant="outline" className="bg-red-50 text-red-600">Absent</Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-gray-50 text-gray-600">Not marked</Badge>
-                    )}
-                  </td>
-                  <td className="p-4">{teacherAttendance[teacher.id].checkIn || "-"}</td>
-                  <td className="p-4">{teacherAttendance[teacher.id].checkOut || "-"}</td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      {teacherAttendance[teacher.id].status !== 'present' ? (
-                        <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700" onClick={() => handleCheckIn(teacher.id)}>
-                          <LogIn className="mr-2 h-4 w-4" />
-                          Check In
-                        </Button>
-                      ) : !teacherAttendance[teacher.id].checkOut ? (
-                        <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-700" onClick={() => handleCheckOut(teacher.id)}>
-                          <LogIn className="mr-2 h-4 w-4" />
-                          Check Out
-                        </Button>
-                      ) : null}
-                      {teacherAttendance[teacher.id].status !== 'absent' && (
-                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleMarkAbsent(teacher.id)}>
-                          Absent
-                        </Button>
-                      )}
-                    </div>
+              {filteredTeachers.length > 0 ? filteredTeachers.map((teacher) => (
+                <TeacherAttendanceRecord
+                  key={teacher.id}
+                  teacherId={teacher.id}
+                  teacherName={`${teacher.first_name} ${teacher.last_name}`}
+                  attendance={teacherAttendance[teacher.id] || { status: 'not-marked', checkIn: null, checkOut: null }}
+                  onCheckIn={handleCheckIn}
+                  onCheckOut={handleCheckOut}
+                  onMarkAbsent={handleMarkAbsent}
+                />
+              )) : (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center">
+                    No teachers found matching your search criteria
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

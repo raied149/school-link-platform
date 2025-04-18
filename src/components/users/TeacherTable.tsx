@@ -45,7 +45,7 @@ export function TeacherTable() {
         firstName: profile.first_name,
         lastName: profile.last_name,
         middleName: '',
-        gender: 'not specified',
+        gender: 'male', // Fixed: Using valid enum value instead of "not specified"
         dateOfBirth: '1980-01-01',
         nationality: 'Not specified',
         role: 'teacher',
@@ -77,11 +77,20 @@ export function TeacherTable() {
           casual: 5,
           vacation: 15,
         },
-        performance: {},
+        performance: {
+          lastReviewDate: '',
+          rating: 0,
+          feedback: '',
+          awards: [],
+        },
         emergency: {
           contactName: 'Emergency Contact',
           relationship: 'Not specified',
           phone: 'Not specified',
+        },
+        medicalInformation: {
+          conditions: [],
+          allergies: [],
         },
         createdAt: profile.created_at || '',
         updatedAt: profile.created_at || '',
