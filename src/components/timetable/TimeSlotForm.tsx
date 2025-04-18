@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -9,23 +8,7 @@ import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Form } from '@/components/ui/form';
 import { format, parse, addMinutes } from 'date-fns';
 import { TimeFieldSection } from './TimeFieldSection';
 import { SubjectTeacherSection } from './SubjectTeacherSection';
@@ -61,7 +44,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     queryFn: () => subjectService.getSubjectsByClass(classId)
   });
   
-  // Mock teacher data - In a real app, fetch this from an API
   const teachers = [
     { id: '1', name: 'John Doe' },
     { id: '2', name: 'Jane Smith' },
@@ -71,10 +53,10 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
   const weekDays = timetableService.getWeekDays();
   const timeOptions = timetableService.getTimeRange();
   
-  let defaultValues: FormValues = {
+  const defaultValues = {
     dayOfWeek: initialData?.dayOfWeek || 'Monday',
     startTime: initialData?.startTime || '08:00',
-    duration: 60, // Default duration in minutes
+    duration: initialData?.duration || 60,
     subjectId: initialData?.subjectId || '',
     teacherId: initialData?.teacherId || '',
     classId: initialData?.classId || classId,
@@ -82,15 +64,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     academicYearId: initialData?.academicYearId || '',
   };
   
-  if (initialData?.startTime && initialData?.endTime) {
-    // Calculate duration from start and end time
-    const startDate = parse(initialData.startTime, 'HH:mm', new Date());
-    const endDate = parse(initialData.endTime, 'HH:mm', new Date());
-    const durationInMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (60 * 1000));
-    defaultValues.duration = durationInMinutes;
-  }
-  
-  const form = useForm<FormValues>({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues
   });
@@ -105,17 +79,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     }
   };
   
-  // Update end time when start time or duration changes
-  const watchStartTime = form.watch('startTime');
-  const watchDuration = form.watch('duration');
-  
-  useState(() => {
-    if (watchStartTime) {
-      const endTime = calculateEndTime(watchStartTime, watchDuration || 60);
-      setCalculatedEndTime(endTime);
-    }
-  });
-  
   const handleStartTimeChange = (value: string) => {
     form.setValue('startTime', value);
     const endTime = calculateEndTime(value, form.getValues('duration'));
@@ -129,13 +92,12 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     setCalculatedEndTime(endTime);
   };
   
-  const onSubmit = (values: FormValues) => {
-    // Fix: Make sure all required properties of TimeSlot are provided
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
       startTime: values.startTime,
       endTime: calculatedEndTime,
       subjectId: values.subjectId,
-      teacherId: values.teacherId, 
+      teacherId: values.teacherId,
       dayOfWeek: values.dayOfWeek,
       classId: values.classId,
       sectionId: values.sectionId,
@@ -143,153 +105,31 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     };
     onSave(timeSlotData);
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {initialData && initialData.id ? 'Edit Time Slot' : 'Add Time Slot'}
+            {initialData?.id ? 'Edit Time Slot' : 'Add Time Slot'}
           </DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dayOfWeek"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Day</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select day" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {weekDays.map(day => (
-                          <SelectItem key={day} value={day}>{day}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Time</FormLabel>
-                    <Select
-                      onValueChange={handleStartTimeChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select time" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {timeOptions.map(time => (
-                          <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="duration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (minutes)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={15}
-                        step={15}
-                        {...field}
-                        onChange={handleDurationChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="space-y-2">
-                <Label>End Time</Label>
-                <Input value={calculatedEndTime} readOnly disabled />
-              </div>
-            </div>
-            
-            <FormField
+            <TimeFieldSection
               control={form.control}
-              name="subjectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subject</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {subjects.map(subject => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              weekDays={weekDays}
+              timeOptions={timeOptions}
+              calculatedEndTime={calculatedEndTime}
+              onStartTimeChange={handleStartTimeChange}
+              onDurationChange={handleDurationChange}
             />
             
-            <FormField
+            <SubjectTeacherSection
               control={form.control}
-              name="teacherId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teacher</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select teacher" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {teachers.map(teacher => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              subjects={subjects}
+              teachers={teachers}
             />
             
             <DialogFooter>
@@ -297,7 +137,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
                 Cancel
               </Button>
               <Button type="submit">
-                {initialData && initialData.id ? 'Update' : 'Create'}
+                {initialData?.id ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </form>
