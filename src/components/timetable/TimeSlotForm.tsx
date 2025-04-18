@@ -96,7 +96,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
     try {
       const startDate = parse(startTime, 'HH:mm', new Date());
-      const endDate = addMinutes(startDate, durationMinutes);
+      const endDate = addMinutes(startDate, durationInMinutes);
       return format(endDate, 'HH:mm');
     } catch (error) {
       return '';
@@ -128,9 +128,16 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
   };
   
   const onSubmit = (values: FormValues) => {
+    // Fix: Make sure all required properties of TimeSlot are provided
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
-      ...values,
-      endTime: calculatedEndTime
+      startTime: values.startTime,
+      endTime: calculatedEndTime,
+      subjectId: values.subjectId,
+      teacherId: values.teacherId, 
+      dayOfWeek: values.dayOfWeek,
+      classId: values.classId,
+      sectionId: values.sectionId,
+      academicYearId: values.academicYearId
     };
     onSave(timeSlotData);
   };
