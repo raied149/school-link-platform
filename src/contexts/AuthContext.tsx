@@ -1,73 +1,60 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define user roles
-export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
-
-// User interface
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-}
-
-// Auth context interface
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  signOut: () => Promise<void>;
 }
 
-// Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth provider props
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-// Mock user data - would be replaced with actual authentication
-const mockUsers: User[] = [
-  { id: '1', name: 'Admin User', email: 'admin@school.com', role: 'admin' },
-  { id: '2', name: 'Teacher User', email: 'teacher@school.com', role: 'teacher' },
-  { id: '3', name: 'Student User', email: 'student@school.com', role: 'student' },
-  { id: '4', name: 'Parent User', email: 'parent@school.com', role: 'parent' },
-];
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock login function
-  const login = async (email: string, password: string) => {
-    // In a real app, this would make an API request
-    const foundUser = mockUsers.find(u => u.email === email);
-    
-    if (foundUser) {
-      setUser(foundUser);
-      return Promise.resolve();
-    }
-    
-    return Promise.reject(new Error('Invalid email or password'));
-  };
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
 
-  // Logout function
-  const logout = () => {
-    setUser(null);
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
   };
 
   const value = {
     user,
+    session,
     isAuthenticated: !!user,
-    login,
-    logout,
+    signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
-// Custom hook to use auth context
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

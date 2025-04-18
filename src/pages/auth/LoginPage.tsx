@@ -1,36 +1,63 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+    
     try {
-      await login(email, password);
-      toast({
-        title: "Logged in successfully",
-        description: "Welcome to the School ERP system",
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      navigate("/dashboard");
-    } catch (error) {
+
+      if (error) throw error;
+      
+      navigate('/dashboard');
+    } catch (error: any) {
       toast({
-        title: "Login failed",
-        description: "Invalid email or password",
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Please check your email to confirm your account.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -39,56 +66,54 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50">
-      <Card className="w-[400px]">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">School ERP</CardTitle>
-          <CardDescription className="text-center">
-            Enter your credentials to access your account
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md space-y-8 p-8">
+        <div>
+          <h2 className="text-center text-3xl font-bold tracking-tight">
+            Welcome to School Manager
+          </h2>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Sign in to access your account
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="space-y-4">
+            <div>
               <Input
-                id="email"
                 type="email"
-                placeholder="admin@school.com"
+                placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div>
               <Input
-                id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            <div className="text-xs text-muted-foreground">
-              <p>Test accounts:</p>
-              <p>admin@school.com</p>
-              <p>teacher@school.com</p>
-              <p>student@school.com</p>
-              <p>parent@school.com</p>
-              <p>(Any password will work for demo)</p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Log in"}
+          </div>
+
+          <div className="flex flex-col space-y-4">
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Loading..." : "Sign in"}
             </Button>
-          </CardFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSignUp}
+              disabled={isLoading}
+            >
+              Create account
+            </Button>
+          </div>
         </form>
       </Card>
     </div>
   );
-};
-
-export default LoginPage;
+}
