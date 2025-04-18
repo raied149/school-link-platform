@@ -21,11 +21,24 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StudentAttendanceViewProps {
   classId?: string;
   sectionId?: string;
   studentId?: string;
+}
+
+interface AttendanceRecord {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  attendance: {
+    present: number;
+    absent: number;
+    total: number;
+    percentage: number;
+  };
 }
 
 export function StudentAttendanceView({ 
@@ -38,57 +51,75 @@ export function StudentAttendanceView({
     to: undefined,
   });
 
-  const { data: attendance, isLoading } = useQuery({
-    queryKey: ['attendance', classId, sectionId, studentId, dateRange],
+  // Fetch student profiles from Supabase
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['students', studentId],
     queryFn: async () => {
-      // Mock data for now
-      const allAttendance = [
-        {
-          studentId: "1",
-          studentName: "John Doe",
-          admissionNumber: "2024001",
-          attendance: {
-            present: 45,
-            absent: 3,
-            total: 48,
-            percentage: 93.75
-          }
-        },
-        {
-          studentId: "2",
-          studentName: "Jane Smith",
-          admissionNumber: "2024002",
-          attendance: {
-            present: 47,
-            absent: 1,
-            total: 48,
-            percentage: 97.92
-          }
-        },
-        {
-          studentId: "3",
-          studentName: "Alex Johnson",
-          admissionNumber: "2024003",
-          attendance: {
-            present: 42,
-            absent: 6,
-            total: 48,
-            percentage: 87.50
-          }
-        }
-      ];
-      
+      console.log("Fetching students for attendance view");
+      const query = supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'student');
+        
       // Filter by studentId if provided
       if (studentId) {
-        return allAttendance.filter(record => record.studentId === studentId);
+        query.eq('id', studentId);
       }
       
-      return allAttendance;
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error fetching students:", error);
+        throw error;
+      }
+      
+      return data || [];
     }
   });
 
+  // Fetch attendance records (currently mock data, you can replace with real attendance data from Supabase later)
+  const { data: attendanceRecords, isLoading: isLoadingAttendance } = useQuery({
+    queryKey: ['attendance', students, dateRange],
+    queryFn: async () => {
+      // Generate attendance records for the fetched students
+      // In a real application, you would query the attendance table 
+      return students.map(student => {
+        // Generate random attendance data for demonstration
+        const totalDays = 48;
+        const presentDays = Math.floor(Math.random() * 20) + 25; // Between 25 and 45 days
+        const absentDays = totalDays - presentDays;
+        const percentage = (presentDays / totalDays) * 100;
+        
+        return {
+          studentId: student.id,
+          studentName: `${student.first_name} ${student.last_name}`,
+          admissionNumber: student.id.substring(0, 8),
+          attendance: {
+            present: presentDays,
+            absent: absentDays,
+            total: totalDays,
+            percentage: parseFloat(percentage.toFixed(2))
+          }
+        };
+      });
+    },
+    enabled: students.length > 0
+  });
+
+  const isLoading = isLoadingStudents || isLoadingAttendance;
+
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="text-center py-8">Loading student attendance data...</div>;
+  }
+
+  if (!attendanceRecords || attendanceRecords.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        {students.length > 0 
+          ? "No attendance records found for the selected students." 
+          : "No students found in the database."}
+      </div>
+    );
   }
 
   return (
@@ -144,13 +175,7 @@ export function StudentAttendanceView({
                 >
                   Reset
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={() => {
-                    // This would typically trigger the data reload, 
-                    // but our hook already handles that
-                  }}
-                >
+                <Button size="sm">
                   Apply Filter
                 </Button>
               </div>
@@ -171,9 +196,9 @@ export function StudentAttendanceView({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {attendance?.map((record) => (
+            {attendanceRecords.map((record) => (
               <TableRow key={record.studentId}>
-                <TableCell>{record.studentId}</TableCell>
+                <TableCell>{record.admissionNumber}</TableCell>
                 <TableCell>{record.studentName}</TableCell>
                 <TableCell>{record.attendance.present}</TableCell>
                 <TableCell>{record.attendance.absent}</TableCell>

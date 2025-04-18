@@ -11,22 +11,42 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Download } from "lucide-react";
-import { mockStudents, mockClasses, mockSections } from "@/mocks/data";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const StudentAttendancePage = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [gradeFilter, setGradeFilter] = useState("grade-1");
-  const [sectionFilter, setSectionFilter] = useState("section-a");
+  const [gradeFilter, setGradeFilter] = useState("all-grades");
+  const [sectionFilter, setSectionFilter] = useState("all-sections");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // Fetch student profiles
+  const { data: students = [], isLoading } = useQuery({
+    queryKey: ['students'],
+    queryFn: async () => {
+      console.log("Fetching students for attendance page");
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'student');
+        
+      if (error) {
+        console.error("Error fetching students:", error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  });
   
   const [studentAttendance, setStudentAttendance] = useState<Record<string, {
     status: 'present' | 'absent' | 'late' | 'leave' | 'not-marked'
   }>>(() => {
     const initialAttendance: Record<string, any> = {};
-    mockStudents.forEach(student => {
+    students.forEach(student => {
       initialAttendance[student.id] = {
         status: 'not-marked'
       };
@@ -34,13 +54,28 @@ const StudentAttendancePage = () => {
     return initialAttendance;
   });
 
-  const filteredStudents = mockStudents.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  // Update studentAttendance when students data changes
+  useState(() => {
+    const updatedAttendance: Record<string, any> = {};
+    students.forEach(student => {
+      updatedAttendance[student.id] = studentAttendance[student.id] || {
+        status: 'not-marked'
+      };
+    });
+    setStudentAttendance(updatedAttendance);
+  });
+
+  const filteredStudents = students.filter((student) => {
+    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+    const matchesSearch = searchTerm === "" || 
+                          fullName.includes(searchTerm.toLowerCase()) || 
                           student.id.toLowerCase().includes(searchTerm.toLowerCase());
                           
     const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "present" && studentAttendance[student.id].status === "present") ||
-                         (statusFilter === "absent" && studentAttendance[student.id].status === "absent");
+                         (statusFilter === "present" && studentAttendance[student.id]?.status === "present") ||
+                         (statusFilter === "absent" && studentAttendance[student.id]?.status === "absent") ||
+                         (statusFilter === "late" && studentAttendance[student.id]?.status === "late") ||
+                         (statusFilter === "leave" && studentAttendance[student.id]?.status === "leave");
     
     return matchesSearch && matchesStatus;
   });
@@ -74,6 +109,10 @@ const StudentAttendancePage = () => {
     }
   };
 
+  if (isLoading) {
+    return <div className="text-center py-8">Loading students...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -90,9 +129,9 @@ const StudentAttendancePage = () => {
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-4 w-4" />
-              <span>April 15th, 2025</span>
+              <span>April 18th, 2025</span>
             </div>
-            <Select defaultValue="grade-1" onValueChange={setGradeFilter}>
+            <Select defaultValue="all-grades" onValueChange={setGradeFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
@@ -102,7 +141,7 @@ const StudentAttendancePage = () => {
                 <SelectItem value="grade-2">Grade 2</SelectItem>
               </SelectContent>
             </Select>
-            <Select defaultValue="section-a" onValueChange={setSectionFilter}>
+            <Select defaultValue="all-sections" onValueChange={setSectionFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Section" />
               </SelectTrigger>
@@ -151,14 +190,14 @@ const StudentAttendancePage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((student) => (
+              {filteredStudents.length > 0 ? filteredStudents.map((student) => (
                 <tr key={student.id} className="border-b">
-                  <td className="p-4">{student.id}</td>
-                  <td className="p-4">{student.name}</td>
+                  <td className="p-4">{student.id.substring(0, 8)}</td>
+                  <td className="p-4">{`${student.first_name} ${student.last_name}`}</td>
                   <td className="p-4">Grade 1</td>
                   <td className="p-4">Section A</td>
                   <td className="p-4">
-                    {getStatusBadge(studentAttendance[student.id].status)}
+                    {getStatusBadge(studentAttendance[student.id]?.status || 'not-marked')}
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
@@ -197,7 +236,13 @@ const StudentAttendancePage = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center">
+                    No students found matching your search criteria
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
