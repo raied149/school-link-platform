@@ -29,14 +29,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
-import { generateTimeOptions, formatTimeDisplay } from "@/utils/timeUtils";
+import { generateTimeOptions, formatTimeDisplay, convertTo24Hour, convertTo12Hour } from "@/utils/timeUtils";
 
 const formSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   type: z.enum(["meeting", "function", "holiday"] as const),
   date: z.string(),
   startTime: z.string(),
+  startPeriod: z.enum(['AM', 'PM']),
   endTime: z.string(),
+  endPeriod: z.enum(['AM', 'PM']),
   description: z.string().optional(),
   teacherIds: z.array(z.string()).optional(),
 });
@@ -50,7 +52,7 @@ interface EventFormProps {
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
   const timeOptions = generateTimeOptions();
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,7 +60,9 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       type: "meeting",
       name: "",
       startTime: "09:00",
+      startPeriod: "AM",
       endTime: "10:00",
+      endPeriod: "AM",
       teacherIds: [],
     },
   });
@@ -68,8 +72,8 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       name: values.name,
       type: values.type,
       date: values.date,
-      startTime: values.startTime,
-      endTime: values.endTime,
+      startTime: convertTo24Hour(values.startTime, values.startPeriod),
+      endTime: convertTo24Hour(values.endTime, values.endPeriod),
       description: values.description,
       teacherIds: values.teacherIds,
     };
@@ -134,55 +138,85 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Time</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select start time" />
-                        </SelectTrigger>
+                        <Input
+                          type="text"
+                          placeholder="HH:MM"
+                          pattern="^(0[1-9]|1[0-2]):[0-5][0-9]$"
+                          {...field}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {formatTimeDisplay(time)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Time</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="startPeriod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-[80px]">
+                            <SelectValue placeholder="AM/PM" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Time</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select end time" />
-                        </SelectTrigger>
+                        <Input
+                          type="text"
+                          placeholder="HH:MM"
+                          pattern="^(0[1-9]|1[0-2]):[0-5][0-9]$"
+                          {...field}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {formatTimeDisplay(time)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="endPeriod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-[80px]">
+                            <SelectValue placeholder="AM/PM" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="AM">AM</SelectItem>
+                          <SelectItem value="PM">PM</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <FormField
