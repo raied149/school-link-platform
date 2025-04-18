@@ -87,12 +87,9 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
       id: profile.id,
       name: `${profile.first_name} ${profile.last_name}`,
       email: profile.email || '',
-      role: profile.role,
-      // Required fields from StudentDetail that need default values
       admissionNumber: profile.id.substring(0, 8),
       createdAt: profile.created_at,
       updatedAt: profile.created_at,
-      // Other StudentDetail fields with default values
       dateOfBirth: '2000-01-01',
       gender: 'other',
       language: 'English',
