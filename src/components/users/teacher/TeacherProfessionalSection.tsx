@@ -7,6 +7,13 @@ interface TeacherProfessionalSectionProps {
 }
 
 export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSectionProps) {
+  // Make sure all arrays exist or default to empty arrays
+  const subjects = teacher.professionalDetails?.subjects || [];
+  const classesAssigned = teacher.professionalDetails?.classesAssigned || [];
+  const qualifications = teacher.professionalDetails?.qualifications || [];
+  const specializations = teacher.professionalDetails?.specializations || [];
+  const previousExperience = teacher.professionalDetails?.previousExperience || [];
+
   return (
     <AccordionItem value="professional">
       <AccordionTrigger className="hover:no-underline">
@@ -23,64 +30,84 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium">Employee ID</p>
-              <p className="text-sm text-muted-foreground">{teacher.professionalDetails.employeeId}</p>
+              <p className="text-sm text-muted-foreground">{teacher.professionalDetails?.employeeId || 'Not specified'}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Designation</p>
-              <p className="text-sm text-muted-foreground">{teacher.professionalDetails.designation}</p>
+              <p className="text-sm text-muted-foreground">{teacher.professionalDetails?.designation || 'Not specified'}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Department</p>
-              <p className="text-sm text-muted-foreground">{teacher.professionalDetails.department}</p>
+              <p className="text-sm text-muted-foreground">{teacher.professionalDetails?.department || 'Not specified'}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Joining Date</p>
-              <p className="text-sm text-muted-foreground">{teacher.professionalDetails.joiningDate}</p>
+              <p className="text-sm text-muted-foreground">{teacher.professionalDetails?.joiningDate || 'Not specified'}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Employment Type</p>
-              <p className="text-sm text-muted-foreground">{teacher.professionalDetails.employmentType}</p>
+              <p className="text-sm text-muted-foreground">{teacher.professionalDetails?.employmentType || 'Not specified'}</p>
             </div>
           </div>
           <div>
             <p className="text-sm font-medium">Subjects Taught</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.professionalDetails.subjects.map((subject: string, index: number) => (
-                <li key={index}>{subject}</li>
-              ))}
-            </ul>
+            {subjects.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {subjects.map((subject: string, index: number) => (
+                  <li key={index}>{subject}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No subjects specified</p>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium">Classes Assigned</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.professionalDetails.classesAssigned.map((classAssigned: string, index: number) => (
-                <li key={index}>{classAssigned}</li>
-              ))}
-            </ul>
+            {classesAssigned.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {classesAssigned.map((classAssigned: string, index: number) => (
+                  <li key={index}>{classAssigned}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No classes assigned</p>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium">Qualifications</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.professionalDetails.qualifications.map((qualification: string, index: number) => (
-                <li key={index}>{qualification}</li>
-              ))}
-            </ul>
+            {qualifications.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {qualifications.map((qualification: string, index: number) => (
+                  <li key={index}>{qualification}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No qualifications specified</p>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium">Specializations</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.professionalDetails.specializations.map((specialization: string, index: number) => (
-                <li key={index}>{specialization}</li>
-              ))}
-            </ul>
+            {specializations.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {specializations.map((specialization: string, index: number) => (
+                  <li key={index}>{specialization}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No specializations specified</p>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium">Previous Experience</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.professionalDetails.previousExperience.map((exp: any, index: number) => (
-                <li key={index}>{exp.position} at {exp.schoolName} ({exp.duration})</li>
-              ))}
-            </ul>
+            {previousExperience.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {previousExperience.map((exp: any, index: number) => (
+                  <li key={index}>{exp.position} at {exp.schoolName} ({exp.duration})</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No previous experience</p>
+            )}
           </div>
         </div>
       </AccordionContent>
