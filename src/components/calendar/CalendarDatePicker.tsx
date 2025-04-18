@@ -120,7 +120,7 @@ export function CalendarDatePicker({ selected, onSelect }: CalendarDatePickerPro
         onMonthChange={setCurrentMonth}
         className="rounded-md border shadow-sm pointer-events-auto"
         classNames={{
-          day_today: "bg-accent/50 text-accent-foreground",
+          day_today: "bg-primary/20 text-primary-foreground font-bold",
           day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         }}
       />
