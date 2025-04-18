@@ -83,6 +83,11 @@ export function TeacherAttendanceSection({ teacher }: TeacherAttendanceSectionPr
                   onSelect={setDateRange}
                   numberOfMonths={2}
                   className="p-3"
+                  classNames={{
+                    day_today: "bg-accent/50 text-accent-foreground",
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                    day_range_middle: "bg-accent/50",
+                  }}
                 />
                 <div className="flex items-center justify-between p-3 border-t bg-muted/20">
                   <Button 
