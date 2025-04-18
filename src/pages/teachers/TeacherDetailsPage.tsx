@@ -1,13 +1,12 @@
 
 import { Card } from "@/components/ui/card";
 import { UserTabs } from "@/components/users/UserTabs";
+import { TeacherPageHeader } from "@/components/teachers/TeacherPageHeader";
 
 const TeacherDetailsPage = () => {
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Teacher Management</h1>
-      </div>
+      <TeacherPageHeader />
 
       <Card className="p-6">
         <div className="mb-4">
