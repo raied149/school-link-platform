@@ -5,6 +5,7 @@ export interface TimeSlot {
   id: string;
   startTime: string; // format: "HH:MM"
   endTime: string; // format: "HH:MM"
+  duration?: number; // in minutes
   subjectId: string;
   teacherId: string;
   dayOfWeek: WeekDay;

@@ -11,10 +11,11 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { WeekDay } from '@/types/timetable';
 
 interface TimeFieldSectionProps {
   control: Control<any>;
-  weekDays: string[];
+  weekDays: WeekDay[];
   timeOptions: string[];
   calculatedEndTime: string;
   onStartTimeChange: (value: string) => void;
@@ -65,7 +66,10 @@ export function TimeFieldSection({
             <FormItem>
               <FormLabel>Start Time</FormLabel>
               <Select
-                onValueChange={onStartTimeChange}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  onStartTimeChange(value);
+                }}
                 defaultValue={field.value}
               >
                 <FormControl>
@@ -98,7 +102,11 @@ export function TimeFieldSection({
                   min={15}
                   step={15}
                   {...field}
-                  onChange={onDurationChange}
+                  onChange={(e) => {
+                    field.onChange(Number(e.target.value));
+                    onDurationChange(e);
+                  }}
+                  value={field.value}
                 />
               </FormControl>
               <FormMessage />

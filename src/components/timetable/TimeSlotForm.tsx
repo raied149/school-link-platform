@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -53,7 +54,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
   const weekDays = timetableService.getWeekDays();
   const timeOptions = timetableService.getTimeRange();
   
-  const defaultValues = {
+  const defaultValues: FormValues = {
     dayOfWeek: initialData?.dayOfWeek || 'Monday',
     startTime: initialData?.startTime || '08:00',
     duration: initialData?.duration || 60,
@@ -64,7 +65,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     academicYearId: initialData?.academicYearId || '',
   };
   
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues
   });
@@ -92,7 +93,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     setCalculatedEndTime(endTime);
   };
   
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: FormValues) => {
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
       startTime: values.startTime,
       endTime: calculatedEndTime,
