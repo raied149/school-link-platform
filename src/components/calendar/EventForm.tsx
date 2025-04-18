@@ -30,6 +30,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
 import { validateHour, validateMinute, formatTimeFromParts, convertTo24Hour } from "@/utils/timeUtils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Users } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Event name is required"),
@@ -69,6 +72,9 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       teacherIds: [],
     },
   });
+
+  const currentType = form.watch('type');
+  const showTeacherSelection = currentType === 'meeting' || currentType === 'function';
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     const startTime = formatTimeFromParts(values.startHour, values.startMinute);
@@ -268,6 +274,48 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
                 </div>
               </div>
             </div>
+
+            {showTeacherSelection && (
+              <FormField
+                control={form.control}
+                name="teacherIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Assign Teachers
+                    </FormLabel>
+                    <FormControl>
+                      <ScrollArea className="h-[200px] border rounded-md p-4">
+                        <div className="space-y-2">
+                          {teachers.map((teacher) => (
+                            <div key={teacher.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={teacher.id}
+                                checked={field.value?.includes(teacher.id)}
+                                onCheckedChange={(checked) => {
+                                  const updatedValue = checked
+                                    ? [...(field.value || []), teacher.id]
+                                    : field.value?.filter((id) => id !== teacher.id) || [];
+                                  field.onChange(updatedValue);
+                                }}
+                              />
+                              <label
+                                htmlFor={teacher.id}
+                                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {teacher.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
