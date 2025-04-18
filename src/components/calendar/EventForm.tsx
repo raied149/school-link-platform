@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,27 +27,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
-import { validateHour, validateMinute, formatTimeFromParts, convertTo24Hour } from "@/utils/timeUtils";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users } from "lucide-react";
-
-const formSchema = z.object({
-  name: z.string().min(1, "Event name is required"),
-  type: z.enum(["meeting", "function", "holiday"] as const),
-  date: z.string(),
-  startHour: z.string().refine(validateHour, { message: "Invalid hour (1-12)" }),
-  startMinute: z.string().refine(validateMinute, { message: "Invalid minute (0-59)" }),
-  startPeriod: z.enum(['AM', 'PM']),
-  endHour: z.string().refine(validateHour, { message: "Invalid hour (1-12)" }),
-  endMinute: z.string().refine(validateMinute, { message: "Invalid minute (0-59)" }),
-  endPeriod: z.enum(['AM', 'PM']),
-  description: z.string().optional(),
-  teacherIds: z.array(z.string()).optional(),
-});
+import { formatTimeFromParts, convertTo24Hour } from "@/utils/timeUtils";
+import { formSchema } from "./schema";
+import { TimeInputFields } from "./TimeInputFields";
+import { TeacherSelection } from "./TeacherSelection";
+import { z } from "zod";
 
 interface EventFormProps {
   date: Date;
@@ -150,172 +137,15 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <FormLabel>Start Time</FormLabel>
-                <div className="flex items-center gap-2">
-                  <FormField
-                    control={form.control}
-                    name="startHour"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="HH"
-                            maxLength={2}
-                            className="text-center"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <span className="text-lg">:</span>
-                  <FormField
-                    control={form.control}
-                    name="startMinute"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="MM"
-                            maxLength={2}
-                            className="text-center"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="startPeriod"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-[80px]">
-                              <SelectValue placeholder="AM/PM" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <FormLabel>End Time</FormLabel>
-                <div className="flex items-center gap-2">
-                  <FormField
-                    control={form.control}
-                    name="endHour"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="HH"
-                            maxLength={2}
-                            className="text-center"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <span className="text-lg">:</span>
-                  <FormField
-                    control={form.control}
-                    name="endMinute"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="MM"
-                            maxLength={2}
-                            className="text-center"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endPeriod"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-[80px]">
-                              <SelectValue placeholder="AM/PM" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="AM">AM</SelectItem>
-                            <SelectItem value="PM">PM</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              <TimeInputFields form={form} prefix="start" label="Start Time" />
+              <TimeInputFields form={form} prefix="end" label="End Time" />
             </div>
 
-            {showTeacherSelection && (
-              <FormField
-                control={form.control}
-                name="teacherIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Assign Teachers
-                    </FormLabel>
-                    <FormControl>
-                      <ScrollArea className="h-[200px] border rounded-md p-4">
-                        <div className="space-y-2">
-                          {teachers.map((teacher) => (
-                            <div key={teacher.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={teacher.id}
-                                checked={field.value?.includes(teacher.id)}
-                                onCheckedChange={(checked) => {
-                                  const updatedValue = checked
-                                    ? [...(field.value || []), teacher.id]
-                                    : field.value?.filter((id) => id !== teacher.id) || [];
-                                  field.onChange(updatedValue);
-                                }}
-                              />
-                              <label
-                                htmlFor={teacher.id}
-                                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                {teacher.name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <TeacherSelection 
+              form={form} 
+              teachers={teachers} 
+              show={showTeacherSelection} 
+            />
 
             <FormField
               control={form.control}
