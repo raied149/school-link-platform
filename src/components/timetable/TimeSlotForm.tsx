@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format, parse, addMinutes } from 'date-fns';
+import { TimeFieldSection } from './TimeFieldSection';
+import { SubjectTeacherSection } from './SubjectTeacherSection';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -96,7 +98,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
     try {
       const startDate = parse(startTime, 'HH:mm', new Date());
-      const endDate = addMinutes(startDate, durationInMinutes);
+      const endDate = addMinutes(startDate, durationMinutes);
       return format(endDate, 'HH:mm');
     } catch (error) {
       return '';
