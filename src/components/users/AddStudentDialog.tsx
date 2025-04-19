@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -108,6 +109,7 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
 
       if (profileError) throw profileError;
 
+      // Fix: Changed the RPC function name from 'insert_teacher_details' to 'insert_student_details'
       const { error: detailsError } = await supabase.rpc('insert_student_details', {
         profile_id: profileData.id,
         nationality: values.nationality,

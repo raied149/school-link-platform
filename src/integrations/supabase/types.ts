@@ -561,6 +561,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      insert_student_details: {
+        Args: {
+          profile_id: string
+          nationality: string
+          language_pref: string
+          date_of_birth: string
+          gender_type: string
+          guardian_info: Json
+          medical_info: Json
+        }
+        Returns: undefined
+      }
       insert_teacher_details: {
         Args: {
           profile_id: string
