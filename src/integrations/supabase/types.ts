@@ -335,6 +335,47 @@ export type Database = {
           },
         ]
       }
+      student_details: {
+        Row: {
+          created_at: string
+          dateofbirth: string
+          gender: string
+          guardian: Json
+          id: string
+          language: string
+          medical: Json
+          nationality: string
+        }
+        Insert: {
+          created_at?: string
+          dateofbirth: string
+          gender: string
+          guardian: Json
+          id: string
+          language: string
+          medical: Json
+          nationality: string
+        }
+        Update: {
+          created_at?: string
+          dateofbirth?: string
+          gender?: string
+          guardian?: Json
+          id?: string
+          language?: string
+          medical?: Json
+          nationality?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_sections: {
         Row: {
           section_id: string

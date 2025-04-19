@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -86,8 +87,8 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       dateOfBirth: profile.teacher_details.date_of_birth,
       nationality: profile.teacher_details.nationality,
       role: 'teacher',
-      contactInformation: profile.teacher_details.contact_info,
-      professionalDetails: profile.teacher_details.professional_info,
+      contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
+      professionalDetails: profile.teacher_details.professional_info as Teacher['professionalDetails'],
       attendance: {
         present: 20,
         absent: 2,
@@ -104,8 +105,8 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         feedback: '',
         awards: [],
       },
-      emergency: profile.teacher_details.emergency_contact,
-      medicalInformation: profile.teacher_details.medical_info,
+      emergency: profile.teacher_details.emergency_contact as Teacher['emergency'],
+      medicalInformation: profile.teacher_details.medical_info as Teacher['medicalInformation'],
       createdAt: profile.created_at || '',
       updatedAt: profile.created_at || '',
     }));
