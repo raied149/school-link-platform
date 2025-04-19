@@ -117,9 +117,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
             department: '',
             joiningDate: '',
             qualifications: [],
-            employmentType: 'Full-time',
+            employmentType: 'Full-time' as const,
             subjects: [],
-            classesAssigned: [], // Add the required property
+            classesAssigned: [], 
           },
           attendance: {
             present: 0,
@@ -138,7 +138,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
             awards: [],
           },
           emergency: {
-            name: '',
+            contactName: '', // Added the missing property
             relationship: '',
             phone: '',
           },
@@ -165,11 +165,35 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         dateOfBirth: profile.teacher_details.date_of_birth,
         nationality: profile.teacher_details.nationality,
         role: 'teacher' as const,
-        contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
+        contactInformation: profile.teacher_details.contact_info || {
+          currentAddress: '',
+          permanentAddress: '',
+          personalPhone: '',
+          schoolPhone: '',
+          personalEmail: profile.email || '',
+          schoolEmail: '',
+        },
         professionalDetails: {
-          ...(professionalInfo as Partial<Teacher['professionalDetails']>),
-          classesAssigned: professionalInfo.classesAssigned || [], // Ensure this property is present
-          subjects: professionalInfo.subjects || [],
+          employeeId: typeof professionalInfo === 'object' && professionalInfo !== null ? 
+            (professionalInfo.employeeId || 'Not set') : 'Not set',
+          designation: typeof professionalInfo === 'object' && professionalInfo !== null ? 
+            (professionalInfo.designation || 'Not set') : 'Not set',
+          department: typeof professionalInfo === 'object' && professionalInfo !== null ? 
+            (professionalInfo.department || '') : '',
+          joiningDate: typeof professionalInfo === 'object' && professionalInfo !== null ? 
+            (professionalInfo.joiningDate || '') : '',
+          subjects: typeof professionalInfo === 'object' && professionalInfo !== null && 
+            Array.isArray(professionalInfo.subjects) ? professionalInfo.subjects : [],
+          classesAssigned: typeof professionalInfo === 'object' && professionalInfo !== null && 
+            Array.isArray(professionalInfo.classesAssigned) ? professionalInfo.classesAssigned : [],
+          qualifications: typeof professionalInfo === 'object' && professionalInfo !== null && 
+            Array.isArray(professionalInfo.qualifications) ? professionalInfo.qualifications : [],
+          employmentType: typeof professionalInfo === 'object' && professionalInfo !== null ? 
+            (professionalInfo.employmentType as 'Full-time' | 'Part-time' | 'Contractual' || 'Full-time') : 'Full-time',
+          specializations: typeof professionalInfo === 'object' && professionalInfo !== null && 
+            Array.isArray(professionalInfo.specializations) ? professionalInfo.specializations : [],
+          previousExperience: typeof professionalInfo === 'object' && professionalInfo !== null && 
+            Array.isArray(professionalInfo.previousExperience) ? professionalInfo.previousExperience : [],
         },
         attendance: {
           present: 20,
@@ -187,8 +211,19 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           feedback: '',
           awards: [],
         },
-        emergency: profile.teacher_details.emergency_contact as Teacher['emergency'],
-        medicalInformation: profile.teacher_details.medical_info as Teacher['medicalInformation'],
+        emergency: {
+          // Fixed the property name to match the Teacher interface
+          contactName: typeof profile.teacher_details.emergency_contact === 'object' ? 
+            profile.teacher_details.emergency_contact.name || '' : '',
+          relationship: typeof profile.teacher_details.emergency_contact === 'object' ? 
+            profile.teacher_details.emergency_contact.relationship || '' : '',
+          phone: typeof profile.teacher_details.emergency_contact === 'object' ? 
+            profile.teacher_details.emergency_contact.phone || '' : '',
+        },
+        medicalInformation: profile.teacher_details.medical_info || {
+          conditions: [],
+          allergies: [],
+        },
         createdAt: profile.created_at || '',
         updatedAt: profile.created_at || '',
       } as Teacher;
