@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -110,20 +109,16 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
 
       if (profileError) throw profileError;
 
-      // Then, add the student details
-      const studentDetails = {
-        id: profileData.id,
+      // Then, insert into raw SQL table using RPC
+      const { error: detailsError } = await supabase.rpc('insert_student_details', {
+        profile_id: profileData.id,
         nationality: values.nationality,
-        language: values.language,
-        dateOfBirth: values.dateOfBirth,
-        gender: values.gender,
-        guardian: values.guardian,
-        medical: values.medical,
-      };
-
-      const { error: detailsError } = await supabase
-        .from("student_details")
-        .insert(studentDetails);
+        language_pref: values.language,
+        date_of_birth: values.dateOfBirth,
+        gender_type: values.gender,
+        guardian_info: values.guardian,
+        medical_info: values.medical
+      });
 
       if (detailsError) throw detailsError;
 
@@ -140,6 +135,7 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
         description: "Failed to add student. Please try again.",
         variant: "destructive",
       });
+      console.error("Error adding student:", error);
     }
   };
 
@@ -437,4 +433,3 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
     </Dialog>
   );
 }
-
