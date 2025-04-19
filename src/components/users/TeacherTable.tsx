@@ -24,13 +24,13 @@ interface TeacherTableProps {
 
 export function TeacherTable({ searchFilters }: TeacherTableProps) {
   // Fetch all profiles with role 'teacher'
-  const { data: teacherProfiles = [], isLoading, error } = useQuery({
+  const { data: teacherProfiles = [], isLoading, error, refetch } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
       console.log("Fetching teachers from profiles table");
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('*, teacher_details!inner(*)')
+        .select('*, teacher_details(*)')
         .eq('role', 'teacher');
         
       if (profileError) {
@@ -76,40 +76,47 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       }
     }
 
-    return filtered.map(profile => ({
-      id: profile.id,
-      name: `${profile.first_name} ${profile.last_name}`,
-      email: profile.email || '',
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      middleName: '',
-      gender: profile.teacher_details.gender as "male" | "female" | "other",
-      dateOfBirth: profile.teacher_details.date_of_birth,
-      nationality: profile.teacher_details.nationality,
-      role: 'teacher' as const, // Fix: Using const assertion to make it a UserRole type
-      contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
-      professionalDetails: profile.teacher_details.professional_info as Teacher['professionalDetails'],
-      attendance: {
-        present: 20,
-        absent: 2,
-        leave: 1,
-      },
-      leaveBalance: {
-        sick: 10,
-        casual: 5,
-        vacation: 15,
-      },
-      performance: {
-        lastReviewDate: '',
-        rating: 0,
-        feedback: '',
-        awards: [],
-      },
-      emergency: profile.teacher_details.emergency_contact as Teacher['emergency'],
-      medicalInformation: profile.teacher_details.medical_info as Teacher['medicalInformation'],
-      createdAt: profile.created_at || '',
-      updatedAt: profile.created_at || '',
-    }));
+    return filtered.map(profile => {
+      if (!profile.teacher_details) {
+        console.warn(`Teacher profile ${profile.id} has no teacher_details`);
+        return null;
+      }
+
+      return {
+        id: profile.id,
+        name: `${profile.first_name} ${profile.last_name}`,
+        email: profile.email || '',
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        middleName: '',
+        gender: profile.teacher_details.gender as "male" | "female" | "other",
+        dateOfBirth: profile.teacher_details.date_of_birth,
+        nationality: profile.teacher_details.nationality,
+        role: 'teacher' as const,
+        contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
+        professionalDetails: profile.teacher_details.professional_info as Teacher['professionalDetails'],
+        attendance: {
+          present: 20,
+          absent: 2,
+          leave: 1,
+        },
+        leaveBalance: {
+          sick: 10,
+          casual: 5,
+          vacation: 15,
+        },
+        performance: {
+          lastReviewDate: '',
+          rating: 0,
+          feedback: '',
+          awards: [],
+        },
+        emergency: profile.teacher_details.emergency_contact as Teacher['emergency'],
+        medicalInformation: profile.teacher_details.medical_info as Teacher['medicalInformation'],
+        createdAt: profile.created_at || '',
+        updatedAt: profile.created_at || '',
+      };
+    }).filter(Boolean) as Teacher[];
   }, [teacherProfiles, searchFilters]);
 
   if (isLoading) {

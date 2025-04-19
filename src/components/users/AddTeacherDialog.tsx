@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -109,7 +108,9 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("Submitting teacher form with values:", values);
     try {
+      // First, insert into profiles table
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .insert({
@@ -118,13 +119,24 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
           email: values.email,
           role: "teacher",
         })
-        .select()
-        .single();
+        .select();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        throw profileError;
+      }
 
+      if (!profileData || profileData.length === 0) {
+        console.error("No profile data returned after insert");
+        throw new Error("Failed to create teacher profile");
+      }
+
+      const profileId = profileData[0].id;
+      console.log("Created profile with ID:", profileId);
+
+      // Then, insert teacher details
       const { error: detailsError } = await supabase.rpc('insert_teacher_details', {
-        profile_id: profileData.id,
+        profile_id: profileId,
         gender_type: values.gender,
         birth_date: values.dateOfBirth,
         nationality_val: values.nationality,
@@ -134,7 +146,10 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
         medical_data: values.medicalInfo
       });
 
-      if (detailsError) throw detailsError;
+      if (detailsError) {
+        console.error("Error inserting teacher details:", detailsError);
+        throw detailsError;
+      }
 
       toast({
         title: "Success",
@@ -144,12 +159,12 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
       form.reset();
       onOpenChange(false);
     } catch (error) {
+      console.error("Error in teacher form submission:", error);
       toast({
         title: "Error",
         description: "Failed to add teacher. Please try again.",
         variant: "destructive",
       });
-      console.error("Error adding teacher:", error);
     }
   };
 
