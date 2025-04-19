@@ -86,7 +86,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       gender: profile.teacher_details.gender as "male" | "female" | "other",
       dateOfBirth: profile.teacher_details.date_of_birth,
       nationality: profile.teacher_details.nationality,
-      role: 'teacher',
+      role: 'teacher' as const, // Fix: Using const assertion to make it a UserRole type
       contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
       professionalDetails: profile.teacher_details.professional_info as Teacher['professionalDetails'],
       attendance: {
