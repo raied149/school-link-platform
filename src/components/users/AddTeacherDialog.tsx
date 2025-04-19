@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,35 +34,42 @@ const formSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  nationality: z.string().min(1, "Nationality is required"),
-  language: z.string().min(1, "Primary language is required"),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female", "other"]),
-  guardian: z.object({
-    name: z.string().min(1, "Guardian name is required"),
-    email: z.string().email("Invalid guardian email"),
-    phone: z.string().min(1, "Guardian phone is required"),
-    relationship: z.string().min(1, "Relationship is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  nationality: z.string().min(1, "Nationality is required"),
+  contactInformation: z.object({
+    currentAddress: z.string().min(1, "Current address is required"),
+    permanentAddress: z.string().optional(),
+    personalPhone: z.string().min(1, "Personal phone is required"),
+    schoolPhone: z.string().optional(),
+    personalEmail: z.string().email("Invalid personal email"),
+    schoolEmail: z.string().email("Invalid school email"),
   }),
-  medical: z.object({
-    bloodGroup: z.string().optional(),
+  professionalInfo: z.object({
+    employeeId: z.string().min(1, "Employee ID is required"),
+    designation: z.string().min(1, "Designation is required"),
+    department: z.string().min(1, "Department is required"),
+    joiningDate: z.string().min(1, "Joining date is required"),
+    qualifications: z.string().min(1, "Qualifications are required"),
+    employmentType: z.enum(["Full-time", "Part-time", "Contractual"]),
+  }),
+  emergency: z.object({
+    name: z.string().min(1, "Emergency contact name is required"),
+    relationship: z.string().min(1, "Relationship is required"),
+    phone: z.string().min(1, "Emergency contact phone is required"),
+  }),
+  medicalInfo: z.object({
+    conditions: z.string().optional(),
     allergies: z.string().optional(),
-    medicalHistory: z.string().optional(),
-    medications: z.string().optional(),
-    emergencyContact: z.object({
-      name: z.string().min(1, "Emergency contact name is required"),
-      phone: z.string().min(1, "Emergency contact phone is required"),
-      relationship: z.string().min(1, "Emergency contact relationship is required"),
-    }),
   }),
 });
 
-interface AddStudentDialogProps {
+interface AddTeacherDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) {
+export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,26 +77,33 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
       first_name: "",
       last_name: "",
       email: "",
-      nationality: "",
-      language: "",
-      dateOfBirth: "",
       gender: "male",
-      guardian: {
-        name: "",
-        email: "",
-        phone: "",
-        relationship: "",
+      dateOfBirth: "",
+      nationality: "",
+      contactInformation: {
+        currentAddress: "",
+        permanentAddress: "",
+        personalPhone: "",
+        schoolPhone: "",
+        personalEmail: "",
+        schoolEmail: "",
       },
-      medical: {
-        bloodGroup: "",
+      professionalInfo: {
+        employeeId: "",
+        designation: "",
+        department: "",
+        joiningDate: "",
+        qualifications: "",
+        employmentType: "Full-time",
+      },
+      emergency: {
+        name: "",
+        relationship: "",
+        phone: "",
+      },
+      medicalInfo: {
+        conditions: "",
         allergies: "",
-        medicalHistory: "",
-        medications: "",
-        emergencyContact: {
-          name: "",
-          phone: "",
-          relationship: "",
-        },
       },
     },
   });
@@ -101,28 +116,29 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
           first_name: values.first_name,
           last_name: values.last_name,
           email: values.email,
-          role: "student",
+          role: "teacher",
         })
         .select()
         .single();
 
       if (profileError) throw profileError;
 
-      const { error: detailsError } = await supabase.rpc('insert_student_details', {
+      const { error: detailsError } = await supabase.rpc('insert_teacher_details', {
         profile_id: profileData.id,
-        nationality: values.nationality,
-        language_pref: values.language,
-        date_of_birth: values.dateOfBirth,
         gender_type: values.gender,
-        guardian_info: values.guardian,
-        medical_info: values.medical
+        birth_date: values.dateOfBirth,
+        nationality_val: values.nationality,
+        contact_data: values.contactInformation,
+        professional_data: values.professionalInfo,
+        emergency_data: values.emergency,
+        medical_data: values.medicalInfo
       });
 
       if (detailsError) throw detailsError;
 
       toast({
         title: "Success",
-        description: "Student has been added successfully",
+        description: "Teacher has been added successfully",
       });
       
       form.reset();
@@ -130,10 +146,10 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add student. Please try again.",
+        description: "Failed to add teacher. Please try again.",
         variant: "destructive",
       });
-      console.error("Error adding student:", error);
+      console.error("Error adding teacher:", error);
     }
   };
 
@@ -141,9 +157,9 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
+          <DialogTitle>Add New Teacher</DialogTitle>
           <DialogDescription>
-            Enter the student's details below.
+            Enter the teacher's details below.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -195,22 +211,6 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
                 <FormField
                   control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
                   name="nationality"
                   render={({ field }) => (
                     <FormItem>
@@ -222,52 +222,68 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="language"
+                  name="dateOfBirth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Primary Language</FormLabel>
+                      <FormLabel>Date of Birth</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input type="date" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
+              <h3 className="text-lg font-medium pt-4">Contact Information</h3>
               <FormField
                 control={form.control}
-                name="gender"
+                name="contactInformation.currentAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Current Address</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <h3 className="text-lg font-medium pt-4">Guardian Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="guardian.name"
+                  name="contactInformation.personalPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Guardian Name</FormLabel>
+                      <FormLabel>Personal Phone</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -277,10 +293,10 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
                 <FormField
                   control={form.control}
-                  name="guardian.relationship"
+                  name="contactInformation.schoolPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Relationship</FormLabel>
+                      <FormLabel>School Phone</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -293,10 +309,10 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="guardian.email"
+                  name="contactInformation.personalEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Guardian Email</FormLabel>
+                      <FormLabel>Personal Email</FormLabel>
                       <FormControl>
                         <Input type="email" {...field} />
                       </FormControl>
@@ -306,10 +322,40 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
                 <FormField
                   control={form.control}
-                  name="guardian.phone"
+                  name="contactInformation.schoolEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Guardian Phone</FormLabel>
+                      <FormLabel>School Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <h3 className="text-lg font-medium pt-4">Professional Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="professionalInfo.employeeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employee ID</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="professionalInfo.designation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Designation</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -319,14 +365,13 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
               </div>
 
-              <h3 className="text-lg font-medium pt-4">Medical Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="medical.bloodGroup"
+                  name="professionalInfo.department"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Blood Group</FormLabel>
+                      <FormLabel>Department</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -336,12 +381,12 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
                 <FormField
                   control={form.control}
-                  name="medical.allergies"
+                  name="professionalInfo.joiningDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Allergies</FormLabel>
+                      <FormLabel>Joining Date</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input type="date" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -351,40 +396,35 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
 
               <FormField
                 control={form.control}
-                name="medical.medicalHistory"
+                name="professionalInfo.employmentType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Medical History</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
+                    <FormLabel>Employment Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select employment type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Full-time">Full-time</SelectItem>
+                        <SelectItem value="Part-time">Part-time</SelectItem>
+                        <SelectItem value="Contractual">Contractual</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="medical.medications"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Medications</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <h4 className="text-md font-medium pt-2">Emergency Contact</h4>
+              <h3 className="text-lg font-medium pt-4">Emergency Contact</h3>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="medical.emergencyContact.name"
+                  name="emergency.name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Contact Name</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -394,7 +434,7 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
                 />
                 <FormField
                   control={form.control}
-                  name="medical.emergencyContact.relationship"
+                  name="emergency.relationship"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Relationship</FormLabel>
@@ -409,10 +449,10 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
 
               <FormField
                 control={form.control}
-                name="medical.emergencyContact.phone"
+                name="emergency.phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Emergency Contact Phone</FormLabel>
+                    <FormLabel>Emergency Phone</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -423,7 +463,7 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
             </div>
 
             <DialogFooter>
-              <Button type="submit">Add Student</Button>
+              <Button type="submit">Add Teacher</Button>
             </DialogFooter>
           </form>
         </Form>

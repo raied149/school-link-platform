@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -14,7 +13,15 @@ import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
-export function TeacherTable() {
+interface TeacherTableProps {
+  searchFilters?: {
+    idSearch: string;
+    nameSearch: string;
+    globalSearch: string;
+  };
+}
+
+export function TeacherTable({ searchFilters }: TeacherTableProps) {
   // Fetch all profiles with role 'teacher'
   const { data: teacherProfiles = [], isLoading, error } = useQuery({
     queryKey: ['teachers'],
@@ -36,67 +43,96 @@ export function TeacherTable() {
   });
 
   // Map profile data to Teacher type
-  const teachers = useMemo(() => {
-    return teacherProfiles.map(profile => {
-      return {
-        id: profile.id,
-        name: `${profile.first_name} ${profile.last_name}`,
-        email: profile.email || '',
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        middleName: '',
-        gender: 'male', // Fixed: Using valid enum value instead of "not specified"
-        dateOfBirth: '1980-01-01',
-        nationality: 'Not specified',
-        role: 'teacher',
-        contactInformation: {
-          currentAddress: 'Not specified',
-          permanentAddress: 'Not specified',
-          personalPhone: 'Not specified',
-          schoolPhone: 'Not specified',
-          personalEmail: profile.email || 'Not specified',
-          schoolEmail: profile.email || 'Not specified',
-        },
-        professionalDetails: {
-          employeeId: profile.id.substring(0, 8),
-          designation: 'Teacher',
-          department: 'General',
-          subjects: ['Subject 1', 'Subject 2'],
-          classesAssigned: ['Class A', 'Class B'],
-          joiningDate: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : '',
-          qualifications: ['Not specified'],
-          employmentType: 'Full-time',
-        },
-        attendance: {
-          present: 20,
-          absent: 2,
-          leave: 1,
-        },
-        leaveBalance: {
-          sick: 10,
-          casual: 5,
-          vacation: 15,
-        },
-        performance: {
-          lastReviewDate: '',
-          rating: 0,
-          feedback: '',
-          awards: [],
-        },
-        emergency: {
-          contactName: 'Emergency Contact',
-          relationship: 'Not specified',
-          phone: 'Not specified',
-        },
-        medicalInformation: {
-          conditions: [],
-          allergies: [],
-        },
-        createdAt: profile.created_at || '',
-        updatedAt: profile.created_at || '',
-      } as Teacher;
-    });
-  }, [teacherProfiles]);
+  const filteredTeachers = useMemo(() => {
+    let filtered = teacherProfiles;
+
+    if (searchFilters) {
+      const { idSearch, nameSearch, globalSearch } = searchFilters;
+
+      if (globalSearch) {
+        const searchTerm = globalSearch.toLowerCase();
+        filtered = filtered.filter(teacher => {
+          const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+          const searchableFields = [
+            fullName,
+            teacher.id.toLowerCase(),
+            teacher.email?.toLowerCase() || '',
+          ];
+          return searchableFields.some(field => field.includes(searchTerm));
+        });
+      } else {
+        if (idSearch) {
+          filtered = filtered.filter(teacher =>
+            teacher.id.toLowerCase().includes(idSearch.toLowerCase())
+          );
+        }
+        if (nameSearch) {
+          filtered = filtered.filter(teacher => {
+            const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+            return fullName.includes(nameSearch.toLowerCase());
+          });
+        }
+      }
+    }
+
+    return filtered.map(profile => ({
+      id: profile.id,
+      name: `${profile.first_name} ${profile.last_name}`,
+      email: profile.email || '',
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      middleName: '',
+      gender: 'male', // Fixed: Using valid enum value instead of "not specified"
+      dateOfBirth: '1980-01-01',
+      nationality: 'Not specified',
+      role: 'teacher',
+      contactInformation: {
+        currentAddress: 'Not specified',
+        permanentAddress: 'Not specified',
+        personalPhone: 'Not specified',
+        schoolPhone: 'Not specified',
+        personalEmail: profile.email || 'Not specified',
+        schoolEmail: profile.email || 'Not specified',
+      },
+      professionalDetails: {
+        employeeId: profile.id.substring(0, 8),
+        designation: 'Teacher',
+        department: 'General',
+        subjects: ['Subject 1', 'Subject 2'],
+        classesAssigned: ['Class A', 'Class B'],
+        joiningDate: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : '',
+        qualifications: ['Not specified'],
+        employmentType: 'Full-time',
+      },
+      attendance: {
+        present: 20,
+        absent: 2,
+        leave: 1,
+      },
+      leaveBalance: {
+        sick: 10,
+        casual: 5,
+        vacation: 15,
+      },
+      performance: {
+        lastReviewDate: '',
+        rating: 0,
+        feedback: '',
+        awards: [],
+      },
+      emergency: {
+        contactName: 'Emergency Contact',
+        relationship: 'Not specified',
+        phone: 'Not specified',
+      },
+      medicalInformation: {
+        conditions: [],
+        allergies: [],
+      },
+      createdAt: profile.created_at || '',
+      updatedAt: profile.created_at || '',
+    }));
+  }, [teacherProfiles, searchFilters]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading teachers...</div>;
@@ -106,7 +142,7 @@ export function TeacherTable() {
     return <div className="text-center py-8 text-destructive">Error loading teachers: {(error as Error).message}</div>;
   }
 
-  if (teachers.length === 0) {
+  if (filteredTeachers.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         No teachers found in the database. Please add teachers first.
@@ -126,7 +162,7 @@ export function TeacherTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {teachers.map((teacher) => (
+          {filteredTeachers.map((teacher) => (
             <TableRow key={teacher.id}>
               <TableCell>{teacher.professionalDetails.employeeId}</TableCell>
               <TableCell>{teacher.name}</TableCell>

@@ -1,9 +1,9 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { StudentTable } from "./StudentTable";
 import { TeacherTable } from "./TeacherTable";
 import { StudentSearch } from "./StudentSearch";
+import { TeacherSearch } from "./TeacherSearch";
 
 interface UserTabsProps {
   defaultTab: "students" | "teachers";
@@ -54,7 +54,8 @@ export function UserTabs({
       
       {!showStudentsOnly && (
         <TabsContent value="teachers">
-          <TeacherTable />
+          <TeacherSearch onSearch={handleSearch} />
+          <TeacherTable searchFilters={searchFilters} />
         </TabsContent>
       )}
     </Tabs>
