@@ -386,6 +386,50 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_details: {
+        Row: {
+          contact_info: Json
+          created_at: string | null
+          date_of_birth: string
+          emergency_contact: Json
+          gender: string
+          id: string
+          medical_info: Json
+          nationality: string
+          professional_info: Json
+        }
+        Insert: {
+          contact_info?: Json
+          created_at?: string | null
+          date_of_birth: string
+          emergency_contact?: Json
+          gender: string
+          id: string
+          medical_info?: Json
+          nationality: string
+          professional_info?: Json
+        }
+        Update: {
+          contact_info?: Json
+          created_at?: string | null
+          date_of_birth?: string
+          emergency_contact?: Json
+          gender?: string
+          id?: string
+          medical_info?: Json
+          nationality?: string
+          professional_info?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_subjects: {
         Row: {
           subject_id: string
@@ -476,7 +520,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_teacher_details: {
+        Args: {
+          profile_id: string
+          gender_type: string
+          birth_date: string
+          nationality_val: string
+          contact_data: Json
+          professional_data: Json
+          emergency_data: Json
+          medical_data: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       user_role: "admin" | "teacher" | "student" | "parent"

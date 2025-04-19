@@ -27,18 +27,18 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
     queryKey: ['teachers'],
     queryFn: async () => {
       console.log("Fetching teachers from profiles table");
-      const { data, error } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, teacher_details!inner(*)')
         .eq('role', 'teacher');
         
-      if (error) {
-        console.error("Error fetching teachers:", error);
-        throw error;
+      if (profileError) {
+        console.error("Error fetching teachers:", profileError);
+        throw profileError;
       }
       
-      console.log("Retrieved teachers:", data);
-      return data || [];
+      console.log("Retrieved teachers:", profiles);
+      return profiles || [];
     }
   });
 
@@ -82,28 +82,12 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       firstName: profile.first_name,
       lastName: profile.last_name,
       middleName: '',
-      gender: 'male', // Fixed: Using valid enum value instead of "not specified"
-      dateOfBirth: '1980-01-01',
-      nationality: 'Not specified',
+      gender: profile.teacher_details.gender as "male" | "female" | "other",
+      dateOfBirth: profile.teacher_details.date_of_birth,
+      nationality: profile.teacher_details.nationality,
       role: 'teacher',
-      contactInformation: {
-        currentAddress: 'Not specified',
-        permanentAddress: 'Not specified',
-        personalPhone: 'Not specified',
-        schoolPhone: 'Not specified',
-        personalEmail: profile.email || 'Not specified',
-        schoolEmail: profile.email || 'Not specified',
-      },
-      professionalDetails: {
-        employeeId: profile.id.substring(0, 8),
-        designation: 'Teacher',
-        department: 'General',
-        subjects: ['Subject 1', 'Subject 2'],
-        classesAssigned: ['Class A', 'Class B'],
-        joiningDate: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : '',
-        qualifications: ['Not specified'],
-        employmentType: 'Full-time',
-      },
+      contactInformation: profile.teacher_details.contact_info,
+      professionalDetails: profile.teacher_details.professional_info,
       attendance: {
         present: 20,
         absent: 2,
@@ -120,15 +104,8 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         feedback: '',
         awards: [],
       },
-      emergency: {
-        contactName: 'Emergency Contact',
-        relationship: 'Not specified',
-        phone: 'Not specified',
-      },
-      medicalInformation: {
-        conditions: [],
-        allergies: [],
-      },
+      emergency: profile.teacher_details.emergency_contact,
+      medicalInformation: profile.teacher_details.medical_info,
       createdAt: profile.created_at || '',
       updatedAt: profile.created_at || '',
     }));
