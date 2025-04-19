@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -12,7 +11,13 @@ import { TeacherDetails } from "./TeacherDetails";
 import { Teacher } from "@/types";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useState } from "react";
+import { EditTeacherDialog } from "./EditTeacherDialog";
 
 interface TeacherTableProps {
   searchFilters?: {
@@ -23,7 +28,13 @@ interface TeacherTableProps {
 }
 
 export function TeacherTable({ searchFilters }: TeacherTableProps) {
-  // Fetch all profiles with role 'teacher'
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const { data: teacherProfiles = [], isLoading, error } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
@@ -41,11 +52,10 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       console.log("Retrieved teachers:", profiles);
       return profiles || [];
     },
-    staleTime: 1000, // Lower stale time to ensure frequent refreshes
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 1000,
+    refetchOnWindowFocus: true,
   });
 
-  // Map profile data to Teacher type
   const filteredTeachers = useMemo(() => {
     let filtered = teacherProfiles;
 
@@ -79,7 +89,6 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
     }
 
     return filtered.map(profile => {
-      // If the teacher doesn't have teacher_details yet, show basic info only
       if (!profile.teacher_details) {
         console.warn(`Teacher profile ${profile.id} has no teacher_details`);
         return {
@@ -193,32 +202,113 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
     );
   }
 
+  const handleDelete = async (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setShowDeleteDialog(true);
+  };
+
+  const handleEdit = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setShowEditDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedTeacher) return;
+    
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', selectedTeacher.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Teacher deleted",
+        description: "Teacher has been successfully removed from the database."
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+    } catch (error) {
+      console.error('Error deleting teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete teacher. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Teacher ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Designation</TableHead>
-            <TableHead>Details</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredTeachers.map((teacher) => (
-            <TableRow key={teacher.id}>
-              <TableCell>{teacher.professionalDetails?.employeeId || 'Not set'}</TableCell>
-              <TableCell>{teacher.name}</TableCell>
-              <TableCell>{teacher.professionalDetails?.designation || 'Not set'}</TableCell>
-              <TableCell className="w-1/2">
-                <Accordion type="single" collapsible>
-                  <TeacherDetails teacher={teacher} />
-                </Accordion>
-              </TableCell>
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Teacher ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead>Details</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {filteredTeachers.map((teacher) => (
+              <TableRow key={teacher.id}>
+                <TableCell>{teacher.professionalDetails?.employeeId || 'Not set'}</TableCell>
+                <TableCell>{teacher.name}</TableCell>
+                <TableCell>{teacher.professionalDetails?.designation || 'Not set'}</TableCell>
+                <TableCell className="w-1/2">
+                  <Accordion type="single" collapsible>
+                    <TeacherDetails teacher={teacher} />
+                  </Accordion>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(teacher)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(teacher)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <ConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Teacher"
+        description="Are you sure you want to delete this teacher? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        isProcessing={isProcessing}
+      />
+
+      {selectedTeacher && (
+        <EditTeacherDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          teacher={selectedTeacher}
+        />
+      )}
+    </>
   );
 }
