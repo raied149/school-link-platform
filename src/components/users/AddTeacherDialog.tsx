@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 
 const formSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -70,6 +72,8 @@ interface AddTeacherDialogProps {
 
 export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -134,6 +138,20 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
       const profileId = profileData[0].id;
       console.log("Created profile with ID:", profileId);
 
+      // Process medical info to convert string to arrays
+      const medicalData = {
+        conditions: values.medicalInfo.conditions ? values.medicalInfo.conditions.split(',').map(item => item.trim()) : [],
+        allergies: values.medicalInfo.allergies ? values.medicalInfo.allergies.split(',').map(item => item.trim()) : [],
+      };
+      
+      // Process qualifications to convert string to array
+      const professionalData = {
+        ...values.professionalInfo,
+        qualifications: values.professionalInfo.qualifications ? 
+          [values.professionalInfo.qualifications] : [],
+        subjects: [],
+      };
+
       // Then, insert teacher details
       const { error: detailsError } = await supabase.rpc('insert_teacher_details', {
         profile_id: profileId,
@@ -141,15 +159,18 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
         birth_date: values.dateOfBirth,
         nationality_val: values.nationality,
         contact_data: values.contactInformation,
-        professional_data: values.professionalInfo,
+        professional_data: professionalData,
         emergency_data: values.emergency,
-        medical_data: values.medicalInfo
+        medical_data: medicalData
       });
 
       if (detailsError) {
         console.error("Error inserting teacher details:", detailsError);
         throw detailsError;
       }
+
+      // Invalidate the teachers query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
 
       toast({
         title: "Success",
@@ -162,7 +183,7 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
       console.error("Error in teacher form submission:", error);
       toast({
         title: "Error",
-        description: "Failed to add teacher. Please try again.",
+        description: `Failed to add teacher: ${(error as Error).message || "Unknown error"}`,
         variant: "destructive",
       });
     }
@@ -411,6 +432,20 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
 
               <FormField
                 control={form.control}
+                name="professionalInfo.qualifications"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Qualifications</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter qualifications (e.g., B.Ed, M.Ed)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="professionalInfo.employmentType"
                 render={({ field }) => (
                   <FormItem>
@@ -475,6 +510,36 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
                   </FormItem>
                 )}
               />
+
+              <h3 className="text-lg font-medium pt-4">Medical Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="medicalInfo.conditions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Medical Conditions</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Separated by commas" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medicalInfo.allergies"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Allergies</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Separated by commas" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <DialogFooter>

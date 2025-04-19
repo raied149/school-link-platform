@@ -24,7 +24,7 @@ interface TeacherTableProps {
 
 export function TeacherTable({ searchFilters }: TeacherTableProps) {
   // Fetch all profiles with role 'teacher'
-  const { data: teacherProfiles = [], isLoading, error, refetch } = useQuery({
+  const { data: teacherProfiles = [], isLoading, error } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
       console.log("Fetching teachers from profiles table");
@@ -40,7 +40,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       
       console.log("Retrieved teachers:", profiles);
       return profiles || [];
-    }
+    },
+    staleTime: 1000, // Lower stale time to ensure frequent refreshes
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Map profile data to Teacher type
@@ -77,9 +79,65 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
     }
 
     return filtered.map(profile => {
+      // If the teacher doesn't have teacher_details yet, show basic info only
       if (!profile.teacher_details) {
         console.warn(`Teacher profile ${profile.id} has no teacher_details`);
-        return null;
+        return {
+          id: profile.id,
+          name: `${profile.first_name} ${profile.last_name}`,
+          email: profile.email || '',
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          middleName: '',
+          gender: 'other' as "male" | "female" | "other",
+          dateOfBirth: '',
+          nationality: '',
+          role: 'teacher' as const,
+          contactInformation: {
+            currentAddress: '',
+            permanentAddress: '',
+            personalPhone: '',
+            schoolPhone: '',
+            personalEmail: profile.email || '',
+            schoolEmail: '',
+          },
+          professionalDetails: {
+            employeeId: 'Not set',
+            designation: 'Not set',
+            department: '',
+            joiningDate: '',
+            qualifications: [],
+            employmentType: 'Full-time',
+            subjects: [],
+          },
+          attendance: {
+            present: 0,
+            absent: 0,
+            leave: 0,
+          },
+          leaveBalance: {
+            sick: 10,
+            casual: 5,
+            vacation: 15,
+          },
+          performance: {
+            lastReviewDate: '',
+            rating: 0,
+            feedback: '',
+            awards: [],
+          },
+          emergency: {
+            name: '',
+            relationship: '',
+            phone: '',
+          },
+          medicalInformation: {
+            conditions: [],
+            allergies: [],
+          },
+          createdAt: profile.created_at || '',
+          updatedAt: profile.created_at || '',
+        };
       }
 
       return {
@@ -116,7 +174,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         createdAt: profile.created_at || '',
         updatedAt: profile.created_at || '',
       };
-    }).filter(Boolean) as Teacher[];
+    });
   }, [teacherProfiles, searchFilters]);
 
   if (isLoading) {
@@ -149,9 +207,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         <TableBody>
           {filteredTeachers.map((teacher) => (
             <TableRow key={teacher.id}>
-              <TableCell>{teacher.professionalDetails.employeeId}</TableCell>
+              <TableCell>{teacher.professionalDetails?.employeeId || 'Not set'}</TableCell>
               <TableCell>{teacher.name}</TableCell>
-              <TableCell>{teacher.professionalDetails.designation}</TableCell>
+              <TableCell>{teacher.professionalDetails?.designation || 'Not set'}</TableCell>
               <TableCell className="w-1/2">
                 <Accordion type="single" collapsible>
                   <TeacherDetails teacher={teacher} />
