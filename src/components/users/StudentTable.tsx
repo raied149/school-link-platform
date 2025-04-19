@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -187,36 +188,39 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => (
-              <TableRow key={student.id}>
-                <TableCell>{student.admissionNumber}</TableCell>
-                <TableCell>{student.name}</TableCell>
-                <TableCell>{student.email || 'No email'}</TableCell>
-                <TableCell className="w-1/2">
-                  <Accordion type="single" collapsible>
-                    <StudentDetails student={mapProfileToStudentDetail(student)} />
-                  </Accordion>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(mapProfileToStudentDetail(student))}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(mapProfileToStudentDetail(student))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredStudents.map((student) => {
+              const studentDetail = mapProfileToStudentDetail(student);
+              return (
+                <TableRow key={student.id}>
+                  <TableCell>{studentDetail.admissionNumber}</TableCell>
+                  <TableCell>{studentDetail.name}</TableCell>
+                  <TableCell>{student.email || 'No email'}</TableCell>
+                  <TableCell className="w-1/2">
+                    <Accordion type="single" collapsible>
+                      <StudentDetails student={studentDetail} />
+                    </Accordion>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(studentDetail)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(studentDetail)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

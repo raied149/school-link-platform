@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -98,7 +99,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           firstName: profile.first_name,
           lastName: profile.last_name,
           middleName: '',
-          gender: 'other' as "male" | "female" | "other",
+          gender: 'other' as const,
           dateOfBirth: '',
           nationality: '',
           role: 'teacher' as const,
@@ -118,6 +119,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
             qualifications: [],
             employmentType: 'Full-time',
             subjects: [],
+            classesAssigned: [], // Add the required property
           },
           attendance: {
             present: 0,
@@ -146,9 +148,12 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           },
           createdAt: profile.created_at || '',
           updatedAt: profile.created_at || '',
-        };
+        } as Teacher;
       }
 
+      // Ensure all required properties are present
+      const professionalInfo = profile.teacher_details.professional_info || {};
+      
       return {
         id: profile.id,
         name: `${profile.first_name} ${profile.last_name}`,
@@ -161,7 +166,11 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         nationality: profile.teacher_details.nationality,
         role: 'teacher' as const,
         contactInformation: profile.teacher_details.contact_info as Teacher['contactInformation'],
-        professionalDetails: profile.teacher_details.professional_info as Teacher['professionalDetails'],
+        professionalDetails: {
+          ...(professionalInfo as Partial<Teacher['professionalDetails']>),
+          classesAssigned: professionalInfo.classesAssigned || [], // Ensure this property is present
+          subjects: professionalInfo.subjects || [],
+        },
         attendance: {
           present: 20,
           absent: 2,
@@ -182,7 +191,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         medicalInformation: profile.teacher_details.medical_info as Teacher['medicalInformation'],
         createdAt: profile.created_at || '',
         updatedAt: profile.created_at || '',
-      };
+      } as Teacher;
     });
   }, [teacherProfiles, searchFilters]);
 
