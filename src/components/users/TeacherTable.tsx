@@ -93,7 +93,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         const searchTerm = globalSearch.toLowerCase();
         filtered = filtered.filter(teacher => {
           const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
-          const teacherIdDisplay = teacher.teacher_details?.professional_info?.employeeId || '';
+          const teacherIdDisplay = typeof teacher.teacher_details?.professional_info === 'object' 
+            ? (teacher.teacher_details.professional_info as any)?.employeeId || ''
+            : '';
           
           const searchableFields = [
             fullName,
@@ -106,7 +108,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
       } else {
         if (idSearch) {
           filtered = filtered.filter(teacher => {
-            const teacherId = teacher.teacher_details?.professional_info?.employeeId || '';
+            const teacherId = typeof teacher.teacher_details?.professional_info === 'object'
+              ? (teacher.teacher_details.professional_info as any)?.employeeId || ''
+              : '';
             return teacherId.toLowerCase().includes(idSearch.toLowerCase());
           });
         }

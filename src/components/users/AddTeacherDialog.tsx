@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,28 +7,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BasicInfoSection } from "./teacher-form/BasicInfoSection";
+import { PersonalInfoSection } from "./teacher-form/PersonalInfoSection";
+import { ProfessionalInfoSection } from "./teacher-form/ProfessionalInfoSection";
+import { ContactInfoSection } from "./teacher-form/ContactInfoSection";
+import { EmergencyInfoSection } from "./teacher-form/EmergencyInfoSection";
 
 const formSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -114,7 +104,6 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("Submitting teacher form with values:", values);
     try {
-      // First, insert into profiles table
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .insert({
@@ -138,13 +127,11 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
       const profileId = profileData[0].id;
       console.log("Created profile with ID:", profileId);
 
-      // Process medical info to convert string to arrays
       const medicalData = {
         conditions: values.medicalInfo.conditions ? values.medicalInfo.conditions.split(',').map(item => item.trim()) : [],
         allergies: values.medicalInfo.allergies ? values.medicalInfo.allergies.split(',').map(item => item.trim()) : [],
       };
       
-      // Process qualifications to convert string to array
       const professionalData = {
         ...values.professionalInfo,
         qualifications: values.professionalInfo.qualifications ? 
@@ -152,7 +139,6 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
         subjects: [],
       };
 
-      // Then, insert teacher details
       const { error: detailsError } = await supabase.rpc('insert_teacher_details', {
         profile_id: profileId,
         gender_type: values.gender,
@@ -169,7 +155,6 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
         throw detailsError;
       }
 
-      // Invalidate the teachers query to refresh the data
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
 
       toast({
@@ -200,347 +185,35 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="first_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="last_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="basic">Basic</TabsTrigger>
+                <TabsTrigger value="personal">Personal</TabsTrigger>
+                <TabsTrigger value="professional">Professional</TabsTrigger>
+                <TabsTrigger value="contact">Contact</TabsTrigger>
+                <TabsTrigger value="emergency">Emergency</TabsTrigger>
+              </TabsList>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="john.doe@example.com" type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nationality"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nationality</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <TabsContent value="basic" className="space-y-4 mt-4">
+                <BasicInfoSection form={form} />
+              </TabsContent>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <TabsContent value="personal" className="space-y-4 mt-4">
+                <PersonalInfoSection form={form} />
+              </TabsContent>
 
-              <h3 className="text-lg font-medium pt-4">Contact Information</h3>
-              <FormField
-                control={form.control}
-                name="contactInformation.currentAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <TabsContent value="professional" className="space-y-4 mt-4">
+                <ProfessionalInfoSection form={form} />
+              </TabsContent>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="contactInformation.personalPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Personal Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactInformation.schoolPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>School Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <TabsContent value="contact" className="space-y-4 mt-4">
+                <ContactInfoSection form={form} />
+              </TabsContent>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="contactInformation.personalEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Personal Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactInformation.schoolEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>School Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <h3 className="text-lg font-medium pt-4">Professional Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="professionalInfo.employeeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Employee ID</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="professionalInfo.designation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Designation</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="professionalInfo.department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="professionalInfo.joiningDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Joining Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="professionalInfo.qualifications"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Qualifications</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter qualifications (e.g., B.Ed, M.Ed)" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="professionalInfo.employmentType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Employment Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select employment type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Full-time">Full-time</SelectItem>
-                        <SelectItem value="Part-time">Part-time</SelectItem>
-                        <SelectItem value="Contractual">Contractual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <h3 className="text-lg font-medium pt-4">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="emergency.name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="emergency.relationship"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Relationship</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="emergency.phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Emergency Phone</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <h3 className="text-lg font-medium pt-4">Medical Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="medicalInfo.conditions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Medical Conditions</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Separated by commas" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="medicalInfo.allergies"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Allergies</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Separated by commas" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+              <TabsContent value="emergency" className="space-y-4 mt-4">
+                <EmergencyInfoSection form={form} />
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button type="submit">Add Teacher</Button>
