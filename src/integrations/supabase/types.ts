@@ -337,6 +337,7 @@ export type Database = {
       }
       student_details: {
         Row: {
+          admission_number: string | null
           created_at: string
           dateofbirth: string
           gender: string
@@ -347,6 +348,7 @@ export type Database = {
           nationality: string
         }
         Insert: {
+          admission_number?: string | null
           created_at?: string
           dateofbirth: string
           gender: string
@@ -357,6 +359,7 @@ export type Database = {
           nationality: string
         }
         Update: {
+          admission_number?: string | null
           created_at?: string
           dateofbirth?: string
           gender?: string

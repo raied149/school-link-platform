@@ -73,7 +73,7 @@ export function EditStudentDialog({
       firstName,
       lastName,
       email: student.email,
-      admissionNumber: student.admissionNumber,
+      admissionNumber: student.admissionNumber || '',
       dateOfBirth: student.dateOfBirth,
       gender: student.gender,
       nationality: student.nationality,
