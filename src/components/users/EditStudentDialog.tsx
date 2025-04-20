@@ -367,7 +367,7 @@ export function EditStudentDialog({
                       </FormItem>
                     )}
                   />
-                  <Form.Field
+                  <FormField
                     control={form.control}
                     name="medicalHistory"
                     render={({ field }) => (
