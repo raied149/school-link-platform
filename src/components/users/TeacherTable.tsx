@@ -28,6 +28,31 @@ interface TeacherTableProps {
   };
 }
 
+// Define the structure for the professional info from the database
+interface ProfessionalInfo {
+  employeeId?: string;
+  designation?: string;
+  department?: string;
+  joiningDate?: string;
+  subjects?: string[];
+  classesAssigned?: string[];
+  qualifications?: string[];
+  employmentType?: 'Full-time' | 'Part-time' | 'Contractual';
+  specializations?: string[];
+  previousExperience?: Array<{
+    schoolName: string;
+    position: string;
+    duration: string;
+  }>;
+}
+
+// Define the structure for the emergency contact from the database
+interface EmergencyContact {
+  name?: string;
+  relationship?: string;
+  phone?: string;
+}
+
 export function TeacherTable({ searchFilters }: TeacherTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -138,7 +163,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
             awards: [],
           },
           emergency: {
-            contactName: '', // Added the missing property
+            contactName: '', 
             relationship: '',
             phone: '',
           },
@@ -151,8 +176,17 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         } as Teacher;
       }
 
-      // Ensure all required properties are present
-      const professionalInfo = profile.teacher_details.professional_info || {};
+      // Parse professional_info as the correct type
+      const professionalInfo: ProfessionalInfo = 
+        typeof profile.teacher_details.professional_info === 'object' && profile.teacher_details.professional_info !== null
+          ? profile.teacher_details.professional_info as ProfessionalInfo
+          : {};
+      
+      // Parse emergency_contact as the correct type
+      const emergencyContact: EmergencyContact = 
+        typeof profile.teacher_details.emergency_contact === 'object' && profile.teacher_details.emergency_contact !== null
+          ? profile.teacher_details.emergency_contact as EmergencyContact
+          : {};
       
       return {
         id: profile.id,
@@ -174,26 +208,16 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           schoolEmail: '',
         },
         professionalDetails: {
-          employeeId: typeof professionalInfo === 'object' && professionalInfo !== null ? 
-            (professionalInfo.employeeId || 'Not set') : 'Not set',
-          designation: typeof professionalInfo === 'object' && professionalInfo !== null ? 
-            (professionalInfo.designation || 'Not set') : 'Not set',
-          department: typeof professionalInfo === 'object' && professionalInfo !== null ? 
-            (professionalInfo.department || '') : '',
-          joiningDate: typeof professionalInfo === 'object' && professionalInfo !== null ? 
-            (professionalInfo.joiningDate || '') : '',
-          subjects: typeof professionalInfo === 'object' && professionalInfo !== null && 
-            Array.isArray(professionalInfo.subjects) ? professionalInfo.subjects : [],
-          classesAssigned: typeof professionalInfo === 'object' && professionalInfo !== null && 
-            Array.isArray(professionalInfo.classesAssigned) ? professionalInfo.classesAssigned : [],
-          qualifications: typeof professionalInfo === 'object' && professionalInfo !== null && 
-            Array.isArray(professionalInfo.qualifications) ? professionalInfo.qualifications : [],
-          employmentType: typeof professionalInfo === 'object' && professionalInfo !== null ? 
-            (professionalInfo.employmentType as 'Full-time' | 'Part-time' | 'Contractual' || 'Full-time') : 'Full-time',
-          specializations: typeof professionalInfo === 'object' && professionalInfo !== null && 
-            Array.isArray(professionalInfo.specializations) ? professionalInfo.specializations : [],
-          previousExperience: typeof professionalInfo === 'object' && professionalInfo !== null && 
-            Array.isArray(professionalInfo.previousExperience) ? professionalInfo.previousExperience : [],
+          employeeId: professionalInfo.employeeId || 'Not set',
+          designation: professionalInfo.designation || 'Not set',
+          department: professionalInfo.department || '',
+          joiningDate: professionalInfo.joiningDate || '',
+          subjects: Array.isArray(professionalInfo.subjects) ? professionalInfo.subjects : [],
+          classesAssigned: Array.isArray(professionalInfo.classesAssigned) ? professionalInfo.classesAssigned : [],
+          qualifications: Array.isArray(professionalInfo.qualifications) ? professionalInfo.qualifications : [],
+          employmentType: professionalInfo.employmentType || 'Full-time' as const,
+          specializations: Array.isArray(professionalInfo.specializations) ? professionalInfo.specializations : [],
+          previousExperience: Array.isArray(professionalInfo.previousExperience) ? professionalInfo.previousExperience : [],
         },
         attendance: {
           present: 20,
@@ -212,13 +236,9 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           awards: [],
         },
         emergency: {
-          // Fixed the property name to match the Teacher interface
-          contactName: typeof profile.teacher_details.emergency_contact === 'object' ? 
-            profile.teacher_details.emergency_contact.name || '' : '',
-          relationship: typeof profile.teacher_details.emergency_contact === 'object' ? 
-            profile.teacher_details.emergency_contact.relationship || '' : '',
-          phone: typeof profile.teacher_details.emergency_contact === 'object' ? 
-            profile.teacher_details.emergency_contact.phone || '' : '',
+          contactName: emergencyContact.name || '',
+          relationship: emergencyContact.relationship || '',
+          phone: emergencyContact.phone || '',
         },
         medicalInformation: profile.teacher_details.medical_info || {
           conditions: [],
