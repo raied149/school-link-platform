@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -111,6 +111,7 @@ export function EditStudentDialog({
       const { error: detailsError } = await supabase
         .from('student_details')
         .update({
+          admission_number: data.admissionNumber,
           nationality: data.nationality,
           language: data.language,
           dateofbirth: data.dateOfBirth,
@@ -161,6 +162,9 @@ export function EditStudentDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Student Details</DialogTitle>
+          <DialogDescription>
+            Update student information in the system
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

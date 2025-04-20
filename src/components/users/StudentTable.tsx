@@ -35,23 +35,42 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch all profiles with role 'student'
+  // Fetch all profiles with role 'student' and their details
   const { data: students = [], isLoading, error } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
       console.log("Fetching students from profiles table");
-      const { data, error } = await supabase
+      
+      // Fetch student profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('role', 'student');
         
-      if (error) {
-        console.error("Error fetching students:", error);
-        throw error;
+      if (profilesError) {
+        console.error("Error fetching student profiles:", profilesError);
+        throw profilesError;
       }
       
-      console.log("Retrieved students:", data);
-      return data || [];
+      // Fetch student details
+      const { data: detailsData, error: detailsError } = await supabase
+        .from('student_details')
+        .select('*');
+      
+      if (detailsError) {
+        console.error("Error fetching student details:", detailsError);
+        // Don't throw here, we may have profiles without details
+      }
+      
+      // Combine profiles and details
+      const studentsWithDetails = profilesData.map(profile => {
+        // Find corresponding details, if any
+        const details = detailsData?.find(d => d.id === profile.id);
+        return { ...profile, details };
+      });
+      
+      console.log("Retrieved students:", studentsWithDetails);
+      return studentsWithDetails || [];
     }
   });
 
@@ -141,26 +160,26 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
       id: profile.id,
       name: `${profile.first_name} ${profile.last_name}`,
       email: profile.email || '',
-      admissionNumber: profile.id.substring(0, 8),
+      admissionNumber: profile.details?.admission_number || profile.id.substring(0, 8),
       createdAt: profile.created_at,
       updatedAt: profile.created_at,
-      dateOfBirth: '2000-01-01',
-      gender: 'other',
-      language: 'English',
-      nationality: 'Not specified',
+      dateOfBirth: profile.details?.dateofbirth || '2000-01-01',
+      gender: profile.details?.gender || 'other',
+      language: profile.details?.language || 'English',
+      nationality: profile.details?.nationality || 'Not specified',
       contactNumber: '',
       address: '',
       currentClassId: '',
       currentSectionId: '',
       academicYearId: '',
       parentId: '',
-      guardian: {
+      guardian: profile.details?.guardian || {
         name: 'Not specified',
         email: 'not.specified@example.com',
         phone: 'Not specified',
         relationship: 'Not specified'
       },
-      medical: {
+      medical: profile.details?.medical || {
         bloodGroup: '',
         allergies: [],
         medications: [],
