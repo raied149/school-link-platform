@@ -73,6 +73,8 @@ export function EditTeacherDialog({
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log("Teacher data being edited:", teacher);
+
   const form = useForm<FormData>({
     defaultValues: {
       // Basic Details
@@ -81,28 +83,28 @@ export function EditTeacherDialog({
       email: teacher.email,
       // Personal Details
       gender: teacher.gender,
-      dateOfBirth: teacher.dateOfBirth,
-      nationality: teacher.nationality,
-      religion: teacher.religion,
-      maritalStatus: teacher.maritalStatus,
-      bloodGroup: teacher.bloodGroup,
+      dateOfBirth: teacher.dateOfBirth || '',
+      nationality: teacher.nationality || '',
+      religion: teacher.religion || '',
+      maritalStatus: teacher.maritalStatus || '',
+      bloodGroup: teacher.bloodGroup || '',
       // Professional Details
-      employeeId: teacher.professionalDetails.employeeId,
-      designation: teacher.professionalDetails.designation,
-      department: teacher.professionalDetails.department,
-      joiningDate: teacher.professionalDetails.joiningDate,
-      employmentType: teacher.professionalDetails.employmentType,
+      employeeId: teacher.professionalDetails?.employeeId || '',
+      designation: teacher.professionalDetails?.designation || '',
+      department: teacher.professionalDetails?.department || '',
+      joiningDate: teacher.professionalDetails?.joiningDate || '',
+      employmentType: teacher.professionalDetails?.employmentType || 'Full-time',
       // Contact Information
-      currentAddress: teacher.contactInformation.currentAddress,
-      permanentAddress: teacher.contactInformation.permanentAddress || '',
-      personalPhone: teacher.contactInformation.personalPhone,
-      schoolPhone: teacher.contactInformation.schoolPhone || '',
-      personalEmail: teacher.contactInformation.personalEmail,
-      schoolEmail: teacher.contactInformation.schoolEmail,
+      currentAddress: teacher.contactInformation?.currentAddress || '',
+      permanentAddress: teacher.contactInformation?.permanentAddress || '',
+      personalPhone: teacher.contactInformation?.personalPhone || '',
+      schoolPhone: teacher.contactInformation?.schoolPhone || '',
+      personalEmail: teacher.contactInformation?.personalEmail || '',
+      schoolEmail: teacher.contactInformation?.schoolEmail || '',
       // Emergency Contact
-      emergencyContactName: teacher.emergency.contactName,
-      emergencyRelationship: teacher.emergency.relationship,
-      emergencyPhone: teacher.emergency.phone,
+      emergencyContactName: teacher.emergency?.contactName || '',
+      emergencyRelationship: teacher.emergency?.relationship || '',
+      emergencyPhone: teacher.emergency?.phone || '',
       // Medical Information
       medicalConditions: teacher.medicalInformation?.conditions?.join(', ') || '',
       allergies: teacher.medicalInformation?.allergies?.join(', ') || '',
@@ -111,6 +113,7 @@ export function EditTeacherDialog({
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    console.log("Submitting form with data:", data);
     try {
       // Update profile
       const { error: profileError } = await supabase
@@ -122,7 +125,10 @@ export function EditTeacherDialog({
         })
         .eq('id', teacher.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
+        throw profileError;
+      }
 
       // Update teacher details
       const { error: detailsError } = await supabase
@@ -140,12 +146,15 @@ export function EditTeacherDialog({
             schoolEmail: data.schoolEmail,
           },
           professional_info: {
-            ...teacher.professionalDetails,
             employeeId: data.employeeId,
             designation: data.designation,
             department: data.department,
             joiningDate: data.joiningDate,
             employmentType: data.employmentType,
+            subjects: teacher.professionalDetails?.subjects || [],
+            classesAssigned: teacher.professionalDetails?.classesAssigned || [],
+            qualifications: teacher.professionalDetails?.qualifications || [],
+            specializations: teacher.professionalDetails?.specializations || [],
           },
           emergency_contact: {
             name: data.emergencyContactName,
@@ -153,13 +162,16 @@ export function EditTeacherDialog({
             phone: data.emergencyPhone,
           },
           medical_info: {
-            conditions: data.medicalConditions.split(',').map(item => item.trim()).filter(Boolean),
-            allergies: data.allergies.split(',').map(item => item.trim()).filter(Boolean),
+            conditions: data.medicalConditions ? data.medicalConditions.split(',').map(item => item.trim()).filter(Boolean) : [],
+            allergies: data.allergies ? data.allergies.split(',').map(item => item.trim()).filter(Boolean) : [],
           },
         })
         .eq('id', teacher.id);
 
-      if (detailsError) throw detailsError;
+      if (detailsError) {
+        console.error("Error updating teacher details:", detailsError);
+        throw detailsError;
+      }
 
       toast({
         title: "Success",
@@ -585,4 +597,3 @@ export function EditTeacherDialog({
     </Dialog>
   );
 }
-

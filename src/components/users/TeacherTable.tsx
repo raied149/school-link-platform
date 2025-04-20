@@ -83,6 +83,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
   });
 
   const filteredTeachers = useMemo(() => {
+    console.log("Processing teacher profiles:", teacherProfiles);
     let filtered = teacherProfiles;
 
     if (searchFilters) {
@@ -92,18 +93,22 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
         const searchTerm = globalSearch.toLowerCase();
         filtered = filtered.filter(teacher => {
           const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+          const teacherIdDisplay = teacher.teacher_details?.professional_info?.employeeId || '';
+          
           const searchableFields = [
             fullName,
             teacher.id.toLowerCase(),
             teacher.email?.toLowerCase() || '',
+            teacherIdDisplay.toLowerCase()
           ];
           return searchableFields.some(field => field.includes(searchTerm));
         });
       } else {
         if (idSearch) {
-          filtered = filtered.filter(teacher =>
-            teacher.id.toLowerCase().includes(idSearch.toLowerCase())
-          );
+          filtered = filtered.filter(teacher => {
+            const teacherId = teacher.teacher_details?.professional_info?.employeeId || '';
+            return teacherId.toLowerCase().includes(idSearch.toLowerCase());
+          });
         }
         if (nameSearch) {
           filtered = filtered.filter(teacher => {
@@ -175,6 +180,8 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
           updatedAt: profile.created_at || '',
         } as Teacher;
       }
+
+      console.log(`Processing teacher ${profile.id} details:`, profile.teacher_details);
 
       // Parse professional_info as the correct type
       const professionalInfo: ProfessionalInfo = 
@@ -272,6 +279,7 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
   };
 
   const handleEdit = (teacher: Teacher) => {
+    console.log("Selected teacher for editing:", teacher);
     setSelectedTeacher(teacher);
     setShowEditDialog(true);
   };
