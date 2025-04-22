@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const gradeOptions = [
   'LKG',
@@ -103,11 +104,13 @@ export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }:
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
-                {gradeOptions.map((grade) => (
-                  <SelectItem key={grade} value={grade}>
-                    Grade {grade}
-                  </SelectItem>
-                ))}
+                <ScrollArea className="h-[200px]">
+                  {gradeOptions.map((grade) => (
+                    <SelectItem key={grade} value={grade}>
+                      Grade {grade}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
               </SelectContent>
             </Select>
           </div>
