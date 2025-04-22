@@ -36,13 +36,46 @@ export function TeacherSelectionDialog({
         qualifications: []
       }
     } as Teacher,
+    {
+      id: "2",
+      firstName: "Jane",
+      lastName: "Smith",
+      professionalDetails: {
+        employeeId: "T002",
+        subjects: ["Science"],
+        designation: "Teacher",
+        department: "Science",
+        classesAssigned: [],
+        joiningDate: "2023-06-15",
+        employmentType: "Full-time",
+        qualifications: []
+      }
+    } as Teacher,
+    {
+      id: "3",
+      firstName: "Michael",
+      lastName: "Johnson",
+      professionalDetails: {
+        employeeId: "T003",
+        subjects: ["English"],
+        designation: "Teacher",
+        department: "Languages",
+        classesAssigned: [],
+        joiningDate: "2023-09-01",
+        employmentType: "Part-time",
+        qualifications: []
+      }
+    } as Teacher,
     // Add more mock teachers as needed
   ];
   
   const filteredTeachers = mockTeachers.filter(teacher => 
     teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.professionalDetails.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+    teacher.professionalDetails.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    teacher.professionalDetails.subjects.some(subject => 
+      subject.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (
@@ -55,7 +88,7 @@ export function TeacherSelectionDialog({
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by teacher ID or name..."
+            placeholder="Search by teacher ID, name or subject..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"

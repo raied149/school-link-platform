@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Users } from "lucide-react";
 import { StudentDetail } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface StudentSelectionDialogProps {
   open: boolean;
@@ -100,7 +101,7 @@ export function StudentSelectionDialog({
               <tr className="border-b">
                 <th className="text-left py-2 px-4">Student ID</th>
                 <th className="text-left py-2 px-4">Name</th>
-                <th className="text-right py-2 px-4">Action</th>
+                <th className="text-center py-2 px-4">Select</th>
               </tr>
             </thead>
             <tbody>
@@ -110,14 +111,11 @@ export function StudentSelectionDialog({
                   <tr key={student.id} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-4">{student.admissionNumber}</td>
                     <td className="py-2 px-4">{student.name}</td>
-                    <td className="py-2 px-4 text-right">
-                      <Button 
-                        variant={isSelected ? "secondary" : "outline"}
-                        size="sm"
-                        onClick={() => toggleStudent(student)}
-                      >
-                        {isSelected ? "Selected" : "Select"}
-                      </Button>
+                    <td className="py-2 px-4 text-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleStudent(student)}
+                      />
                     </td>
                   </tr>
                 )}
