@@ -4,7 +4,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Teacher } from "@/types";
+
+// Get all teachers from the real DB (profiles + teacher_details)
+async function fetchTeachers() {
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('*, teacher_details(*)')
+    .eq('role', 'teacher');
+  if (error) throw error;
+  // Transform into Teacher[]
+  return (profiles || []).map((profile: any) => ({
+    id: profile.id,
+    firstName: profile.first_name,
+    lastName: profile.last_name,
+    email: profile.email,
+    professionalDetails: {
+      employeeId: profile.teacher_details?.professional_info?.employeeId ?? "Not set",
+      subjects: profile.teacher_details?.professional_info?.subjects ?? [],
+      designation: profile.teacher_details?.professional_info?.designation ?? "",
+      department: profile.teacher_details?.professional_info?.department ?? "",
+      classesAssigned: profile.teacher_details?.professional_info?.classesAssigned ?? [],
+      joiningDate: profile.teacher_details?.professional_info?.joiningDate ?? "",
+      employmentType: profile.teacher_details?.professional_info?.employmentType ?? "Full-time",
+      qualifications: profile.teacher_details?.professional_info?.qualifications ?? [],
+    },
+  })) as Teacher[];
+}
 
 interface TeacherSelectionDialogProps {
   open: boolean;
@@ -18,64 +46,13 @@ export function TeacherSelectionDialog({
   onSelect,
 }: TeacherSelectionDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // Mock data for now - this would be replaced with actual teacher data
-  const mockTeachers: Teacher[] = [
-    {
-      id: "1",
-      firstName: "John",
-      lastName: "Doe",
-      professionalDetails: {
-        employeeId: "T001",
-        subjects: ["Mathematics"],
-        designation: "Senior Teacher",
-        department: "Mathematics",
-        classesAssigned: [],
-        joiningDate: "2024-01-01",
-        employmentType: "Full-time",
-        qualifications: []
-      }
-    } as Teacher,
-    {
-      id: "2",
-      firstName: "Jane",
-      lastName: "Smith",
-      professionalDetails: {
-        employeeId: "T002",
-        subjects: ["Science"],
-        designation: "Teacher",
-        department: "Science",
-        classesAssigned: [],
-        joiningDate: "2023-06-15",
-        employmentType: "Full-time",
-        qualifications: []
-      }
-    } as Teacher,
-    {
-      id: "3",
-      firstName: "Michael",
-      lastName: "Johnson",
-      professionalDetails: {
-        employeeId: "T003",
-        subjects: ["English"],
-        designation: "Teacher",
-        department: "Languages",
-        classesAssigned: [],
-        joiningDate: "2023-09-01",
-        employmentType: "Part-time",
-        qualifications: []
-      }
-    } as Teacher,
-    // Add more mock teachers as needed
-  ];
-  
-  const filteredTeachers = mockTeachers.filter(teacher => 
-    teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.professionalDetails.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.professionalDetails.subjects.some(subject => 
-      subject.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  const {data: teachers = [], isLoading} = useQuery({ queryKey: ["selectable-teachers"], queryFn: fetchTeachers });
+
+  const filteredTeachers = teachers.filter(teacher =>
+    teacher.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    teacher.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    teacher.professionalDetails.employeeId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    teacher.professionalDetails.subjects?.some((subject: string) => subject.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -84,7 +61,6 @@ export function TeacherSelectionDialog({
         <DialogHeader>
           <DialogTitle>Select Homeroom Teacher</DialogTitle>
         </DialogHeader>
-        
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -94,7 +70,9 @@ export function TeacherSelectionDialog({
             className="pl-8"
           />
         </div>
-
+        {isLoading ? (
+          <div className="py-8 text-center">Loading teachers...</div>
+        ) : (
         <div className="max-h-[300px] overflow-y-auto">
           <table className="w-full">
             <thead className="sticky top-0 bg-background">
@@ -128,6 +106,7 @@ export function TeacherSelectionDialog({
             </tbody>
           </table>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

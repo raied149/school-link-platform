@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { TeacherSelectionDialog } from "./TeacherSelectionDialog";
 import { StudentSelectionDialog } from "./StudentSelectionDialog";
 import { Users, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
 
 interface SectionFormDialogProps {
   open: boolean;
@@ -29,6 +29,12 @@ export function SectionFormDialog({
   const [isTeacherDialogOpen, setIsTeacherDialogOpen] = useState(false);
   const [isStudentDialogOpen, setIsStudentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setSectionName(defaultValues?.name || "");
+    if (defaultValues?.teacher) setSelectedTeacher(defaultValues.teacher);
+    if (defaultValues?.students) setSelectedStudents(defaultValues.students);
+  }, [defaultValues, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -312,18 +312,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          teacher_id: string | null
         }
         Insert: {
           class_id?: string | null
           created_at?: string
           id?: string
           name: string
+          teacher_id?: string | null
         }
         Update: {
           class_id?: string | null
           created_at?: string
           id?: string
           name?: string
+          teacher_id?: string | null
         }
         Relationships: [
           {
@@ -333,12 +336,21 @@ export type Database = {
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sections_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       student_details: {
         Row: {
           admission_number: string | null
           created_at: string
+          current_class_id: string | null
+          current_section_id: string | null
           dateofbirth: string
           gender: string
           guardian: Json
@@ -350,6 +362,8 @@ export type Database = {
         Insert: {
           admission_number?: string | null
           created_at?: string
+          current_class_id?: string | null
+          current_section_id?: string | null
           dateofbirth: string
           gender: string
           guardian: Json
@@ -361,6 +375,8 @@ export type Database = {
         Update: {
           admission_number?: string | null
           created_at?: string
+          current_class_id?: string | null
+          current_section_id?: string | null
           dateofbirth?: string
           gender?: string
           guardian?: Json
@@ -370,6 +386,20 @@ export type Database = {
           nationality?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "student_details_current_class_id_fkey"
+            columns: ["current_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_details_current_section_id_fkey"
+            columns: ["current_section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "student_details_id_fkey"
             columns: ["id"]
@@ -437,6 +467,7 @@ export type Database = {
           date_of_birth: string
           emergency_contact: Json
           gender: string
+          homeroom_section_id: string | null
           id: string
           medical_info: Json
           nationality: string
@@ -448,6 +479,7 @@ export type Database = {
           date_of_birth: string
           emergency_contact?: Json
           gender: string
+          homeroom_section_id?: string | null
           id: string
           medical_info?: Json
           nationality: string
@@ -459,12 +491,20 @@ export type Database = {
           date_of_birth?: string
           emergency_contact?: Json
           gender?: string
+          homeroom_section_id?: string | null
           id?: string
           medical_info?: Json
           nationality?: string
           professional_info?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "teacher_details_homeroom_section_id_fkey"
+            columns: ["homeroom_section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teacher_details_id_fkey"
             columns: ["id"]

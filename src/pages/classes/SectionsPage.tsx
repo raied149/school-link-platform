@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,24 @@ import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
 import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+function useTeacherMap() {
+  return useQuery({
+    queryKey: ["teachers-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("role", "teacher");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((t: any) => { map[t.id] = `${t.first_name} ${t.last_name}`; });
+      return map;
+    },
+  });
+}
 
 const SectionsPage = () => {
   const { yearId, classId } = useParams<{ yearId: string, classId: string }>();
@@ -26,28 +43,26 @@ const SectionsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   
-  // Fetch academic year details
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
     queryFn: () => academicYearService.getAcademicYearById(yearId!),
     enabled: !!yearId
   });
   
-  // Fetch class details
   const { data: classDetails } = useQuery({
     queryKey: ['class', classId],
     queryFn: () => classService.getClassById(classId!),
     enabled: !!classId
   });
   
-  // Fetch sections
   const { data: sections = [], isLoading } = useQuery({
     queryKey: ['sections', classId, yearId],
     queryFn: () => sectionService.getSectionsByClassAndYear(classId!, yearId!),
     enabled: !!classId && !!yearId
   });
   
-  // Mutations
+  const { data: teacherNameMap = {} } = useTeacherMap();
+  
   const createMutation = useMutation({
     mutationFn: (sectionData: Omit<Section, 'id' | 'createdAt' | 'updatedAt'>) => {
       return sectionService.createSection(sectionData);
@@ -75,16 +90,13 @@ const SectionsPage = () => {
     }
   });
   
-  // Filter sections based on search term
   const filteredSections = sections.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  // Handlers
   const handleSaveSection = async (sectionData: any) => {
     try {
       if (selectedSection) {
-        // Update existing section
         await updateMutation.mutateAsync({
           id: selectedSection.id,
           data: {
@@ -99,7 +111,6 @@ const SectionsPage = () => {
           description: `${sectionData.name} has been updated successfully.`
         });
       } else {
-        // Create new section
         await createMutation.mutateAsync({
           ...sectionData,
           classId: classId!,
@@ -222,10 +233,11 @@ const SectionsPage = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {section.teacherId ? "Assigned" : "Not Assigned"}
+                      {section.teacherId
+                        ? teacherNameMap[section.teacherId] || "Assigned"
+                        : "Not Assigned"}
                     </td>
                     <td className="py-3 px-4">
-                      {/* This would be filled with actual data in a real implementation */}
                       0 students
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -268,7 +280,6 @@ const SectionsPage = () => {
         )}
       </Card>
       
-      {/* Create/Edit Section Dialog */}
       <SectionFormDialog
         open={isCreateDialogOpen || isEditDialogOpen}
         onOpenChange={(open) => {
@@ -281,7 +292,6 @@ const SectionsPage = () => {
         defaultValues={selectedSection}
       />
       
-      {/* Delete Confirmation */}
       <ConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

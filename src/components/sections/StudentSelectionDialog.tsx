@@ -3,10 +3,44 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Users } from "lucide-react";
-import { StudentDetail } from "@/types";
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { StudentDetail } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+async function fetchStudents(): Promise<StudentDetail[]> {
+  // Get all profiles with 'student' role and their details
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('*, student_details(*)')
+    .eq('role', 'student');
+  if (error) throw error;
+  // Combine main and details table
+  return (profiles || []).map((profile: any) => ({
+    id: profile.id,
+    name: `${profile.first_name} ${profile.last_name}`,
+    admissionNumber: profile.student_details?.admission_number ?? profile.id.substring(0, 8),
+    email: profile.email,
+    dateOfBirth: profile.student_details?.dateofbirth ?? "",
+    gender: profile.student_details?.gender ?? "other",
+    nationality: profile.student_details?.nationality ?? "",
+    language: profile.student_details?.language ?? "",
+    guardian: profile.student_details?.guardian ?? {
+      name: "Not set", email: "notset@example.com", phone: "-", relationship: "-"
+    },
+    medical: profile.student_details?.medical ?? {},
+    createdAt: profile.created_at,
+    updatedAt: profile.created_at,
+    academicYearId: "",
+    currentClassId: profile.student_details?.current_class_id ?? "",
+    currentSectionId: profile.student_details?.current_section_id ?? "",
+    contactNumber: "",
+    address: "",
+    parentId: ""
+  }));
+}
 
 interface StudentSelectionDialogProps {
   open: boolean;
@@ -23,72 +57,12 @@ export function StudentSelectionDialog({
 }: StudentSelectionDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [localSelectedStudents, setLocalSelectedStudents] = useState<StudentDetail[]>(selectedStudents);
-  
-  // Mock data for now - this would be replaced with actual student data
-  const mockStudents: StudentDetail[] = [
-    {
-      id: "1",
-      name: "Alice Smith",
-      admissionNumber: "S001",
-      email: "alice@school.com",
-      dateOfBirth: "2010-01-01",
-      gender: "female",
-      nationality: "US",
-      language: "English",
-      guardian: {
-        name: "John Smith",
-        email: "john@example.com",
-        phone: "1234567890",
-        relationship: "Father"
-      },
-      medical: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: "2",
-      name: "Bob Johnson",
-      admissionNumber: "S002",
-      email: "bob@school.com",
-      dateOfBirth: "2010-03-15",
-      gender: "male",
-      nationality: "US",
-      language: "English",
-      guardian: {
-        name: "Mary Johnson",
-        email: "mary@example.com",
-        phone: "0987654321",
-        relationship: "Mother"
-      },
-      medical: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: "3",
-      name: "Charlie Brown",
-      admissionNumber: "S003",
-      email: "charlie@school.com",
-      dateOfBirth: "2010-05-22",
-      gender: "male",
-      nationality: "US",
-      language: "English",
-      guardian: {
-        name: "Lucy Brown",
-        email: "lucy@example.com",
-        phone: "1122334455",
-        relationship: "Mother"
-      },
-      medical: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    // Add more mock students as needed
-  ];
 
-  const filteredStudents = mockStudents.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.admissionNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+  const {data: students = [], isLoading} = useQuery({ queryKey: ["selectable-students"], queryFn: fetchStudents });
+
+  const filteredStudents = students.filter(student =>
+    (student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.admissionNumber?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const toggleStudent = (student: StudentDetail) => {
@@ -111,7 +85,6 @@ export function StudentSelectionDialog({
         <DialogHeader>
           <DialogTitle>Select Students</DialogTitle>
         </DialogHeader>
-        
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -121,7 +94,6 @@ export function StudentSelectionDialog({
             className="pl-8"
           />
         </div>
-
         <div className="space-y-2">
           <div className="text-sm font-medium">Selected Students:</div>
           <div className="flex flex-wrap gap-2">
@@ -132,8 +104,10 @@ export function StudentSelectionDialog({
             ))}
           </div>
         </div>
-
         <div className="max-h-[300px] overflow-y-auto">
+          {isLoading ? (
+            <div className="py-8 text-center">Loading students...</div>
+          ) : (
           <table className="w-full">
             <thead className="sticky top-0 bg-background">
               <tr className="border-b">
@@ -160,8 +134,8 @@ export function StudentSelectionDialog({
               )}
             </tbody>
           </table>
+          )}
         </div>
-
         <div className="flex justify-end space-x-2 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
