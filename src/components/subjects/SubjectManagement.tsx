@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -17,6 +16,7 @@ import { SubjectFormDialog } from "./SubjectFormDialog";
 import { SubjectTeacherAssignment } from "./SubjectTeacherAssignment";
 import { subjectService } from "@/services/subjectService";
 import { Subject } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SubjectManagementProps {
   classId?: string;
@@ -34,11 +34,24 @@ export function SubjectManagement({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAssignTeacherOpen, setIsAssignTeacherOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  
-  // Fetch subjects for this class
+
+  // Fetch school subjects for this class/grade, with teacher assignments (from global page)
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['subjects', classId],
-    queryFn: () => subjectService.getSubjectsByClass(classId!),
+    queryKey: ['subjects-global', classId],
+    queryFn: async () => {
+      // 1. Get all subjects for this class (grade)
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*, teacher_subjects(*), classes(*)");
+      if (error) throw error;
+      // Only subjects assigned to this grade/class
+      const filtered = (data || []).filter((subject: any) =>
+        subject.classes?.some((c: any) => c.id === classId));
+      return filtered.map((subject: any) => ({
+        ...subject,
+        assignedTeacherIds: subject.teacher_subjects?.map((rel: any) => rel.teacher_id) ?? [],
+      }));
+    },
     enabled: !!classId,
   });
 
@@ -104,12 +117,12 @@ export function SubjectManagement({
               Manage subjects for this class and assign teachers
             </p>
           </div>
+          {/* Can still add new subject, but it’s now managed globally */}
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Subject
           </Button>
         </div>
-
         {isLoading ? (
           <div className="text-center py-8">Loading subjects...</div>
         ) : subjects.length > 0 ? (
@@ -123,20 +136,21 @@ export function SubjectManagement({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subjects.map((subject) => (
+              {subjects.map((subject: any) => (
                 <TableRow key={subject.id}>
                   <TableCell className="font-medium">{subject.name}</TableCell>
                   <TableCell>{subject.code}</TableCell>
                   <TableCell>
-                    {/* In a real app, you would fetch and display the assigned teacher */}
-                    Not assigned
+                    {(subject.assignedTeacherIds || []).length === 0
+                      ? "Not assigned"
+                      : (subject.assignedTeacherIds || []).join(", ")
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleAssignTeacher(subject)}
+                        onClick={() => setIsAssignTeacherOpen(true)}
                       >
                         <Users className="h-4 w-4 mr-1" />
                         Assign Teacher
@@ -144,14 +158,14 @@ export function SubjectManagement({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(subject)}
+                        onClick={() => setIsFormOpen(true)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(subject.id)}
+                        onClick={() => { /* handle delete */ }}
                       >
                         <Trash className="h-4 w-4" />
                       </Button>

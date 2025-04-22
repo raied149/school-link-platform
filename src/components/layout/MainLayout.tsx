@@ -12,7 +12,8 @@ import {
   Calendar,
   FileText,
   AlertTriangle,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +38,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
     { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
+    { icon: BookOpen, label: 'Subjects', path: '/subjects' },
   ];
 
   const handleLogout = () => {

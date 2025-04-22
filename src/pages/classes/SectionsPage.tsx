@@ -12,7 +12,6 @@ import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
 import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 function useTeacherMap() {

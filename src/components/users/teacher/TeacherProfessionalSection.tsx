@@ -1,18 +1,29 @@
-
 import { Teacher } from "@/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TeacherProfessionalSectionProps {
   teacher: Teacher;
 }
 
 export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSectionProps) {
+  // Query for subjects assigned to this teacher
+  const { data: teacherSubjects = [] } = useQuery({
+    queryKey: ['subjects-by-teacher', teacher.id],
+    queryFn: async () => {
+      const { data: ts, error } = await supabase
+        .from("teacher_subjects")
+        .select("subject_id, subjects(name, code)")
+        .eq("teacher_id", teacher.id);
+      if (error) throw error;
+      return (ts || []).map((row: any) => row.subjects?.name).filter(Boolean);
+    },
+    enabled: !!teacher.id
+  });
+
   // Make sure all arrays exist or default to empty arrays
-  const subjects = teacher.professionalDetails?.subjects || [];
-  const classesAssigned = teacher.professionalDetails?.classesAssigned || [];
-  const qualifications = teacher.professionalDetails?.qualifications || [];
-  const specializations = teacher.professionalDetails?.specializations || [];
-  const previousExperience = teacher.professionalDetails?.previousExperience || [];
+  const subjects = teacherSubjects;
 
   return (
     <AccordionItem value="professional">
@@ -58,14 +69,14 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">No subjects specified</p>
+              <p className="text-sm text-muted-foreground">No subjects assigned</p>
             )}
           </div>
           <div>
             <p className="text-sm font-medium">Classes Assigned</p>
-            {classesAssigned.length > 0 ? (
+            {teacher.professionalDetails?.classesAssigned.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {classesAssigned.map((classAssigned: string, index: number) => (
+                {teacher.professionalDetails?.classesAssigned.map((classAssigned: string, index: number) => (
                   <li key={index}>{classAssigned}</li>
                 ))}
               </ul>
@@ -75,9 +86,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Qualifications</p>
-            {qualifications.length > 0 ? (
+            {teacher.professionalDetails?.qualifications.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {qualifications.map((qualification: string, index: number) => (
+                {teacher.professionalDetails?.qualifications.map((qualification: string, index: number) => (
                   <li key={index}>{qualification}</li>
                 ))}
               </ul>
@@ -87,9 +98,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Specializations</p>
-            {specializations.length > 0 ? (
+            {teacher.professionalDetails?.specializations.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {specializations.map((specialization: string, index: number) => (
+                {teacher.professionalDetails?.specializations.map((specialization: string, index: number) => (
                   <li key={index}>{specialization}</li>
                 ))}
               </ul>
@@ -99,9 +110,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Previous Experience</p>
-            {previousExperience.length > 0 ? (
+            {teacher.professionalDetails?.previousExperience.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {previousExperience.map((exp: any, index: number) => (
+                {teacher.professionalDetails?.previousExperience.map((exp: any, index: number) => (
                   <li key={index}>{exp.position} at {exp.schoolName} ({exp.duration})</li>
                 ))}
               </ul>
