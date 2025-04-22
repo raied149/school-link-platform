@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -32,26 +31,33 @@ const ClassesPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
 
-  // Fetch classes directly from Supabase
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes', yearId],
     queryFn: async () => {
       if (!yearId) return [];
+      
+      console.log("Fetching classes for yearId:", yearId);
+      
       const { data, error } = await supabase
         .from('classes')
         .select('*')
         .eq('year_id', yearId)
         .order('name');
+        
       if (error) {
+        console.error("Error fetching classes:", error);
         toast({ title: "Error", description: error.message, variant: "destructive" });
         return [];
       }
+      
+      console.log("Classes data:", data);
+      
       return (
         data?.map(row => ({
           id: row.id,
           name: row.name,
           level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
-          description: "", // The Supabase table doesn't have a description
+          description: "", 
           academicYearId: row.year_id,
           createdAt: row.created_at,
           updatedAt: row.created_at,
@@ -61,22 +67,32 @@ const ClassesPage = () => {
     enabled: !!yearId
   });
 
-  // Create class via Supabase
   const createMutation = useMutation({
     mutationFn: async (classData: Omit<Class, "id" | "createdAt" | "updatedAt">) => {
       const { name, academicYearId } = classData;
+      
       if (!academicYearId) throw new Error("Academic year ID missing");
+      
+      console.log("Creating class with data:", { name, year_id: academicYearId });
+      
       const { data, error } = await supabase
         .from("classes")
         .insert({ name, year_id: academicYearId })
         .select()
         .single();
-      if (error) throw error;
+        
+      if (error) {
+        console.error("Error creating class:", error);
+        throw error;
+      }
+      
+      console.log("Created class:", data);
+      
       return {
         id: data.id,
         name: data.name,
         level: classData.level,
-        description: "", // No description column
+        description: "", 
         academicYearId: data.year_id,
         createdAt: data.created_at,
         updatedAt: data.created_at,
@@ -87,12 +103,10 @@ const ClassesPage = () => {
     }
   });
 
-  // Update class via Supabase
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Class> }) => {
       const updates: any = {};
       if (data.name) updates.name = data.name;
-      // academicYearId and level aren't natively columns
       const { error } = await supabase
         .from("classes")
         .update(updates)
@@ -105,7 +119,6 @@ const ClassesPage = () => {
     }
   });
 
-  // Delete class via Supabase
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -135,14 +148,25 @@ const ClassesPage = () => {
   ];
 
   const handleCreateClass = async (classData: Partial<Class>) => {
-    await createMutation.mutateAsync({
-      ...classData,
-      academicYearId: yearId
-    } as Omit<Class, "id" | "createdAt" | "updatedAt">);
-    toast({
-      title: "Class Created",
-      description: `${classData.name} has been created successfully.`
-    });
+    try {
+      await createMutation.mutateAsync({
+        ...classData,
+        academicYearId: yearId || ""
+      } as Omit<Class, "id" | "createdAt" | "updatedAt">);
+      
+      toast({
+        title: "Class Created",
+        description: `${classData.name} has been created successfully.`
+      });
+      
+      setIsCreateDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create class",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleUpdateClass = async (classData: Partial<Class>) => {

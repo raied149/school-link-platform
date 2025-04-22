@@ -1,5 +1,5 @@
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { academicYearService } from "@/services/academicYearService";
@@ -8,6 +8,7 @@ import ClassesPage from "./ClassesPage";
 
 export default function ClassYearsPage() {
   const navigate = useNavigate();
+  const { yearId } = useParams<{ yearId: string }>();
   
   const { data: academicYears = [], isLoading } = useQuery({
     queryKey: ['academicYears'],
@@ -16,6 +17,9 @@ export default function ClassYearsPage() {
   
   // Find the active academic year
   const activeYear = academicYears.find(year => year.isActive);
+  
+  // If no yearId is provided in URL but we have years, redirect to the active year or first year
+  const defaultYearId = activeYear?.id || academicYears[0]?.id;
   
   if (isLoading) {
     return (
@@ -27,10 +31,15 @@ export default function ClassYearsPage() {
     );
   }
 
+  if (!yearId && defaultYearId) {
+    navigate(`/classes/${defaultYearId}`);
+    return null;
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Tabs 
-        defaultValue={activeYear?.id} 
+        value={yearId || defaultYearId}
         className="w-full"
         onValueChange={(value) => navigate(`/classes/${value}`)}
       >
@@ -48,7 +57,7 @@ export default function ClassYearsPage() {
         </TabsList>
       </Tabs>
       
-      <ClassesPage />
+      {yearId && <ClassesPage />}
     </div>
   );
 }
