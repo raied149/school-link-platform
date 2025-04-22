@@ -35,7 +35,6 @@ export default function ClassYearsPage() {
         return [];
       }
 
-      // Defensive parse and cast data to AcademicYear[]
       return (
         data?.map((year: any) => ({
           id: year.id,
@@ -154,13 +153,15 @@ export default function ClassYearsPage() {
     );
   }
 
-  // Redirect if necessary
+  // Redirect if necessary - THIS IS KEY: on route /classes, redirect to a specific year
   if (!yearId && defaultYearId) {
+    console.log("No yearId in URL, redirecting to:", defaultYearId);
     navigate(`/classes/${defaultYearId}`, { replace: true });
     return null;
   }
 
   if (yearId && !academicYears.some(year => year.id === yearId) && defaultYearId) {
+    console.log("Invalid yearId, redirecting to:", defaultYearId);
     navigate(`/classes/${defaultYearId}`, { replace: true });
     return null;
   }
