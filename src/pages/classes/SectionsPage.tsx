@@ -6,14 +6,13 @@ import { PlusCircle, Pencil, Trash, Search, Users, ArrowRight } from "lucide-rea
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { sectionService } from "@/services/sectionService";
 import { classService } from "@/services/classService";
 import { academicYearService } from "@/services/academicYearService";
 import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
+import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
 
 const SectionsPage = () => {
   const { yearId, classId } = useParams<{ yearId: string, classId: string }>();
@@ -26,7 +25,6 @@ const SectionsPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
-  const [newSectionName, setNewSectionName] = useState("");
   
   // Fetch academic year details
   const { data: academicYear } = useQuery({
@@ -56,7 +54,6 @@ const SectionsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
-      setNewSectionName("");
     }
   });
   
@@ -84,59 +81,45 @@ const SectionsPage = () => {
   );
   
   // Handlers
-  const handleCreateSection = async () => {
-    if (!newSectionName.trim()) {
-      toast({
-        title: "Error",
-        description: "Section name cannot be empty",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleSaveSection = async (sectionData: any) => {
     try {
-      await createMutation.mutateAsync({
-        name: newSectionName,
-        classId: classId!,
-        academicYearId: yearId!
-      });
-      
-      toast({
-        title: "Section Created",
-        description: `Section ${newSectionName} has been created successfully.`
-      });
-      
-      setIsCreateDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create section. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleUpdateSection = async () => {
-    if (selectedSection && newSectionName.trim()) {
-      try {
-        await updateMutation.mutateAsync({ 
-          id: selectedSection.id, 
-          data: { name: newSectionName } 
+      if (selectedSection) {
+        // Update existing section
+        await updateMutation.mutateAsync({
+          id: selectedSection.id,
+          data: {
+            ...sectionData,
+            classId: classId!,
+            academicYearId: yearId!
+          }
         });
         
         toast({
           title: "Section Updated",
-          description: `Section has been updated to ${newSectionName}.`
+          description: `${sectionData.name} has been updated successfully.`
+        });
+      } else {
+        // Create new section
+        await createMutation.mutateAsync({
+          ...sectionData,
+          classId: classId!,
+          academicYearId: yearId!
         });
         
-        setIsEditDialogOpen(false);
-      } catch (error) {
         toast({
-          title: "Error",
-          description: "Failed to update section. Please try again.",
-          variant: "destructive"
+          title: "Section Created",
+          description: `${sectionData.name} has been created successfully.`
         });
       }
+      
+      setIsCreateDialogOpen(false);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save section. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -161,7 +144,6 @@ const SectionsPage = () => {
   
   const openEditDialog = (section: Section) => {
     setSelectedSection(section);
-    setNewSectionName(section.name);
     setIsEditDialogOpen(true);
   };
   
@@ -183,7 +165,10 @@ const SectionsPage = () => {
             {academicYear?.name || 'Loading...'} | {classDetails?.name || 'Loading...'}
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => {
+          setSelectedSection(null);
+          setIsCreateDialogOpen(true);
+        }}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Section
         </Button>
@@ -283,61 +268,18 @@ const SectionsPage = () => {
         )}
       </Card>
       
-      {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Section</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="sectionName">Section Name</Label>
-              <Input
-                id="sectionName"
-                placeholder="e.g., Section A"
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSection} disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create Section"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Section</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editSectionName">Section Name</Label>
-              <Input
-                id="editSectionName"
-                placeholder="e.g., Section A"
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateSection} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Updating..." : "Update Section"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create/Edit Section Dialog */}
+      <SectionFormDialog
+        open={isCreateDialogOpen || isEditDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateDialogOpen(false);
+            setIsEditDialogOpen(false);
+          }
+        }}
+        onSave={handleSaveSection}
+        defaultValues={selectedSection}
+      />
       
       {/* Delete Confirmation */}
       <ConfirmationDialog

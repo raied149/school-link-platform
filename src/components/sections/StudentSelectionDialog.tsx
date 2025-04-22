@@ -44,6 +44,44 @@ export function StudentSelectionDialog({
       medical: {},
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
+    },
+    {
+      id: "2",
+      name: "Bob Johnson",
+      admissionNumber: "S002",
+      email: "bob@school.com",
+      dateOfBirth: "2010-03-15",
+      gender: "male",
+      nationality: "US",
+      language: "English",
+      guardian: {
+        name: "Mary Johnson",
+        email: "mary@example.com",
+        phone: "0987654321",
+        relationship: "Mother"
+      },
+      medical: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: "3",
+      name: "Charlie Brown",
+      admissionNumber: "S003",
+      email: "charlie@school.com",
+      dateOfBirth: "2010-05-22",
+      gender: "male",
+      nationality: "US",
+      language: "English",
+      guardian: {
+        name: "Lucy Brown",
+        email: "lucy@example.com",
+        phone: "1122334455",
+        relationship: "Mother"
+      },
+      medical: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
     // Add more mock students as needed
   ];
