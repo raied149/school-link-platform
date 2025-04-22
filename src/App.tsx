@@ -9,7 +9,6 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UsersPage from "./pages/users/UsersPage";
-import ClassesPage from "./pages/classes/ClassesPage";
 import ClassYearsPage from "./pages/classes/ClassYearsPage";
 import ClassDetailsPage from "./pages/classes/ClassDetailsPage";
 import SectionsPage from "./pages/classes/SectionsPage";
@@ -56,7 +55,7 @@ const AuthRoutes = () => (
       <Route path="student-attendance" element={<StudentAttendancePage />} />
       <Route path="teacher-attendance" element={<TeacherAttendancePage />} />
       <Route path="classes" element={<ClassYearsPage />} />
-      <Route path="classes/:yearId" element={<ClassesPage />} />
+      <Route path="classes/:yearId" element={<ClassYearsPage />} />
       <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
       <Route path="classes/:yearId/:classId/:sectionId" element={<ClassDetailsPage />} />
       <Route path="subjects" element={<SubjectsPage />} />

@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -22,15 +23,19 @@ export default function ClassYearsPage() {
   const { data: academicYears = [], isLoading } = useQuery({
     queryKey: ['academicYears'],
     queryFn: async () => {
+      console.log("Fetching academic years");
       const { data, error } = await supabase
         .from('academic_years')
         .select('*')
         .order('start_date', { ascending: false });
 
       if (error) {
+        console.error("Error fetching academic years:", error);
         toast({ title: "Error", description: error.message, variant: "destructive" });
         return [];
       }
+      
+      console.log("Academic years data:", data);
       return (
         data?.map((year: any) => ({
           id: year.id,
@@ -112,14 +117,20 @@ export default function ClassYearsPage() {
   // Redirect logic -- always keep this to ensure URL consistency
   if (!isLoading && academicYears.length > 0) {
     if (!yearId && defaultYearId) {
+      console.log("Redirecting to default year:", defaultYearId);
       navigate(`/classes/${defaultYearId}`, { replace: true });
       return null;
     }
     if (yearId && !academicYears.some(year => year.id === yearId) && defaultYearId) {
+      console.log("Year ID not found, redirecting to default year:", defaultYearId);
       navigate(`/classes/${defaultYearId}`, { replace: true });
       return null;
     }
   }
+
+  console.log("Rendering ClassYearsPage with yearId:", yearId);
+  console.log("Academic years:", academicYears);
+  console.log("Is valid year ID:", isValidYearId);
 
   // Top taskbar: always visible
   const TaskBar = (
