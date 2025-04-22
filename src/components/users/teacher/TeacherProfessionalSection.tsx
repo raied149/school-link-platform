@@ -24,7 +24,11 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
   });
 
   // Make sure all arrays exist or default to empty arrays
-  const subjects = teacherSubjects;
+  const subjects = teacherSubjects || [];
+  const classesAssigned = teacher.professionalDetails?.classesAssigned || [];
+  const qualifications = teacher.professionalDetails?.qualifications || [];
+  const specializations = teacher.professionalDetails?.specializations || [];
+  const previousExperience = teacher.professionalDetails?.previousExperience || [];
 
   return (
     <AccordionItem value="professional">
@@ -75,9 +79,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Classes Assigned</p>
-            {teacher.professionalDetails?.classesAssigned.length > 0 ? (
+            {classesAssigned.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {teacher.professionalDetails?.classesAssigned.map((classAssigned: string, index: number) => (
+                {classesAssigned.map((classAssigned: string, index: number) => (
                   <li key={index}>{classAssigned}</li>
                 ))}
               </ul>
@@ -87,9 +91,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Qualifications</p>
-            {teacher.professionalDetails?.qualifications.length > 0 ? (
+            {qualifications.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {teacher.professionalDetails?.qualifications.map((qualification: string, index: number) => (
+                {qualifications.map((qualification: string, index: number) => (
                   <li key={index}>{qualification}</li>
                 ))}
               </ul>
@@ -99,9 +103,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Specializations</p>
-            {teacher.professionalDetails?.specializations.length > 0 ? (
+            {specializations.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {teacher.professionalDetails?.specializations.map((specialization: string, index: number) => (
+                {specializations.map((specialization: string, index: number) => (
                   <li key={index}>{specialization}</li>
                 ))}
               </ul>
@@ -111,9 +115,9 @@ export function TeacherProfessionalSection({ teacher }: TeacherProfessionalSecti
           </div>
           <div>
             <p className="text-sm font-medium">Previous Experience</p>
-            {teacher.professionalDetails?.previousExperience.length > 0 ? (
+            {previousExperience.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                {teacher.professionalDetails?.previousExperience.map((exp: any, index: number) => (
+                {previousExperience.map((exp: any, index: number) => (
                   <li key={index}>{exp.position} at {exp.schoolName} ({exp.duration})</li>
                 ))}
               </ul>
