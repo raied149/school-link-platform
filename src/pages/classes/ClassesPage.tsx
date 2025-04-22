@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { ClassFormDialog } from "@/components/classes/ClassFormDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { classService } from "@/services/classService";
-import { academicYearService } from "@/services/academicYearService";
 import { Class } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
@@ -31,12 +30,6 @@ const ClassesPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  
-  const { data: academicYear } = useQuery({
-    queryKey: ['academicYear', yearId],
-    queryFn: () => academicYearService.getAcademicYearById(yearId!),
-    enabled: !!yearId
-  });
   
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes', yearId],
@@ -140,13 +133,11 @@ const ClassesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <Card className="p-6">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
-          <p className="text-muted-foreground">
-            Academic Year: {academicYear?.name || 'Loading...'}
-          </p>
+          <h2 className="text-xl font-semibold">All Classes</h2>
+          <p className="text-muted-foreground">Manage all classes</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
@@ -154,105 +145,97 @@ const ClassesPage = () => {
         </Button>
       </div>
 
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">All Classes</h2>
-            <p className="text-muted-foreground">Manage all classes for {academicYear?.name}</p>
-          </div>
-          <div className="flex gap-2">
-            <div className="w-48">
-              <Select
-                value={selectedGrade}
-                onValueChange={setSelectedGrade}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {uniqueGrades.map((grade) => (
-                    <SelectItem key={grade.id} value={grade.id}>
-                      {grade.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-72 relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search classes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
+      <div className="flex gap-2 mb-4">
+        <div className="w-48">
+          <Select
+            value={selectedGrade}
+            onValueChange={setSelectedGrade}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {uniqueGrades.map((grade) => (
+                <SelectItem key={grade.id} value={grade.id}>
+                  {grade.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        <div className="w-72 relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search classes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
 
-        {isLoadingClasses ? (
-          <div className="space-y-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-12 bg-muted rounded-md animate-pulse"></div>
-            ))}
-          </div>
-        ) : filteredClasses.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Grade</th>
-                  <th className="text-right py-3 px-4">Actions</th>
+      {isLoadingClasses ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-12 bg-muted rounded-md animate-pulse"></div>
+          ))}
+        </div>
+      ) : filteredClasses.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-4">Grade</th>
+                <th className="text-right py-3 px-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClasses.map((classItem) => (
+                <tr key={classItem.id} className="border-b hover:bg-muted/50">
+                  <td className="py-3 px-4 font-medium">
+                    <div className="flex items-center space-x-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <span>{classItem.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigateToSections(classItem)}
+                      >
+                        Sections
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openEditDialog(classItem)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openDeleteDialog(classItem)}
+                      >
+                        <Trash className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredClasses.map((classItem) => (
-                  <tr key={classItem.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4 font-medium">
-                      <div className="flex items-center space-x-2">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        <span>{classItem.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => navigateToSections(classItem)}
-                        >
-                          Sections
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => openEditDialog(classItem)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => openDeleteDialog(classItem)}
-                        >
-                          <Trash className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No classes found for this academic year. Create your first class!</p>
-          </div>
-        )}
-      </Card>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No classes found for this academic year. Create your first class!</p>
+        </div>
+      )}
       
       <ClassFormDialog
         open={isCreateDialogOpen}
@@ -280,7 +263,7 @@ const ClassesPage = () => {
         onConfirm={handleDeleteClass}
         isProcessing={deleteMutation.isPending}
       />
-    </div>
+    </Card>
   );
 };
 
