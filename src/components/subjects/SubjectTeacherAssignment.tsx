@@ -54,6 +54,8 @@ const mockTeachers: Teacher[] = [
       joiningDate: "2019-01-01",
       qualifications: ["M.Sc Mathematics"],
       employmentType: "Full-time",
+      specializations: [],
+      previousExperience: []
     },
     attendance: {
       present: 90,
@@ -108,6 +110,8 @@ const mockTeachers: Teacher[] = [
       joiningDate: "2020-01-01",
       qualifications: ["M.Sc Physics"],
       employmentType: "Full-time",
+      specializations: [],
+      previousExperience: []
     },
     attendance: {
       present: 85,
@@ -206,7 +210,10 @@ export function SubjectTeacherAssignment({
               <SelectContent>
                 {teachers.map((teacher) => (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.firstName} {teacher.lastName} ({teacher.professionalDetails.department})
+                    {teacher.firstName} {teacher.lastName} 
+                    {teacher.professionalDetails?.department ? 
+                      ` (${teacher.professionalDetails.department})` : 
+                      ''}
                   </SelectItem>
                 ))}
               </SelectContent>
