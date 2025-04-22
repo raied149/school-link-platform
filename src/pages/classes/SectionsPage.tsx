@@ -1,13 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Pencil, Trash, Search, Users, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { sectionService } from "@/services/sectionService";
-import { classService } from "@/services/classService";
-import { academicYearService } from "@/services/academicYearService";
 import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
@@ -42,67 +40,262 @@ const SectionsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   
+  // Fetch academic year details
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
-    queryFn: () => academicYearService.getAcademicYearById(yearId!),
+    queryFn: async () => {
+      if (!yearId) return null;
+      
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('id', yearId)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error fetching academic year:", error);
+        throw error;
+      }
+      
+      return data ? {
+        id: data.id,
+        name: data.name,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        isActive: data.is_active,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at || data.created_at
+      } : null;
+    },
     enabled: !!yearId
   });
   
+  // Fetch class details
   const { data: classDetails } = useQuery({
     queryKey: ['class', classId],
-    queryFn: () => classService.getClassById(classId!),
+    queryFn: async () => {
+      if (!classId) return null;
+      
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('id', classId)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error fetching class:", error);
+        throw error;
+      }
+      
+      return data ? {
+        id: data.id,
+        name: data.name,
+        academicYearId: data.year_id,
+        createdAt: data.created_at
+      } : null;
+    },
     enabled: !!classId
   });
   
-  const { data: sections = [], isLoading } = useQuery({
+  // Fetch sections for the class
+  const { data: sections = [], isLoading: isSectionsLoading } = useQuery({
     queryKey: ['sections', classId, yearId],
-    queryFn: () => sectionService.getSectionsByClassAndYear(classId!, yearId!),
-    enabled: !!classId && !!yearId
+    queryFn: async () => {
+      if (!classId) return [];
+      
+      console.log("Fetching sections for classId:", classId);
+      
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('class_id', classId);
+        
+      if (error) {
+        console.error("Error fetching sections:", error);
+        throw error;
+      }
+      
+      console.log("Sections data:", data);
+      
+      return (data || []).map((section: any) => ({
+        id: section.id,
+        name: section.name,
+        classId: section.class_id,
+        teacherId: section.teacher_id,
+        createdAt: section.created_at,
+        updatedAt: section.created_at
+      }));
+    },
+    enabled: !!classId
   });
   
+  // Fetch teacher names
   const { data: teacherNameMap = {} } = useTeacherMap();
   
-  const createMutation = useMutation({
-    mutationFn: (sectionData: Omit<Section, 'id' | 'createdAt' | 'updatedAt'>) => {
-      return sectionService.createSection(sectionData);
+  // Save section mutation
+  const createSectionMutation = useMutation({
+    mutationFn: async (sectionData: any) => {
+      console.log("Creating section with data:", {
+        name: sectionData.name,
+        class_id: classId,
+        teacher_id: sectionData.teacherId
+      });
+      
+      const { data, error } = await supabase
+        .from('sections')
+        .insert({
+          name: sectionData.name,
+          class_id: classId,
+          teacher_id: sectionData.teacherId
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error("Error creating section:", error);
+        throw error;
+      }
+
+      console.log("Created section:", data);
+      
+      // If teacher is assigned and students are selected, need to save student assignments too
+      if (sectionData.studentIds && sectionData.studentIds.length > 0) {
+        const studentSections = sectionData.studentIds.map((studentId: string) => ({
+          student_id: studentId,
+          section_id: data.id
+        }));
+        
+        console.log("Creating student sections:", studentSections);
+        
+        const { error: studentSectionError } = await supabase
+          .from('student_sections')
+          .insert(studentSections);
+          
+        if (studentSectionError) {
+          console.error("Error assigning students to section:", studentSectionError);
+          throw studentSectionError;
+        }
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
     }
   });
   
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Section> }) => {
-      return sectionService.updateSection(id, data);
+  // Update section mutation
+  const updateSectionMutation = useMutation({
+    mutationFn: async (params: { id: string; data: any }) => {
+      const { id, data } = params;
+      
+      console.log("Updating section with data:", {
+        id,
+        name: data.name,
+        teacher_id: data.teacherId
+      });
+      
+      const { error } = await supabase
+        .from('sections')
+        .update({
+          name: data.name,
+          teacher_id: data.teacherId
+        })
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error updating section:", error);
+        throw error;
+      }
+      
+      // For students, we need to clear and re-add them
+      if (data.studentIds && Array.isArray(data.studentIds)) {
+        // First, remove all existing student assignments
+        const { error: deleteError } = await supabase
+          .from('student_sections')
+          .delete()
+          .eq('section_id', id);
+          
+        if (deleteError) {
+          console.error("Error removing student assignments:", deleteError);
+          throw deleteError;
+        }
+        
+        // Only add new assignments if we have students
+        if (data.studentIds.length > 0) {
+          const studentSections = data.studentIds.map((studentId: string) => ({
+            student_id: studentId,
+            section_id: id
+          }));
+          
+          console.log("Creating updated student sections:", studentSections);
+          
+          const { error: insertError } = await supabase
+            .from('student_sections')
+            .insert(studentSections);
+            
+          if (insertError) {
+            console.error("Error assigning students to section:", insertError);
+            throw insertError;
+          }
+        }
+      }
+      
+      return { id, ...data };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
     }
   });
   
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      return sectionService.deleteSection(id);
+  // Delete section mutation
+  const deleteSectionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      console.log("Deleting section:", id);
+      
+      // First delete student assignments
+      const { error: studentSectionError } = await supabase
+        .from('student_sections')
+        .delete()
+        .eq('section_id', id);
+        
+      if (studentSectionError) {
+        console.error("Error removing student assignments:", studentSectionError);
+        throw studentSectionError;
+      }
+      
+      // Then delete the section
+      const { error } = await supabase
+        .from('sections')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Error deleting section:", error);
+        throw error;
+      }
+      
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
     }
   });
   
+  // Filter sections by search term
   const filteredSections = sections.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
+  // Handlers
   const handleSaveSection = async (sectionData: any) => {
     try {
+      console.log("Saving section with data:", sectionData);
+      
       if (selectedSection) {
-        await updateMutation.mutateAsync({
+        await updateSectionMutation.mutateAsync({
           id: selectedSection.id,
-          data: {
-            ...sectionData,
-            classId: classId!,
-            academicYearId: yearId!
-          }
+          data: sectionData
         });
         
         toast({
@@ -110,11 +303,7 @@ const SectionsPage = () => {
           description: `${sectionData.name} has been updated successfully.`
         });
       } else {
-        await createMutation.mutateAsync({
-          ...sectionData,
-          classId: classId!,
-          academicYearId: yearId!
-        });
+        await createSectionMutation.mutateAsync(sectionData);
         
         toast({
           title: "Section Created",
@@ -124,10 +313,11 @@ const SectionsPage = () => {
       
       setIsCreateDialogOpen(false);
       setIsEditDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error saving section:", error);
       toast({
         title: "Error",
-        description: "Failed to save section. Please try again.",
+        description: error.message || "Failed to save section. Please try again.",
         variant: "destructive"
       });
     }
@@ -136,16 +326,16 @@ const SectionsPage = () => {
   const handleDeleteSection = async () => {
     if (selectedSection) {
       try {
-        await deleteMutation.mutateAsync(selectedSection.id);
+        await deleteSectionMutation.mutateAsync(selectedSection.id);
         toast({
           title: "Section Deleted",
           description: `${selectedSection.name} has been deleted successfully.`
         });
         setIsDeleteDialogOpen(false);
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to delete section. Please try again.",
+          description: error.message || "Failed to delete section. Please try again.",
           variant: "destructive"
         });
       }
@@ -165,6 +355,13 @@ const SectionsPage = () => {
   const navigateToSectionDetails = (section: Section) => {
     navigate(`/classes/${yearId}/${classId}/${section.id}`);
   };
+  
+  // Redirect if params are missing
+  useEffect(() => {
+    if (!yearId || !classId) {
+      navigate('/classes', { replace: true });
+    }
+  }, [yearId, classId, navigate]);
 
   return (
     <div className="space-y-6">
@@ -205,7 +402,7 @@ const SectionsPage = () => {
           </div>
         </div>
 
-        {isLoading ? (
+        {isSectionsLoading ? (
           <div className="space-y-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-12 bg-muted rounded-md animate-pulse"></div>
@@ -298,7 +495,7 @@ const SectionsPage = () => {
         description={`Are you sure you want to delete ${selectedSection?.name}? This action cannot be undone.`}
         confirmText="Delete"
         onConfirm={handleDeleteSection}
-        isProcessing={deleteMutation.isPending}
+        isProcessing={deleteSectionMutation.isPending}
       />
     </div>
   );
