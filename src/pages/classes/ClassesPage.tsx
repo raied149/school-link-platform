@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ClassFormDialog } from "@/components/classes/ClassFormDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { classService } from "@/services/classService";
+import { supabase } from "@/integrations/supabase/client";
 import { Class } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useNavigate } from "react-router-dom";
@@ -30,65 +31,120 @@ const ClassesPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  
+
+  // Fetch classes directly from Supabase
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes', yearId],
-    queryFn: () => classService.getClassesByYear(yearId!),
+    queryFn: async () => {
+      if (!yearId) return [];
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('year_id', yearId)
+        .order('name');
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return [];
+      }
+      return (
+        data?.map(row => ({
+          id: row.id,
+          name: row.name,
+          level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
+          description: "", // The Supabase table doesn't have a description
+          academicYearId: row.year_id,
+          createdAt: row.created_at,
+          updatedAt: row.created_at,
+        })) ?? []
+      );
+    },
     enabled: !!yearId
   });
-  
+
+  // Create class via Supabase
   const createMutation = useMutation({
-    mutationFn: (classData: Omit<Class, 'id' | 'createdAt' | 'updatedAt'>) => {
-      return classService.createClass({
-        ...classData,
-        academicYearId: yearId
-      });
+    mutationFn: async (classData: Omit<Class, "id" | "createdAt" | "updatedAt">) => {
+      const { name, academicYearId } = classData;
+      if (!academicYearId) throw new Error("Academic year ID missing");
+      const { data, error } = await supabase
+        .from("classes")
+        .insert({ name, year_id: academicYearId })
+        .select()
+        .single();
+      if (error) throw error;
+      return {
+        id: data.id,
+        name: data.name,
+        level: classData.level,
+        description: "", // No description column
+        academicYearId: data.year_id,
+        createdAt: data.created_at,
+        updatedAt: data.created_at,
+      } as Class;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
-  
+
+  // Update class via Supabase
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Class> }) => {
-      return classService.updateClass(id, data);
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Class> }) => {
+      const updates: any = {};
+      if (data.name) updates.name = data.name;
+      // academicYearId and level aren't natively columns
+      const { error } = await supabase
+        .from("classes")
+        .update(updates)
+        .eq("id", id);
+      if (error) throw error;
+      return { id, ...updates };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
-  
+
+  // Delete class via Supabase
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      return classService.deleteClass(id);
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("classes")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
     }
   });
-  
+
   const filteredClasses = classes
     .filter(c => 
-      (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
        (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase())))
     )
     .filter(c => selectedGrade === "all" || c.id === selectedGrade)
-    .sort((a, b) => a.level - b.level);
-  
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+
   const uniqueGrades = [
     { id: "all", name: "All Grades" },
     ...classes
-      .sort((a, b) => a.level - b.level)
+      .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
   ];
-  
+
   const handleCreateClass = async (classData: Partial<Class>) => {
-    await createMutation.mutateAsync(classData as Omit<Class, 'id' | 'createdAt' | 'updatedAt'>);
+    await createMutation.mutateAsync({
+      ...classData,
+      academicYearId: yearId
+    } as Omit<Class, "id" | "createdAt" | "updatedAt">);
     toast({
       title: "Class Created",
       description: `${classData.name} has been created successfully.`
     });
   };
-  
+
   const handleUpdateClass = async (classData: Partial<Class>) => {
     if (selectedClass) {
       await updateMutation.mutateAsync({ id: selectedClass.id, data: classData });
@@ -98,7 +154,7 @@ const ClassesPage = () => {
       });
     }
   };
-  
+
   const handleDeleteClass = async () => {
     if (selectedClass) {
       try {
@@ -117,17 +173,17 @@ const ClassesPage = () => {
       }
     }
   };
-  
+
   const openEditDialog = (classItem: Class) => {
     setSelectedClass(classItem);
     setIsEditDialogOpen(true);
   };
-  
+
   const openDeleteDialog = (classItem: Class) => {
     setSelectedClass(classItem);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const navigateToSections = (classItem: Class) => {
     navigate(`/classes/${yearId}/${classItem.id}`);
   };
