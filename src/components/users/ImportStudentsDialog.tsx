@@ -41,6 +41,11 @@ const excelColumns = [
   "Emergency Contact Relationship"
 ];
 
+// Utility: check if a row (array of values) is fully empty
+function isRowEmpty(row: any[] = []) {
+  return row.every(cell => typeof cell === "undefined" || cell === null || String(cell).trim() === "");
+}
+
 export function ImportStudentsDialog({ open, onOpenChange }: ImportStudentsDialogProps) {
   const { toast } = useToast();
   const [showFormat, setShowFormat] = useState(false);
@@ -72,7 +77,18 @@ export function ImportStudentsDialog({ open, onOpenChange }: ImportStudentsDialo
         }
       }
 
-      const addPromises = rows.map(async (row, idx) => {
+      // Only process non-empty rows and stop once first all-empty row is found
+      const dataRows: any[][] = [];
+      for (let i = 0; i < rows.length; i++) {
+        if (isRowEmpty(rows[i])) break;
+        dataRows.push(rows[i]);
+      }
+
+      if (dataRows.length === 0) {
+        throw new Error("No data rows found in file.");
+      }
+
+      const addPromises = dataRows.map(async (row, idx) => {
         // Map and sanitize fields
         const [
           first_name, last_name, email, nationality, language, dateOfBirth, gender,
@@ -83,7 +99,9 @@ export function ImportStudentsDialog({ open, onOpenChange }: ImportStudentsDialo
 
         // Simple field check
         if (!first_name || !last_name || !email) {
-          throw new Error(`Row ${idx + 2}: First Name, Last Name, and Email are required.`);
+          throw new Error(
+            `Row ${idx + 2}: First Name, Last Name, and Email are required.` // +2 since idx=0 is first data row (after header)
+          );
         }
 
         // Insert into Supabase: first, the profile
@@ -239,3 +257,4 @@ export function ImportStudentsDialog({ open, onOpenChange }: ImportStudentsDialo
     </Dialog>
   );
 }
+
