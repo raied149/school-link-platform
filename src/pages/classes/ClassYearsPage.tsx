@@ -2,7 +2,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { academicYearService } from "@/services/academicYearService";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClassesPage from "./ClassesPage";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,8 @@ export default function ClassYearsPage() {
   const { yearId } = useParams<{ yearId: string }>();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
-  // Fetch academic years from database instead of mock service
+
+  // Fetch academic years
   const { data: academicYears = [], isLoading } = useQuery({
     queryKey: ['academicYears'],
     queryFn: async () => {
@@ -28,38 +27,42 @@ export default function ClassYearsPage() {
       const { data, error } = await supabase
         .from('academic_years')
         .select('*')
-        .order('startDate', { ascending: false });
-        
+        .order('start_date', { ascending: false }); // latest year first
+
       if (error) {
         console.error("Error fetching academic years:", error);
         toast({ title: "Error", description: error.message, variant: "destructive" });
         return [];
       }
-      
-      return data.map(year => ({
-        id: year.id,
-        name: year.name,
-        startDate: year.start_date,
-        endDate: year.end_date,
-        isActive: year.is_active,
-        createdAt: year.created_at,
-        updatedAt: year.updated_at || year.created_at
-      })) as AcademicYear[];
+
+      // Defensive parse and cast data to AcademicYear[]
+      return (
+        data?.map((year: any) => ({
+          id: year.id,
+          name: year.name,
+          startDate: year.start_date,
+          endDate: year.end_date,
+          isActive: year.is_active,
+          createdAt: year.created_at,
+          updatedAt: year.updated_at || year.created_at,
+        })) ?? []
+      ) as AcademicYear[];
     }
   });
-  
+
   const createMutation = useMutation({
     mutationFn: async (yearData: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">) => {
       const { name, startDate, endDate, isActive } = yearData;
-      
+
       // If this year is active, deactivate all others
       if (isActive) {
-        await supabase
+        const { error } = await supabase
           .from('academic_years')
           .update({ is_active: false })
-          .not('id', 'is', null);
+          .neq('id', null); // update all rows
+        if (error) throw error;
       }
-      
+
       const { data, error } = await supabase
         .from('academic_years')
         .insert({
@@ -69,13 +72,14 @@ export default function ClassYearsPage() {
           is_active: isActive
         })
         .select()
-        .single();
-        
+        .maybeSingle();
+
       if (error) {
         console.error("Error creating academic year:", error);
         throw error;
       }
-      
+      if (!data) throw new Error("No academic year returned after insert.");
+
       return {
         id: data.id,
         name: data.name,
@@ -83,7 +87,7 @@ export default function ClassYearsPage() {
         endDate: data.end_date,
         isActive: data.is_active,
         createdAt: data.created_at,
-        updatedAt: data.created_at
+        updatedAt: data.updated_at || data.created_at
       } as AcademicYear;
     },
     onSuccess: () => {
@@ -91,23 +95,19 @@ export default function ClassYearsPage() {
     }
   });
 
-  // Find the active academic year
+  // Find the active academic year or default to the latest (first in sorted array)
   const activeYear = academicYears.find(year => year.isActive);
-  // Or use the most recent year as a fallback
   const mostRecentYear = academicYears[0];
-  
-  // Determine which year ID to use
   const defaultYearId = activeYear?.id || mostRecentYear?.id;
-  
+
+  // When creating a year
   const handleCreateYear = async (yearData: Partial<AcademicYear>) => {
     try {
       await createMutation.mutateAsync(yearData as Omit<AcademicYear, "id" | "createdAt" | "updatedAt">);
-      
       toast({
         title: "Academic Year Created",
         description: `${yearData.name} has been created successfully.`
       });
-      
       setIsCreateDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -117,7 +117,8 @@ export default function ClassYearsPage() {
       });
     }
   };
-  
+
+  // Loading
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -128,7 +129,7 @@ export default function ClassYearsPage() {
     );
   }
 
-  // If no years exist at all
+  // Empty state (no years)
   if (academicYears.length === 0) {
     return (
       <div className="container mx-auto p-6">
@@ -142,7 +143,6 @@ export default function ClassYearsPage() {
             </Button>
           </div>
         </Card>
-        
         <AcademicYearFormDialog
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
@@ -154,18 +154,18 @@ export default function ClassYearsPage() {
     );
   }
 
-  // If no yearId is provided in URL but we have years, redirect to the default year
+  // Redirect if necessary
   if (!yearId && defaultYearId) {
-    navigate(`/classes/${defaultYearId}`);
+    navigate(`/classes/${defaultYearId}`, { replace: true });
     return null;
   }
 
-  // If yearId is invalid (like "year2024" instead of a UUID), redirect to the default year
   if (yearId && !academicYears.some(year => year.id === yearId) && defaultYearId) {
-    navigate(`/classes/${defaultYearId}`);
+    navigate(`/classes/${defaultYearId}`, { replace: true });
     return null;
   }
 
+  // Main UI
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -175,28 +175,27 @@ export default function ClassYearsPage() {
           Add Academic Year
         </Button>
       </div>
-      
-      <Tabs 
+      <Tabs
         value={yearId || defaultYearId}
         className="w-full"
         onValueChange={(value) => navigate(`/classes/${value}`)}
       >
-        <TabsList className="w-full justify-start">
+        <TabsList className="w-full flex gap-2 justify-start">
           {academicYears.map((year) => (
-            <TabsTrigger 
-              key={year.id} 
+            <TabsTrigger
+              key={year.id}
               value={year.id}
               className="min-w-[150px]"
             >
               {year.name}
-              {year.isActive && " (Active)"}
+              {year.isActive && (
+                <span className="ml-1 text-xs text-green-600">(Active)</span>
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
-      
       {yearId && <ClassesPage />}
-      
       <AcademicYearFormDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
