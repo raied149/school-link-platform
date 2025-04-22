@@ -1,3 +1,4 @@
+
 import { Teacher } from "@/types";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useQuery } from "@tanstack/react-query";

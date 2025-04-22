@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -117,7 +118,7 @@ export function SubjectManagement({
               Manage subjects for this class and assign teachers
             </p>
           </div>
-          {/* Can still add new subject, but it’s now managed globally */}
+          {/* Can still add new subject, but it's now managed globally */}
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Subject
@@ -143,14 +144,14 @@ export function SubjectManagement({
                   <TableCell>
                     {(subject.assignedTeacherIds || []).length === 0
                       ? "Not assigned"
-                      : (subject.assignedTeacherIds || []).join(", ")
+                      : (subject.assignedTeacherIds || []).join(", ")}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => setIsAssignTeacherOpen(true)}
+                        onClick={() => handleAssignTeacher(subject)}
                       >
                         <Users className="h-4 w-4 mr-1" />
                         Assign Teacher
@@ -158,14 +159,14 @@ export function SubjectManagement({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsFormOpen(true)}
+                        onClick={() => handleEdit(subject)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => { /* handle delete */ }}
+                        onClick={() => handleDelete(subject.id)}
                       >
                         <Trash className="h-4 w-4" />
                       </Button>

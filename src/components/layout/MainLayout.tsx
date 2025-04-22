@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
@@ -34,11 +35,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
     { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
+    { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: Clock, label: 'Timetables', path: '/timetables' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
     { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
-    { icon: BookOpen, label: 'Subjects', path: '/subjects' },
   ];
 
   const handleLogout = () => {
