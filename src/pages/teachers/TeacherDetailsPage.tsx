@@ -5,8 +5,9 @@ import { TeacherTable } from "@/components/users/TeacherTable";
 import { useState } from "react";
 import { TeacherSearch } from "@/components/users/TeacherSearch";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Import } from "lucide-react";
 import { AddTeacherDialog } from "@/components/users/AddTeacherDialog";
+import { ImportTeachersDialog } from "@/components/users/ImportTeachersDialog";
 
 const TeacherDetailsPage = () => {
   const [searchFilters, setSearchFilters] = useState({
@@ -16,6 +17,7 @@ const TeacherDetailsPage = () => {
   });
   
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
+  const [isImportTeachersOpen, setIsImportTeachersOpen] = useState(false);
   
   const handleSearch = (filters: {
     idSearch: string;
@@ -37,10 +39,16 @@ const TeacherDetailsPage = () => {
               Manage and view teacher information
             </p>
           </div>
-          <Button onClick={() => setIsAddTeacherOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Teacher
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setIsImportTeachersOpen(true)}>
+              <Import className="mr-2 h-4 w-4" />
+              Import from Excel
+            </Button>
+            <Button onClick={() => setIsAddTeacherOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Teacher
+            </Button>
+          </div>
         </div>
         
         <div className="space-y-4">
@@ -52,6 +60,11 @@ const TeacherDetailsPage = () => {
       <AddTeacherDialog
         open={isAddTeacherOpen}
         onOpenChange={setIsAddTeacherOpen}
+      />
+      
+      <ImportTeachersDialog
+        open={isImportTeachersOpen}
+        onOpenChange={setIsImportTeachersOpen}
       />
     </div>
   );
