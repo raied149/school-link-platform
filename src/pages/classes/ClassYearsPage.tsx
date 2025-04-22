@@ -119,8 +119,10 @@ export default function ClassYearsPage() {
         updatedAt: data.updated_at || data.created_at
       } as AcademicYear;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      // Navigate to the newly created year
+      navigate(`/classes/${data.id}`);
     }
   });
 

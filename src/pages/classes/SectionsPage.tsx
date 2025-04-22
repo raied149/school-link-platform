@@ -28,6 +28,34 @@ function useTeacherMap() {
   });
 }
 
+// New hook to get student counts by section
+function useStudentCounts(sections: Section[]) {
+  const sectionIds = sections.map(s => s.id);
+  
+  return useQuery({
+    queryKey: ["student-counts", sectionIds],
+    queryFn: async () => {
+      if (!sectionIds.length) return {};
+      
+      const { data, error } = await supabase
+        .from("student_sections")
+        .select("section_id, student_id")
+        .in("section_id", sectionIds);
+        
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      (data || []).forEach((row: any) => {
+        if (!counts[row.section_id]) counts[row.section_id] = 0;
+        counts[row.section_id]++;
+      });
+      
+      return counts;
+    },
+    enabled: sectionIds.length > 0
+  });
+}
+
 const SectionsPage = () => {
   const { yearId, classId } = useParams<{ yearId: string, classId: string }>();
   const navigate = useNavigate();
@@ -121,6 +149,7 @@ const SectionsPage = () => {
         id: section.id,
         name: section.name,
         classId: section.class_id,
+        academicYearId: yearId || "",  // Fixed: Added the missing academicYearId property
         teacherId: section.teacher_id,
         createdAt: section.created_at,
         updatedAt: section.created_at
@@ -131,6 +160,9 @@ const SectionsPage = () => {
   
   // Fetch teacher names
   const { data: teacherNameMap = {} } = useTeacherMap();
+  
+  // Fetch student counts
+  const { data: studentCounts = {} } = useStudentCounts(sections);
   
   // Save section mutation
   const createSectionMutation = useMutation({
@@ -181,6 +213,7 @@ const SectionsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
+      queryClient.invalidateQueries({ queryKey: ['student-counts'] });
     }
   });
   
@@ -245,6 +278,7 @@ const SectionsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
+      queryClient.invalidateQueries({ queryKey: ['student-counts'] });
     }
   });
   
@@ -279,6 +313,7 @@ const SectionsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sections', classId, yearId] });
+      queryClient.invalidateQueries({ queryKey: ['student-counts'] });
     }
   });
   
@@ -434,7 +469,7 @@ const SectionsPage = () => {
                         : "Not Assigned"}
                     </td>
                     <td className="py-3 px-4">
-                      0 students
+                      {studentCounts[section.id] || 0} students
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">

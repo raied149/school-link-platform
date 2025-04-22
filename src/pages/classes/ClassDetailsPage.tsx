@@ -3,16 +3,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { sectionService } from "@/services/sectionService";
-import { classService } from "@/services/classService";
-import { academicYearService } from "@/services/academicYearService";
 import { useParams } from "react-router-dom";
-import { Users, BookOpen, Calendar, Clock, Plus } from "lucide-react";
+import { Users, BookOpen, Calendar, Clock } from "lucide-react";
 import { StudentAcademicDetails } from "@/components/students/StudentAcademicDetails";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
-import { Button } from "@/components/ui/button";
 import { TimetableManagement } from "@/components/timetable/TimetableManagement";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -23,19 +20,78 @@ const ClassDetailsPage = () => {
   
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
-    queryFn: () => academicYearService.getAcademicYearById(yearId!),
+    queryFn: async () => {
+      if (!yearId) return null;
+      
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('id', yearId)
+        .maybeSingle();
+        
+      if (error) throw error;
+      
+      return data ? {
+        id: data.id,
+        name: data.name,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        isActive: data.is_active,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at || data.created_at
+      } : null;
+    },
     enabled: !!yearId
   });
   
   const { data: classDetails } = useQuery({
     queryKey: ['class', classId],
-    queryFn: () => classService.getClassById(classId!),
+    queryFn: async () => {
+      if (!classId) return null;
+      
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('id', classId)
+        .maybeSingle();
+        
+      if (error) throw error;
+      
+      return data ? {
+        id: data.id,
+        name: data.name,
+        academicYearId: data.year_id,
+        createdAt: data.created_at
+      } : null;
+    },
     enabled: !!classId
   });
   
   const { data: sectionDetails } = useQuery({
     queryKey: ['section', sectionId],
-    queryFn: () => sectionService.getSectionById(sectionId!),
+    queryFn: async () => {
+      if (!sectionId) return null;
+      
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('id', sectionId)
+        .maybeSingle();
+        
+      if (error) throw error;
+      
+      if (!data) return null;
+      
+      return {
+        id: data.id,
+        name: data.name,
+        classId: data.class_id,
+        academicYearId: yearId || "",
+        teacherId: data.teacher_id,
+        createdAt: data.created_at,
+        updatedAt: data.created_at
+      };
+    },
     enabled: !!sectionId
   });
 
@@ -43,7 +99,7 @@ const ClassDetailsPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          {classDetails?.name} - {sectionDetails?.name}
+          {classDetails?.name || 'Loading...'} - {sectionDetails?.name || 'Loading...'}
         </h1>
         <p className="text-muted-foreground">
           Academic Year: {academicYear?.name || 'Loading...'}
@@ -51,7 +107,7 @@ const ClassDetailsPage = () => {
       </div>
 
       <Tabs defaultValue="students">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="students">
             <Users className="h-4 w-4 mr-2" />
             Students

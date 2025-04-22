@@ -54,10 +54,13 @@ const AuthRoutes = () => (
       <Route path="teachers" element={<TeacherDetailsPage />} />
       <Route path="student-attendance" element={<StudentAttendancePage />} />
       <Route path="teacher-attendance" element={<TeacherAttendancePage />} />
+      
+      {/* Updated classes routes */}
       <Route path="classes" element={<ClassYearsPage />} />
       <Route path="classes/:yearId" element={<ClassYearsPage />} />
       <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
       <Route path="classes/:yearId/:classId/:sectionId" element={<ClassDetailsPage />} />
+      
       <Route path="subjects" element={<SubjectsPage />} />
       <Route path="timetables" element={<TimetablePage />} />
       <Route path="calendar" element={<CalendarPage />} />
