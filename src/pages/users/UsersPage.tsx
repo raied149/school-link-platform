@@ -8,7 +8,6 @@ import { AddStudentDialog } from "@/components/users/AddStudentDialog";
 import { ImportStudentsDialog } from "@/components/users/ImportStudentsDialog";
 
 const UsersPage = () => {
-  const [activeTab, setActiveTab] = useState("students");
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
