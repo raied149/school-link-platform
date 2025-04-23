@@ -39,11 +39,23 @@ export function TeacherSelectionDialog({
         .eq('role', 'teacher');
 
       if (error) throw error;
-      return data.map(teacher => ({
-        id: teacher.id,
-        name: `${teacher.first_name} ${teacher.last_name}`,
-        employeeId: teacher.teacher_details?.professional_info?.employeeId || 'N/A'
-      }));
+      return data.map(teacher => {
+        // Safely access employeeId with proper type checking
+        const professionalInfo = teacher.teacher_details?.professional_info;
+        let employeeId = 'N/A';
+        
+        if (professionalInfo && 
+            typeof professionalInfo === 'object' && 
+            'employeeId' in professionalInfo) {
+          employeeId = professionalInfo.employeeId as string || 'N/A';
+        }
+        
+        return {
+          id: teacher.id,
+          name: `${teacher.first_name} ${teacher.last_name}`,
+          employeeId: employeeId
+        };
+      });
     }
   });
 
