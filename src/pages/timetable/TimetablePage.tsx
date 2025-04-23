@@ -12,24 +12,57 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { DailyView } from '@/components/timetable/DailyView';
 import { WeeklyView } from '@/components/timetable/WeeklyView';
+import { TimetableManagement } from '@/components/timetable/TimetableManagement';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from "@/components/ui/label";
 
 const TimetablePage = () => {
   const { user } = useAuth();
-  const [selectedView, setSelectedView] = useState<'daily' | 'weekly'>('daily');
+  const [selectedView, setSelectedView] = useState<'daily' | 'weekly' | 'management'>('daily');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+  
+  // Always fetch available classes and academic years
+  const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
+    queryKey: ['classes'],
+    queryFn: () => classService.getClasses()
+  });
+  
+  // Fetch sections based on selected class
+  const { data: sections = [], isLoading: isLoadingSections } = useQuery({
+    queryKey: ['sections', selectedClassId],
+    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, '1') : [],
+    enabled: !!selectedClassId
+  });
   
   const weekDays = timetableService.getWeekDays();
   
-  // For demo purposes, using fixed IDs. In a real app, get these from user profile
+  // Default filters based on user role
   const filter: TimetableFilter = {};
   
-  // If user is a student, filter by their class/section
-  if (user?.role === 'student') {
-    filter.classId = '1'; // Example class ID
-    filter.sectionId = '1'; // Example section ID
+  // Add selections to filter
+  if (selectedClassId) {
+    filter.classId = selectedClassId;
   }
   
-  // If user is a teacher, filter by their ID
+  if (selectedSectionId) {
+    filter.sectionId = selectedSectionId;
+  }
+  
+  // If student, filter by their class/section
+  if (user?.role === 'student') {
+    filter.classId = filter.classId || '1'; // Example class ID
+    filter.sectionId = filter.sectionId || '1'; // Example section ID
+  }
+  
+  // If teacher, filter by their ID
   if (user?.role === 'teacher') {
     filter.teacherId = '1'; // Example teacher ID
   }
@@ -39,9 +72,10 @@ const TimetablePage = () => {
     filter.dayOfWeek = selectedDay;
   }
 
-  const { data: timeSlots = [], isLoading } = useQuery({
+  const { data: timeSlots = [], isLoading: isLoadingTimeSlots } = useQuery({
     queryKey: ['timetable', selectedView, selectedDay, filter],
-    queryFn: () => timetableService.getTimeSlots(filter)
+    queryFn: () => timetableService.getTimeSlots(filter),
+    enabled: (!!selectedClassId && !!selectedSectionId) || user?.role === 'student' || user?.role === 'teacher'
   });
   
   const { data: subjects = [] } = useQuery({
@@ -49,17 +83,8 @@ const TimetablePage = () => {
     queryFn: () => subjectService.getSubjects()
   });
   
-  const { data: classes = [] } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classService.getClasses()
-  });
-  
-  const { data: sections = [] } = useQuery({
-    queryKey: ['sections'],
-    queryFn: () => sectionService.getSections()
-  });
-
-  const getSubjectName = (subjectId: string) => {
+  const getSubjectName = (subjectId?: string) => {
+    if (!subjectId) return 'N/A';
     const subject = subjects.find(s => s.id === subjectId);
     return subject ? subject.name : 'Unknown Subject';
   };
@@ -82,6 +107,8 @@ const TimetablePage = () => {
     return format(date, 'h:mm a');
   };
 
+  const isReadyToDisplay = (!!selectedClassId && !!selectedSectionId) || user?.role === 'student' || user?.role === 'teacher';
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,16 +118,57 @@ const TimetablePage = () => {
             ? 'Your class schedule' 
             : user?.role === 'teacher' 
               ? 'Your teaching schedule' 
-              : 'All timetables'}
+              : 'Manage school timetables'}
         </p>
       </div>
       
+      {user?.role === 'admin' && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <Label htmlFor="class-select">Class</Label>
+            <Select 
+              value={selectedClassId} 
+              onValueChange={setSelectedClassId}
+              disabled={isLoadingClasses}
+            >
+              <SelectTrigger id="class-select">
+                <SelectValue placeholder="Select Class" />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map(cls => (
+                  <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="section-select">Section</Label>
+            <Select 
+              value={selectedSectionId} 
+              onValueChange={setSelectedSectionId}
+              disabled={isLoadingSections || !selectedClassId}
+            >
+              <SelectTrigger id="section-select">
+                <SelectValue placeholder={!selectedClassId ? "Select Class First" : "Select Section"} />
+              </SelectTrigger>
+              <SelectContent>
+                {sections.map(section => (
+                  <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+      
       <Card className="p-6">
-        <Tabs defaultValue="daily" onValueChange={(value) => setSelectedView(value as 'daily' | 'weekly')}>
+        <Tabs defaultValue="daily" onValueChange={(value) => setSelectedView(value as 'daily' | 'weekly' | 'management')}>
           <div className="flex justify-between items-center mb-6">
             <TabsList>
               <TabsTrigger value="daily">Daily View</TabsTrigger>
               <TabsTrigger value="weekly">Weekly View</TabsTrigger>
+              {user?.role === 'admin' && <TabsTrigger value="management">Management</TabsTrigger>}
             </TabsList>
             
             {selectedView === 'daily' && (
@@ -122,28 +190,56 @@ const TimetablePage = () => {
           </div>
           
           <TabsContent value="daily">
-            <DailyView
-              timeSlots={timeSlots}
-              selectedDay={selectedDay}
-              isLoading={isLoading}
-              formatTime={formatTime}
-              getSubjectName={getSubjectName}
-              user={user}
-            />
+            {isReadyToDisplay ? (
+              <DailyView
+                timeSlots={timeSlots}
+                selectedDay={selectedDay}
+                isLoading={isLoadingTimeSlots}
+                formatTime={formatTime}
+                getSubjectName={getSubjectName}
+                user={user}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <p className="text-muted-foreground">Please select a class and section to view timetable</p>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="weekly">
-            <WeeklyView
-              timeSlots={timeSlots}
-              weekDays={weekDays}
-              isLoading={isLoading}
-              formatTime={formatTime}
-              getSubjectName={getSubjectName}
-              getClassName={getClassName}
-              getSectionName={getSectionName}
-              user={user}
-            />
+            {isReadyToDisplay ? (
+              <WeeklyView
+                timeSlots={timeSlots}
+                weekDays={weekDays}
+                isLoading={isLoadingTimeSlots}
+                formatTime={formatTime}
+                getSubjectName={getSubjectName}
+                getClassName={getClassName}
+                getSectionName={getSectionName}
+                user={user}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <p className="text-muted-foreground">Please select a class and section to view timetable</p>
+              </div>
+            )}
           </TabsContent>
+          
+          {user?.role === 'admin' && (
+            <TabsContent value="management">
+              {selectedClassId && selectedSectionId ? (
+                <TimetableManagement
+                  classId={selectedClassId}
+                  sectionId={selectedSectionId}
+                  academicYearId="1" // Default academic year for demo
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <p className="text-muted-foreground">Please select a class and section to manage timetable</p>
+                </div>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </Card>
     </div>

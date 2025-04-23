@@ -1,5 +1,5 @@
 
-import { TimeSlot, TimetableFilter, WeekDay } from '@/types/timetable';
+import { TimeSlot, TimetableFilter, WeekDay, SlotType } from '@/types/timetable';
 import { v4 as uuidv4 } from 'uuid';
 
 const mockTimeSlots: TimeSlot[] = [
@@ -7,6 +7,7 @@ const mockTimeSlots: TimeSlot[] = [
     id: '1',
     startTime: '08:00',
     endTime: '09:00',
+    slotType: 'subject',
     subjectId: '1', // Mathematics
     teacherId: '1',
     dayOfWeek: 'Monday',
@@ -20,6 +21,7 @@ const mockTimeSlots: TimeSlot[] = [
     id: '2',
     startTime: '09:00',
     endTime: '10:00',
+    slotType: 'subject',
     subjectId: '2', // Science
     teacherId: '2',
     dayOfWeek: 'Monday',
@@ -31,8 +33,22 @@ const mockTimeSlots: TimeSlot[] = [
   },
   {
     id: '3',
+    startTime: '10:00',
+    endTime: '10:15',
+    slotType: 'break',
+    title: 'Short Break',
+    dayOfWeek: 'Monday',
+    classId: '1',
+    sectionId: '1',
+    academicYearId: '1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '4',
     startTime: '10:15',
     endTime: '11:15',
+    slotType: 'subject',
     subjectId: '3', // English
     teacherId: '3',
     dayOfWeek: 'Monday',
@@ -43,12 +59,26 @@ const mockTimeSlots: TimeSlot[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: '4',
+    id: '5',
     startTime: '08:00',
     endTime: '09:00',
+    slotType: 'subject',
     subjectId: '1', // Mathematics
     teacherId: '1',
     dayOfWeek: 'Tuesday',
+    classId: '1',
+    sectionId: '1',
+    academicYearId: '1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '6',
+    startTime: '12:30',
+    endTime: '13:30',
+    slotType: 'event',
+    title: 'Assembly',
+    dayOfWeek: 'Friday',
     classId: '1',
     sectionId: '1',
     academicYearId: '1',
@@ -150,5 +180,9 @@ export const timetableService = {
       timeRange.push(`${formattedHour}:30`);
     }
     return timeRange;
+  },
+  
+  getSlotTypes: (): SlotType[] => {
+    return ['subject', 'break', 'event'];
   }
 };

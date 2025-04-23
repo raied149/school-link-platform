@@ -1,12 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TimeSlotForm } from './TimeSlotForm';
 import { TimeSlot, WeekDay } from '@/types/timetable';
@@ -100,9 +100,29 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
   
   const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
   
-  const getSubjectName = (subjectId: string) => {
+  const getSubjectName = (subjectId?: string) => {
+    if (!subjectId) return '';
     const subject = subjects.find(s => s.id === subjectId);
     return subject ? subject.name : 'Unknown Subject';
+  };
+
+  const getTeacherNameForSubject = (subjectId?: string) => {
+    if (!subjectId) return '';
+    const subject = subjects.find(s => s.id === subjectId);
+    if (!subject) return 'Unknown Teacher';
+
+    // In a real app, you would lookup the teacher assigned to this subject for this class
+    // For now, we'll return a placeholder based on the subject ID
+    return `Teacher ${parseInt(subjectId) + 1}`;
+  };
+  
+  const getSlotIcon = (slotType: SlotType) => {
+    switch (slotType) {
+      case 'subject': return <BookOpen className="h-4 w-4 mr-2" />;
+      case 'break': return <Coffee className="h-4 w-4 mr-2" />;
+      case 'event': return <Calendar className="h-4 w-4 mr-2" />;
+      default: return null;
+    }
   };
   
   const formatTime = (timeString: string) => {
@@ -133,7 +153,7 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
             <TabsList className="grid grid-cols-7 mb-4">
               {weekDays.map(day => (
                 <TabsTrigger key={day} value={day}>
-                  {day}
+                  {day.substring(0, 3)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -162,7 +182,9 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
                         <TableRow>
                           <TableHead>Start Time</TableHead>
                           <TableHead>End Time</TableHead>
-                          <TableHead>Subject</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Teacher</TableHead>
                           {isAdminOrTeacher && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
@@ -173,7 +195,18 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
                             <TableRow key={slot.id}>
                               <TableCell>{formatTime(slot.startTime)}</TableCell>
                               <TableCell>{formatTime(slot.endTime)}</TableCell>
-                              <TableCell>{getSubjectName(slot.subjectId)}</TableCell>
+                              <TableCell className="capitalize">{slot.slotType}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  {getSlotIcon(slot.slotType)}
+                                  {slot.slotType === 'subject' 
+                                    ? getSubjectName(slot.subjectId) 
+                                    : slot.title}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {slot.slotType === 'subject' && getTeacherNameForSubject(slot.subjectId)}
+                              </TableCell>
                               {isAdminOrTeacher && (
                                 <TableCell className="text-right">
                                   <Button variant="ghost" size="sm" onClick={() => handleEditTimeSlot(slot)}>
@@ -213,6 +246,8 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
             academicYearId
           }}
           classId={classId}
+          sectionId={sectionId}
+          academicYearId={academicYearId}
         />
       )}
     </div>

@@ -1,18 +1,26 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { TimeSlot, WeekDay } from '@/types/timetable';
+import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { format, parse, addMinutes } from 'date-fns';
 import { TimeFieldSection } from './TimeFieldSection';
 import { SubjectTeacherSection } from './SubjectTeacherSection';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -20,14 +28,17 @@ interface TimeSlotFormProps {
   onSave: (data: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>) => void;
   initialData?: Partial<TimeSlot>;
   classId: string;
+  sectionId: string;
+  academicYearId: string;
 }
 
 const formSchema = z.object({
   dayOfWeek: z.enum(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as [WeekDay, ...WeekDay[]]),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
   duration: z.number().min(15, { message: "Duration must be at least 15 minutes" }).max(240, { message: "Duration cannot exceed 4 hours" }),
-  subjectId: z.string(),
-  teacherId: z.string(),
+  slotType: z.enum(['subject', 'break', 'event'] as [SlotType, ...SlotType[]]),
+  title: z.string().optional(),
+  subjectId: z.string().optional(),
   classId: z.string(),
   sectionId: z.string(),
   academicYearId: z.string(),
@@ -35,7 +46,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: TimeSlotFormProps) {
+export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, sectionId, academicYearId }: TimeSlotFormProps) {
   const [calculatedEndTime, setCalculatedEndTime] = useState<string>(
     initialData?.endTime || ''
   );
@@ -45,12 +56,9 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     queryFn: () => subjectService.getSubjectsByClass(classId)
   });
   
-  const teachers = [
-    { id: '1', name: 'John Doe' },
-    { id: '2', name: 'Jane Smith' },
-    { id: '3', name: 'Michael Johnson' }
-  ];
+  const [selectedSlotType, setSelectedSlotType] = useState<SlotType>(initialData?.slotType || 'subject');
   
+  const slotTypes = timetableService.getSlotTypes();
   const weekDays = timetableService.getWeekDays();
   const timeOptions = timetableService.getTimeRange();
   
@@ -58,11 +66,12 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     dayOfWeek: initialData?.dayOfWeek || 'Monday',
     startTime: initialData?.startTime || '08:00',
     duration: initialData?.duration || 60,
+    slotType: initialData?.slotType || 'subject',
+    title: initialData?.title || '',
     subjectId: initialData?.subjectId || '',
-    teacherId: initialData?.teacherId || '',
     classId: initialData?.classId || classId,
-    sectionId: initialData?.sectionId || '',
-    academicYearId: initialData?.academicYearId || '',
+    sectionId: initialData?.sectionId || sectionId,
+    academicYearId: initialData?.academicYearId || academicYearId,
   };
   
   const form = useForm<FormValues>({
@@ -93,17 +102,40 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
     setCalculatedEndTime(endTime);
   };
   
+  const handleSlotTypeChange = (value: string) => {
+    const slotType = value as SlotType;
+    setSelectedSlotType(slotType);
+    form.setValue('slotType', slotType);
+    
+    // Reset subject when switching to break or event
+    if (slotType !== 'subject') {
+      form.setValue('subjectId', undefined);
+    }
+    
+    // Reset title when switching to subject
+    if (slotType === 'subject') {
+      form.setValue('title', '');
+    }
+  };
+  
   const onSubmit = (values: FormValues) => {
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
       startTime: values.startTime,
       endTime: calculatedEndTime,
-      subjectId: values.subjectId,
-      teacherId: values.teacherId,
+      slotType: values.slotType,
       dayOfWeek: values.dayOfWeek,
       classId: values.classId,
       sectionId: values.sectionId,
       academicYearId: values.academicYearId
     };
+    
+    // Add slot type specific fields
+    if (values.slotType === 'subject' && values.subjectId) {
+      timeSlotData.subjectId = values.subjectId;
+    } else if (values.slotType === 'break' || values.slotType === 'event') {
+      timeSlotData.title = values.title;
+    }
+    
     onSave(timeSlotData);
   };
 
@@ -127,11 +159,81 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId }: 
               onDurationChange={handleDurationChange}
             />
             
-            <SubjectTeacherSection
+            <FormField
               control={form.control}
-              subjects={subjects}
-              teachers={teachers}
+              name="slotType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slot Type</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      handleSlotTypeChange(value);
+                    }}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select slot type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="subject">Subject</SelectItem>
+                      <SelectItem value="break">Break</SelectItem>
+                      <SelectItem value="event">Event</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
+            
+            {selectedSlotType === 'subject' ? (
+              <FormField
+                control={form.control}
+                name="subjectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{selectedSlotType === 'break' ? 'Break Name' : 'Event Name'}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={selectedSlotType === 'break' ? 'Enter break name' : 'Enter event name'} 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <DialogFooter>
               <Button variant="outline" type="button" onClick={onClose}>

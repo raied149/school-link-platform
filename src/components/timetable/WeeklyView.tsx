@@ -1,6 +1,6 @@
 
-import { Clock } from 'lucide-react';
-import { TimeSlot, WeekDay } from '@/types/timetable';
+import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
+import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface WeeklyViewProps {
@@ -8,7 +8,7 @@ interface WeeklyViewProps {
   weekDays: WeekDay[];
   isLoading: boolean;
   formatTime: (time: string) => string;
-  getSubjectName: (subjectId: string) => string;
+  getSubjectName: (subjectId?: string) => string;
   getClassName: (classId: string) => string;
   getSectionName: (sectionId: string) => string;
   user?: { role?: string };
@@ -49,6 +49,32 @@ export function WeeklyView({
   
   const timeArray = Array.from(timeSet).sort();
 
+  const getSlotIcon = (slotType: SlotType) => {
+    switch (slotType) {
+      case 'subject': return <BookOpen className="h-4 w-4 mb-1" />;
+      case 'break': return <Coffee className="h-4 w-4 mb-1" />;
+      case 'event': return <Calendar className="h-4 w-4 mb-1" />;
+      default: return null;
+    }
+  };
+
+  const getSlotDetails = (slot: TimeSlot) => {
+    if (slot.slotType === 'subject' && slot.subjectId) {
+      return getSubjectName(slot.subjectId);
+    } else {
+      return slot.title || 'Untitled';
+    }
+  };
+
+  const getSlotColor = (slotType: SlotType) => {
+    switch (slotType) {
+      case 'subject': return 'bg-primary/10';
+      case 'break': return 'bg-amber-100';
+      case 'event': return 'bg-green-100';
+      default: return 'bg-primary/10';
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -72,13 +98,16 @@ export function WeeklyView({
                 return (
                   <TableCell key={day} className="min-w-[150px]">
                     {slot ? (
-                      <div className="p-2 bg-primary/10 rounded-md">
-                        <p className="font-medium">{getSubjectName(slot.subjectId)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user?.role === 'student' 
-                            ? `Teacher ${slot.teacherId}` 
-                            : `${getClassName(slot.classId)} - ${getSectionName(slot.sectionId)}`}
-                        </p>
+                      <div className={`p-2 ${getSlotColor(slot.slotType)} rounded-md`}>
+                        {getSlotIcon(slot.slotType)}
+                        <p className="font-medium">{getSlotDetails(slot)}</p>
+                        {slot.slotType === 'subject' && (
+                          <p className="text-xs text-muted-foreground">
+                            {user?.role === 'student' 
+                              ? `Teacher ${slot.teacherId || 'N/A'}` 
+                              : `${getClassName(slot.classId)} - ${getSectionName(slot.sectionId)}`}
+                          </p>
+                        )}
                         <p className="text-xs">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</p>
                       </div>
                     ) : null}

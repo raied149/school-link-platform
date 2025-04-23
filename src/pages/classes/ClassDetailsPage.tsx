@@ -8,6 +8,7 @@ import { Users, BookOpen, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
+import { TimetableManagement } from "@/components/timetable/TimetableManagement";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -204,43 +205,6 @@ const ClassDetailsPage = () => {
     );
   };
 
-  // Simplified TimetableManagement component
-  const TimetableManagement = () => {
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const [selectedDay, setSelectedDay] = useState('Monday');
-
-    return (
-      <Card className="p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Class Timetable</h2>
-          <p className="text-muted-foreground">Schedule for this class section</p>
-        </div>
-        
-        <div className="mb-4">
-          <div className="flex space-x-2 overflow-x-auto">
-            {weekdays.map(day => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`px-4 py-2 rounded ${
-                  selectedDay === day ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                }`}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div className="mt-4">
-          <div className="text-center py-8 text-muted-foreground">
-            No timetable entries for {selectedDay} yet.
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -285,7 +249,19 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="timetable" className="py-4">
-          <TimetableManagement />
+          {classId && sectionId ? (
+            <TimetableManagement
+              classId={classId}
+              sectionId={sectionId}
+              academicYearId={yearId || '1'} // Default academic year ID if not provided
+            />
+          ) : (
+            <Card className="p-6">
+              <div className="text-center py-8 text-muted-foreground">
+                Loading timetable management...
+              </div>
+            </Card>
+          )}
         </TabsContent>
         
         <TabsContent value="attendance" className="py-4">
