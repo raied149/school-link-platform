@@ -26,37 +26,44 @@ export function TeacherSelectionDialog({
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ["teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          teacher_details (
-            professional_info
-          )
-        `)
-        .eq('role', 'teacher');
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            teacher_details (
+              professional_info
+            )
+          `)
+          .eq('role', 'teacher');
 
-      if (error) throw error;
-      return data.map(teacher => {
-        // Safely access employeeId with proper type checking
-        const professionalInfo = teacher.teacher_details?.professional_info;
-        let employeeId = 'N/A';
+        if (error) throw error;
         
-        if (professionalInfo && 
-            typeof professionalInfo === 'object' && 
-            'employeeId' in professionalInfo) {
-          employeeId = professionalInfo.employeeId as string || 'N/A';
-        }
-        
-        return {
-          id: teacher.id,
-          name: `${teacher.first_name} ${teacher.last_name}`,
-          employeeId: employeeId
-        };
-      });
-    }
+        return data.map(teacher => {
+          // Safely access employeeId with proper type checking
+          const professionalInfo = teacher.teacher_details?.professional_info;
+          let employeeId = 'N/A';
+          
+          if (professionalInfo && 
+              typeof professionalInfo === 'object' && 
+              'employeeId' in professionalInfo) {
+            employeeId = professionalInfo.employeeId as string || 'N/A';
+          }
+          
+          return {
+            id: teacher.id,
+            name: `${teacher.first_name} ${teacher.last_name}`,
+            employeeId: employeeId
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching teachers:", error);
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
   const filteredTeachers = teachers.filter(teacher =>

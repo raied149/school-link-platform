@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -105,6 +105,7 @@ export function DateReminderSelection({
                 </PopoverContent>
               </Popover>
             )}
+            <FormMessage />
           </FormItem>
         )}
       />

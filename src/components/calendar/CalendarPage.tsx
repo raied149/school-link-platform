@@ -51,54 +51,9 @@ const CalendarPage = () => {
   });
 
   const handleAddEvent = async (eventData: Omit<SchoolEvent, "id">) => {
-    try {
-      // First insert the event
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .insert([{
-          name: eventData.name,
-          type: eventData.type,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          description: eventData.description,
-          reminder_set: eventData.reminderSet,
-          reminder_times: eventData.reminderTimes
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding event:', error);
-        toast.error('Failed to add event');
-        return;
-      }
-
-      toast.success('Event added successfully');
-
-      // Then insert teacher assignments if any
-      if (eventData.teacherIds?.length) {
-        const teacherAssignments = eventData.teacherIds.map(teacherId => ({
-          event_id: data.id,
-          teacher_id: teacherId
-        }));
-
-        const { error: teacherError } = await supabase
-          .from('calendar_event_teachers')
-          .insert(teacherAssignments);
-
-        if (teacherError) {
-          console.error('Error assigning teachers:', teacherError);
-          toast.error('Failed to assign teachers');
-        }
-      }
-
-      // Refresh the events list
-      refetch();
-    } catch (error) {
-      console.error('Error creating event:', error);
-      toast.error('An unexpected error occurred');
-    }
+    // The actual insertion to the database is now handled in the EventForm component
+    // We just need to refetch the events to update the UI
+    refetch();
   };
 
   return (

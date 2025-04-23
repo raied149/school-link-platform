@@ -23,6 +23,8 @@ import { TeacherSelectionDialog } from "./TeacherSelectionDialog";
 import { EventFormHeader } from "./EventFormHeader";
 import { DateReminderSelection } from "./DateReminderSelection";
 import { EventDescription } from "./EventDescription";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EventFormProps {
   date: Date;
@@ -34,6 +36,7 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
   const [showTeacherDialog, setShowTeacherDialog] = useState(false);
   const [reminderDates, setReminderDates] = useState<Date[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,21 +56,79 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
     },
   });
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit({
-      name: values.name,
-      type: values.type as EventType,
-      date: values.date,
-      startTime: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
-      endTime: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
-      description: values.description,
-      teacherIds: values.teacherIds,
-      reminderSet: values.reminderSet && reminderDates.length > 0,
-      reminderTimes: reminderDates.map(date => format(date, 'yyyy-MM-dd')),
-    });
-    setOpen(false);
-    form.reset();
-    setReminderDates([]);
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Format the reminder dates to string format
+      const formattedReminderDates = reminderDates.map(date => format(date, 'yyyy-MM-dd'));
+      
+      // Create the event object
+      const eventData = {
+        name: values.name,
+        type: values.type as EventType,
+        date: values.date,
+        start_time: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
+        end_time: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
+        description: values.description || "",
+        reminder_set: values.reminderSet && reminderDates.length > 0,
+        reminder_times: formattedReminderDates,
+      };
+      
+      // Insert the event into Supabase
+      const { data: eventResult, error: eventError } = await supabase
+        .from('calendar_events')
+        .insert(eventData)
+        .select()
+        .single();
+        
+      if (eventError) {
+        throw eventError;
+      }
+      
+      // If teachers are selected, assign them to the event
+      if (values.teacherIds && values.teacherIds.length > 0) {
+        const teacherAssignments = values.teacherIds.map(teacherId => ({
+          event_id: eventResult.id,
+          teacher_id: teacherId,
+        }));
+        
+        const { error: teacherError } = await supabase
+          .from('calendar_event_teachers')
+          .insert(teacherAssignments);
+          
+        if (teacherError) {
+          console.error("Error assigning teachers:", teacherError);
+          toast.error("Event saved but there was an issue assigning teachers");
+        }
+      }
+      
+      toast.success("Event saved successfully!");
+      
+      // Call the onSubmit callback with the full event data
+      onSubmit({
+        name: values.name,
+        type: values.type as EventType,
+        date: values.date,
+        startTime: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
+        endTime: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
+        description: values.description,
+        teacherIds: values.teacherIds,
+        reminderSet: values.reminderSet && reminderDates.length > 0,
+        reminderTimes: formattedReminderDates,
+      });
+      
+      // Reset form and close dialog
+      setOpen(false);
+      form.reset();
+      setReminderDates([]);
+      
+    } catch (error) {
+      console.error("Error saving event:", error);
+      toast.error("Failed to save event");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -121,8 +182,8 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
               }}
             />
 
-            <Button type="submit" className="w-full">
-              Create Event
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Creating Event..." : "Create Event"}
             </Button>
           </form>
         </Form>
