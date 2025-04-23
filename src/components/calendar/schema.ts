@@ -15,5 +15,5 @@ export const formSchema = z.object({
   description: z.string().optional(),
   teacherIds: z.array(z.string()).optional(),
   reminderSet: z.boolean().default(false),
-  reminderTime: z.string().nullable(),
+  reminderDates: z.array(z.string()).optional(),
 });
