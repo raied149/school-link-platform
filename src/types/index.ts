@@ -1,4 +1,3 @@
-
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -198,7 +197,6 @@ export interface SchoolEvent {
   teacherIds?: string[];
   createdAt?: string;
   reminderSet?: boolean;
-  reminderTime?: string | null;
   reminderTimes?: string[] | null;
 }
 

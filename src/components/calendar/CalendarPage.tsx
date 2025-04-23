@@ -1,14 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { CalendarDatePicker } from "@/components/calendar/CalendarDatePicker";
 import { EventForm } from "@/components/calendar/EventForm";
 import { DailyEvents } from "@/components/calendar/DailyEvents";
-import { SchoolEvent, EventType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { SchoolEvent, EventType } from "@/types";
 
 const CalendarPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -39,7 +39,6 @@ const CalendarPage = () => {
           description: event.description,
           createdAt: event.created_at,
           reminderSet: event.reminder_set,
-          reminderTime: event.reminder_time,
           reminderTimes: event.reminder_times,
           teacherIds: event.calendar_event_teachers?.map(t => t.teacher_id) || []
         }));

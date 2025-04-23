@@ -104,6 +104,7 @@ export type Database = {
           name: string
           reminder_set: boolean | null
           reminder_time: string | null
+          reminder_times: string[] | null
           start_time: string | null
           type: string
           user_id: string | null
@@ -117,6 +118,7 @@ export type Database = {
           name: string
           reminder_set?: boolean | null
           reminder_time?: string | null
+          reminder_times?: string[] | null
           start_time?: string | null
           type: string
           user_id?: string | null
@@ -130,6 +132,7 @@ export type Database = {
           name?: string
           reminder_set?: boolean | null
           reminder_time?: string | null
+          reminder_times?: string[] | null
           start_time?: string | null
           type?: string
           user_id?: string | null
