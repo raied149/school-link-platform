@@ -11,7 +11,6 @@ import { z } from "zod";
 import { formSchema } from "./schema";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
 
 interface DateReminderSelectionProps {
   form: UseFormReturn<z.infer<typeof formSchema>>;
@@ -86,44 +85,25 @@ export function DateReminderSelection({
               />
             </div>
             {showReminderTime && (
-              <>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" type="button" className="w-full">
-                      {reminderDates.length > 0
-                        ? `${reminderDates.length} reminder${reminderDates.length > 1 ? 's' : ''} set`
-                        : "Select reminder dates"}
-                      <CalendarIcon className="ml-auto h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="multiple"
-                      selected={reminderDates}
-                      onSelect={setReminderDates}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                <FormField
-                  control={form.control}
-                  name="reminderText"
-                  render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add a reminder note (optional)"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" type="button" className="w-full">
+                    {reminderDates.length > 0
+                      ? `${reminderDates.length} reminder${reminderDates.length > 1 ? 's' : ''} set`
+                      : "Select reminder dates"}
+                    <CalendarIcon className="ml-auto h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="multiple"
+                    selected={reminderDates}
+                    onSelect={setReminderDates}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             )}
             <FormMessage />
           </FormItem>

@@ -40,7 +40,6 @@ const CalendarPage = () => {
           createdAt: event.created_at,
           reminderSet: event.reminder_set,
           reminderTimes: event.reminder_times,
-          reminderText: event.reminder_text,
           teacherIds: event.calendar_event_teachers?.map(t => t.teacher_id) || []
         }));
       } catch (error) {
@@ -87,7 +86,6 @@ const CalendarPage = () => {
           description: eventData.description,
           reminder_set: eventData.reminderSet,
           reminder_times: eventData.reminderTimes,
-          reminder_text: eventData.reminderText,
         })
         .eq('id', eventId);
 

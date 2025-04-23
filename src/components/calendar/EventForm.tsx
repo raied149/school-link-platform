@@ -57,7 +57,6 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
       teacherIds: event?.teacherIds || [],
       reminderSet: event?.reminderSet || false,
       reminderDates: event?.reminderTimes || [],
-      reminderText: "",
     },
   });
 
@@ -78,7 +77,6 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
         description: values.description || "",
         reminder_set: values.reminderSet && reminderDates.length > 0,
         reminder_times: formattedReminderDates,
-        reminder_text: values.reminderText || "",
       };
       
       if (event) {
@@ -164,7 +162,6 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
         teacherIds: values.teacherIds,
         reminderSet: values.reminderSet && reminderDates.length > 0,
         reminderTimes: formattedReminderDates,
-        reminderText: values.reminderText,
       });
       
       // Reset form and close dialog
