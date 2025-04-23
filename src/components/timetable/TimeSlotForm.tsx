@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -6,14 +5,12 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { timetableService } from '@/services/timetableService';
-import { subjectService } from '@/services/subjectService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { format, parse, addMinutes } from 'date-fns';
 import { TimeFieldSection } from './TimeFieldSection';
-import { SubjectTeacherSection } from './SubjectTeacherSection';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -21,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -51,9 +49,30 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     initialData?.endTime || ''
   );
   
-  const { data: subjects = [] } = useQuery({
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', classId],
-    queryFn: () => subjectService.getSubjectsByClass(classId)
+    queryFn: async () => {
+      const { data: subjectClasses, error: subjectClassesError } = await supabase
+        .from('subject_classes')
+        .select('subject_id')
+        .eq('class_id', classId);
+
+      if (subjectClassesError) throw subjectClassesError;
+
+      if (!subjectClasses?.length) return [];
+
+      const subjectIds = subjectClasses.map(sc => sc.subject_id);
+
+      const { data: subjects, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*')
+        .in('id', subjectIds);
+
+      if (subjectsError) throw subjectsError;
+
+      return subjects || [];
+    },
+    enabled: !!classId
   });
   
   const [selectedSlotType, setSelectedSlotType] = useState<SlotType>(initialData?.slotType || 'subject');
@@ -107,12 +126,10 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     setSelectedSlotType(slotType);
     form.setValue('slotType', slotType);
     
-    // Reset subject when switching to break or event
     if (slotType !== 'subject') {
       form.setValue('subjectId', undefined);
     }
     
-    // Reset title when switching to subject
     if (slotType === 'subject') {
       form.setValue('title', '');
     }
@@ -129,7 +146,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
       academicYearId: values.academicYearId
     };
     
-    // Add slot type specific fields
     if (values.slotType === 'subject' && values.subjectId) {
       timeSlotData.subjectId = values.subjectId;
     } else if (values.slotType === 'break' || values.slotType === 'event') {
@@ -198,10 +214,11 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isLoadingSubjects}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select subject" />
+                          <SelectValue placeholder={isLoadingSubjects ? "Loading subjects..." : "Select subject"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
