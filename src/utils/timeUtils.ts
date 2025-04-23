@@ -1,5 +1,5 @@
 
-import { format, isValid } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 
 export const generateTimeOptions = () => {
   const times = [];
@@ -15,17 +15,39 @@ export const generateTimeOptions = () => {
 
 export const formatTimeDisplay = (timeString: string): string => {
   try {
-    // Validate the timeString format
-    if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    // If the string is empty or invalid format
+    if (!timeString || typeof timeString !== 'string') {
       return 'Invalid Time';
     }
     
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours);
-    date.setMinutes(minutes);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
+    // Handle different time formats
+    let date;
+    
+    // Try to parse HH:MM format 
+    if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+    } 
+    // Handle "8 AM" or similar format
+    else if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) {
+      const match = timeString.match(/^(\d{1,2})\s*(am|pm)$/i);
+      if (match) {
+        const hours = parseInt(match[1]);
+        const isPM = match[2].toLowerCase() === 'pm';
+        
+        date = new Date();
+        date.setHours(isPM && hours < 12 ? hours + 12 : hours);
+        date.setMinutes(0);
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+      }
+    } else {
+      return 'Invalid Time';
+    }
     
     // Double-check if the date is valid before formatting
     if (!isValid(date)) {
@@ -100,5 +122,39 @@ export const formatTimeFromParts = (hour: string, minute: string): string => {
 };
 
 export const isValidTimeFormat = (timeString: string): boolean => {
-  return !!timeString && typeof timeString === 'string' && !!timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/);
+  if (!timeString || typeof timeString !== 'string') return false;
+  
+  // Check for HH:MM format
+  if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) return true;
+  
+  // Check for "8 AM" format
+  if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) return true;
+  
+  return false;
+};
+
+// Normalize time strings to standard 24-hour format (HH:MM)
+export const normalizeTimeString = (timeString: string): string => {
+  if (!timeString || typeof timeString !== 'string') return '';
+  
+  // Already in HH:MM format
+  if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+  
+  // Handle "8 AM" or similar format
+  const match = timeString.match(/^(\d{1,2})\s*(am|pm)$/i);
+  if (match) {
+    const hours = parseInt(match[1]);
+    const isPM = match[2].toLowerCase() === 'pm';
+    
+    let hour24 = hours;
+    if (isPM && hours < 12) hour24 = hours + 12;
+    if (!isPM && hours === 12) hour24 = 0;
+    
+    return `${hour24.toString().padStart(2, '0')}:00`;
+  }
+  
+  return '';
 };

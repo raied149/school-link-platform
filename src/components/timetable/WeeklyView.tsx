@@ -2,7 +2,7 @@
 import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { isValid } from 'date-fns';
+import { isValidTimeFormat } from '@/utils/timeUtils';
 
 interface WeeklyViewProps {
   timeSlots: TimeSlot[];
@@ -45,8 +45,7 @@ export function WeeklyView({
   // Get unique time slots
   const timeSet = new Set<string>();
   timeSlots.forEach(slot => {
-    if (slot.startTime && typeof slot.startTime === 'string' && 
-        slot.startTime.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    if (isValidTimeFormat(slot.startTime)) {
       timeSet.add(slot.startTime);
     }
   });
@@ -105,13 +104,9 @@ export function WeeklyView({
                       <div className={`p-2 ${getSlotColor(slot.slotType)} rounded-md`}>
                         {getSlotIcon(slot.slotType)}
                         <p className="font-medium">{getSlotDetails(slot)}</p>
-                        {slot.slotType === 'subject' && (
-                          <p className="text-xs text-muted-foreground">
-                            {user?.role === 'student' 
-                              ? `Teacher ${slot.teacherId || 'N/A'}` 
-                              : `${getClassName(slot.classId)} - ${getSectionName(slot.sectionId)}`}
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Teacher: {slot.teacherId ? 'Assigned' : 'N/A'}
+                        </p>
                         <p className="text-xs">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</p>
                       </div>
                     ) : null}

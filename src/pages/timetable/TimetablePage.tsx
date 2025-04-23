@@ -82,9 +82,10 @@ const TimetablePage = () => {
   });
   
   // Fetch teachers data for display
-  const { data: teachers = [] } = useQuery({
+  const { data: teachers = [], isLoading: isLoadingTeachers } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
+      console.log("Fetching teachers data");
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -95,14 +96,16 @@ const TimetablePage = () => {
         throw error;
       }
       
+      console.log("Teachers data:", data);
       return data || [];
     }
   });
   
   // Fetch subject-teacher assignments
-  const { data: teacherSubjects = [] } = useQuery({
+  const { data: teacherSubjects = [], isLoading: isLoadingTeacherSubjects } = useQuery({
     queryKey: ['teacher-subjects'],
     queryFn: async () => {
+      console.log("Fetching teacher-subject assignments");
       const { data, error } = await supabase
         .from('teacher_subjects')
         .select('*');
@@ -112,8 +115,15 @@ const TimetablePage = () => {
         throw error;
       }
       
+      console.log("Teacher subjects data:", data);
       return data || [];
     }
+  });
+  
+  // Fetch all subjects
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ['all-subjects'],
+    queryFn: () => subjectService.getSubjects()
   });
   
   const weekDays = timetableService.getWeekDays();
@@ -159,7 +169,11 @@ const TimetablePage = () => {
   
   const getSubjectName = (subjectId?: string) => {
     if (!subjectId) return 'N/A';
-    const subject = subjects.find(s => s.id === subjectId);
+    
+    console.log("Looking for subject:", subjectId, "in", subjects);
+    const subject = subjects.find(s => s.id === subjectId) || 
+                   allSubjects.find(s => s.id === subjectId);
+                   
     return subject ? subject.name : 'Unknown Subject';
   };
   
@@ -174,23 +188,18 @@ const TimetablePage = () => {
   };
   
   const getTeacherName = (teacherId?: string) => {
-    if (!teacherId) {
-      // If no teacherId provided directly, try to find through subject assignment
-      return 'No Teacher Assigned';
+    console.log("Getting teacher name for:", teacherId);
+    
+    // If teacherId is provided directly, use it
+    if (teacherId) {
+      const teacher = teachers.find(t => t.id === teacherId);
+      if (teacher) {
+        return `${teacher.first_name} ${teacher.last_name}`;
+      }
     }
     
-    const teacher = teachers.find(t => t.id === teacherId);
-    return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
-  };
-  
-  const getTeacherBySubject = (subjectId?: string) => {
-    if (!subjectId) return undefined;
-    
-    // Find the teacher assigned to this subject
-    const assignment = teacherSubjects.find(ts => ts.subject_id === subjectId);
-    if (!assignment) return undefined;
-    
-    return assignment.teacher_id;
+    // Otherwise try to find through subject assignment (for legacy data)
+    return 'No Teacher Assigned';
   };
   
   const formatTime = (timeString: string) => {
@@ -292,13 +301,7 @@ const TimetablePage = () => {
                 isLoading={isLoadingTimeSlots}
                 formatTime={formatTime}
                 getSubjectName={getSubjectName}
-                getTeacherName={(teacherId) => {
-                  // If teacherId is provided, use it directly
-                  if (teacherId) return getTeacherName(teacherId);
-                  
-                  // Otherwise try to find through subject assignment (for legacy data)
-                  return 'No Teacher Assigned';
-                }}
+                getTeacherName={getTeacherName}
                 getClassName={getClassName}
                 getSectionName={getSectionName}
                 user={user}

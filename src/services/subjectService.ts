@@ -1,9 +1,11 @@
+
 import { Subject } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 export const subjectService = {
   getSubjects: async (): Promise<Subject[]> => {
     try {
+      console.log("Fetching all subjects");
       const { data, error } = await supabase
         .from('subjects')
         .select('*');
@@ -12,6 +14,8 @@ export const subjectService = {
         console.error("Error fetching subjects:", error);
         throw error;
       }
+      
+      console.log("Subjects data:", data);
       
       // Map to our Subject type
       return (data || []).map(subject => ({
@@ -64,6 +68,7 @@ export const subjectService = {
 
   getSubjectsByClass: async (classId: string): Promise<Subject[]> => {
     try {
+      console.log("Fetching subjects for class:", classId);
       // First get subject_ids related to this class from subject_classes
       const { data: subjectClasses, error: classError } = await supabase
         .from('subject_classes')
@@ -74,6 +79,8 @@ export const subjectService = {
         console.error("Error fetching subject classes:", classError);
         throw classError;
       }
+      
+      console.log("Subject classes data:", subjectClasses);
       
       if (!subjectClasses || subjectClasses.length === 0) {
         return [];
@@ -91,6 +98,8 @@ export const subjectService = {
         console.error("Error fetching subjects:", subjectError);
         throw subjectError;
       }
+      
+      console.log("Subjects data:", subjects);
       
       // Map to our Subject type
       return (subjects || []).map(subject => ({
@@ -111,6 +120,7 @@ export const subjectService = {
 
   getSubjectById: async (id: string): Promise<Subject | undefined> => {
     try {
+      console.log("Fetching subject by id:", id);
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
@@ -121,6 +131,8 @@ export const subjectService = {
         console.error("Error fetching subject:", error);
         throw error;
       }
+      
+      console.log("Subject data:", data);
       
       if (!data) return undefined;
       

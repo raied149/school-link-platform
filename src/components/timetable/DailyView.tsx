@@ -71,7 +71,7 @@ export function DailyView({
           <TableHead>Type</TableHead>
           <TableHead>Details</TableHead>
           <TableHead>Teacher</TableHead>
-          {user?.role !== 'student' && <TableHead>Class/Section</TableHead>}
+          <TableHead>Class/Section</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -88,11 +88,9 @@ export function DailyView({
             <TableCell>
               {slot.slotType === 'subject' ? getTeacherName(slot.teacherId) : '-'}
             </TableCell>
-            {user?.role !== 'student' && (
-              <TableCell>
-                {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}
-              </TableCell>
-            )}
+            <TableCell>
+              {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

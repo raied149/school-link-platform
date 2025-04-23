@@ -2,6 +2,7 @@
 import { TimeSlot, TimetableFilter, WeekDay, SlotType } from '@/types/timetable';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeTimeString } from '@/utils/timeUtils';
 
 // Service methods
 export const timetableService = {
@@ -195,14 +196,44 @@ export const timetableService = {
       
       const dayOfWeek = dayMap[timeSlotData.dayOfWeek] || 1; // Default to Monday if not found
       
+      // Normalize time strings
+      const startTime = normalizeTimeString(timeSlotData.startTime);
+      const endTime = normalizeTimeString(timeSlotData.endTime);
+      
+      if (!startTime) {
+        console.error("Invalid start time format:", timeSlotData.startTime);
+        throw new Error("Invalid start time format");
+      }
+      
+      if (!endTime) {
+        console.error("Invalid end time format:", timeSlotData.endTime);
+        throw new Error("Invalid end time format");
+      }
+      
+      // If this is a subject slot, try to get the teacher_id from teacher_subjects
+      let teacherId = timeSlotData.teacherId;
+      
+      if (timeSlotData.slotType === 'subject' && timeSlotData.subjectId && !teacherId) {
+        // Look up teacher for this subject
+        const { data: teacherSubjectData } = await supabase
+          .from('teacher_subjects')
+          .select('teacher_id')
+          .eq('subject_id', timeSlotData.subjectId)
+          .single();
+        
+        if (teacherSubjectData) {
+          teacherId = teacherSubjectData.teacher_id;
+        }
+      }
+      
       const { data, error } = await supabase
         .from('timetable')
         .insert({
-          start_time: timeSlotData.startTime,
-          end_time: timeSlotData.endTime,
+          start_time: startTime,
+          end_time: endTime,
           day_of_week: dayOfWeek,
           subject_id: timeSlotData.subjectId,
-          teacher_id: timeSlotData.teacherId,
+          teacher_id: teacherId,
           section_id: timeSlotData.sectionId,
         })
         .select()
@@ -216,6 +247,7 @@ export const timetableService = {
       return {
         id: data.id,
         ...timeSlotData,
+        teacherId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
