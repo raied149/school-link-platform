@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
+import { supabase } from '@/integrations/supabase/client';
 
 const TimetablePage = () => {
   const { user } = useAuth();
@@ -29,16 +30,54 @@ const TimetablePage = () => {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   
-  // Always fetch available classes and academic years
+  // Fetch classes from the database
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes'],
-    queryFn: () => classService.getClasses()
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*');
+        
+      if (error) {
+        console.error("Error fetching classes:", error);
+        throw error;
+      }
+      
+      return (data || []).map((cls: any) => ({
+        id: cls.id,
+        name: cls.name,
+        academicYearId: cls.year_id,
+        createdAt: cls.created_at
+      }));
+    }
   });
   
   // Fetch sections based on selected class
   const { data: sections = [], isLoading: isLoadingSections } = useQuery({
     queryKey: ['sections', selectedClassId],
-    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, '1') : [],
+    queryFn: async () => {
+      if (!selectedClassId) return [];
+      
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('class_id', selectedClassId);
+        
+      if (error) {
+        console.error("Error fetching sections:", error);
+        throw error;
+      }
+      
+      return (data || []).map((section: any) => ({
+        id: section.id,
+        name: section.name,
+        classId: section.class_id,
+        academicYearId: '1', // Default academic year ID
+        teacherId: section.teacher_id,
+        createdAt: section.created_at,
+        updatedAt: section.created_at
+      }));
+    },
     enabled: !!selectedClassId
   });
   

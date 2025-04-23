@@ -141,7 +141,7 @@ const ClassDetailsPage = () => {
             <TimetableManagement
               classId={classId}
               sectionId={sectionId}
-              academicYearId={yearId || '1'} // Default academic year ID if not provided
+              academicYearId={yearId || '1'}
             />
           ) : (
             <Card className="p-6">

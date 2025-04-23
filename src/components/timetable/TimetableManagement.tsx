@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
@@ -12,6 +13,7 @@ import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimetableManagementProps {
   classId: string;
@@ -29,6 +31,7 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
   
   const weekDays = timetableService.getWeekDays();
   
+  // Fetch time slots for the selected day and section
   const { data: timeSlots = [], isLoading } = useQuery({
     queryKey: ['timetable', classId, sectionId, academicYearId, selectedDay],
     queryFn: () => timetableService.getTimeSlots({
@@ -39,11 +42,32 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
     })
   });
   
+  // Fetch subjects for this class
   const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', classId],
     queryFn: () => subjectService.getSubjectsByClass(classId)
   });
   
+  // Fetch teachers assigned to subjects
+  const { data: teacherMap = {}, isLoading: isLoadingTeachers } = useQuery({
+    queryKey: ['subject-teachers', classId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teacher_subjects')
+        .select('subject_id, teacher_id');
+        
+      if (error) throw error;
+      
+      const teacherMapping: Record<string, string> = {};
+      (data || []).forEach((item: any) => {
+        teacherMapping[item.subject_id] = item.teacher_id;
+      });
+      
+      return teacherMapping;
+    }
+  });
+  
+  // CRUD mutations
   const createMutation = useMutation({
     mutationFn: (data: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>) => 
       timetableService.createTimeSlot(data),
@@ -73,6 +97,7 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
     }
   });
   
+  // Event handlers
   const handleAddTimeSlot = () => {
     setEditingTimeSlot(null);
     setIsFormOpen(true);
@@ -97,6 +122,7 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
     }
   };
   
+  // Helper functions
   const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
   
   const getSubjectName = (subjectId?: string) => {
@@ -107,10 +133,10 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
 
   const getTeacherNameForSubject = (subjectId?: string) => {
     if (!subjectId) return '';
-    const subject = subjects.find(s => s.id === subjectId);
-    if (!subject) return 'Unknown Teacher';
-
-    return `Teacher ${parseInt(subjectId) + 1}`;
+    const teacherId = teacherMap[subjectId];
+    if (!teacherId) return 'No Teacher Assigned';
+    
+    return `Teacher ${teacherId.substring(0, 6)}`;
   };
   
   const getSlotIcon = (slotType: SlotType) => {
