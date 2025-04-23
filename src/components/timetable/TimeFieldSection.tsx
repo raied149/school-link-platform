@@ -12,81 +12,106 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { WeekDay } from '@/types/timetable';
+import { validateHour, validateMinute } from '@/utils/timeUtils';
 
 interface TimeFieldSectionProps {
   control: Control<any>;
   weekDays: WeekDay[];
-  timeOptions: string[];
   calculatedEndTime: string;
-  onStartTimeChange: (value: string) => void;
+  onStartTimeChange: (hour: string, minute: string) => void;
   onDurationChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function TimeFieldSection({
   control,
   weekDays,
-  timeOptions,
   calculatedEndTime,
   onStartTimeChange,
   onDurationChange,
 }: TimeFieldSectionProps) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          control={control}
-          name="dayOfWeek"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Day</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
+      <FormField
+        control={control}
+        name="dayOfWeek"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Day</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {weekDays.map(day => (
+                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+      <div className="space-y-2">
+        <FormLabel>Start Time</FormLabel>
+        <div className="flex items-center gap-2">
+          <FormField
+            control={control}
+            name="startHour"
+            render={({ field }) => (
+              <FormItem className="flex-1">
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
+                  <Input
+                    type="text"
+                    placeholder="HH"
+                    maxLength={2}
+                    className="text-center"
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || validateHour(value)) {
+                        field.onChange(value);
+                        onStartTimeChange(value, control._formValues.startMinute || '00');
+                      }
+                    }}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {weekDays.map(day => (
-                    <SelectItem key={day} value={day}>{day}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={control}
-          name="startTime"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Start Time</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  onStartTimeChange(value);
-                }}
-                defaultValue={field.value}
-              >
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <span className="text-lg">:</span>
+          <FormField
+            control={control}
+            name="startMinute"
+            render={({ field }) => (
+              <FormItem className="flex-1">
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
+                  <Input
+                    type="text"
+                    placeholder="MM"
+                    maxLength={2}
+                    className="text-center"
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || validateMinute(value)) {
+                        field.onChange(value);
+                        onStartTimeChange(control._formValues.startHour || '00', value);
+                      }
+                    }}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {timeOptions.map(time => (
-                    <SelectItem key={time} value={time}>{time}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4">

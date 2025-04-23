@@ -74,7 +74,7 @@ export const convertTo12Hour = (time: string) => {
 
 export const validateHour = (hour: string): boolean => {
   const hourNum = parseInt(hour);
-  return !isNaN(hourNum) && hourNum >= 1 && hourNum <= 12;
+  return !isNaN(hourNum) && hourNum >= 1 && hourNum <= 23;
 };
 
 export const validateMinute = (minute: string): boolean => {
@@ -83,7 +83,18 @@ export const validateMinute = (minute: string): boolean => {
 };
 
 export const formatTimeFromParts = (hour: string, minute: string): string => {
-  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  if (!hour || !minute) return '';
+  
+  const hourNum = parseInt(hour);
+  const minuteNum = parseInt(minute);
+  
+  if (isNaN(hourNum) || isNaN(minuteNum) || 
+      hourNum < 0 || hourNum > 23 || 
+      minuteNum < 0 || minuteNum > 59) {
+    return '';
+  }
+  
+  return `${hourNum.toString().padStart(2, '0')}:${minuteNum.toString().padStart(2, '0')}`;
 };
 
 export const isValidTimeFormat = (timeString: string): boolean => {

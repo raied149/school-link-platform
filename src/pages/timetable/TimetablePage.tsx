@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
+import { formatTimeDisplay } from '@/utils/timeUtils';
 
 const TimetablePage = () => {
   const { user } = useAuth();
@@ -81,6 +82,24 @@ const TimetablePage = () => {
     enabled: !!selectedClassId
   });
   
+  // Fetch teachers data for display
+  const { data: teachers = [] } = useQuery({
+    queryKey: ['teachers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'teacher');
+        
+      if (error) {
+        console.error("Error fetching teachers:", error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  });
+  
   const weekDays = timetableService.getWeekDays();
   
   // Default filters based on user role
@@ -138,26 +157,14 @@ const TimetablePage = () => {
     return section ? section.name : 'Unknown Section';
   };
   
+  const getTeacherName = (teacherId?: string) => {
+    if (!teacherId) return 'N/A';
+    const teacher = teachers.find(t => t.id === teacherId);
+    return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
+  };
+  
   const formatTime = (timeString: string) => {
-    try {
-      if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-        return 'Invalid Time';
-      }
-      
-      const [hours, minutes] = timeString.split(':');
-      const date = new Date();
-      date.setHours(parseInt(hours, 10));
-      date.setMinutes(parseInt(minutes, 10));
-      
-      if (!isValid(date)) {
-        return 'Invalid Time';
-      }
-      
-      return format(date, 'h:mm a');
-    } catch (error) {
-      console.error("Error formatting time:", timeString, error);
-      return 'Invalid Time';
-    }
+    return formatTimeDisplay(timeString);
   };
 
   const handleClassChange = (classId: string) => {
@@ -255,6 +262,9 @@ const TimetablePage = () => {
                 isLoading={isLoadingTimeSlots}
                 formatTime={formatTime}
                 getSubjectName={getSubjectName}
+                getTeacherName={getTeacherName}
+                getClassName={getClassName}
+                getSectionName={getSectionName}
                 user={user}
               />
             ) : (

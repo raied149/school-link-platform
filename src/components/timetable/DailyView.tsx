@@ -11,6 +11,9 @@ interface DailyViewProps {
   formatTime: (time: string) => string;
   getSubjectName: (subjectId?: string) => string;
   user?: { role?: string };
+  getTeacherName?: (teacherId?: string) => string;
+  getClassName?: (classId: string) => string;
+  getSectionName?: (sectionId: string) => string;
 }
 
 export function DailyView({
@@ -19,6 +22,9 @@ export function DailyView({
   isLoading,
   formatTime,
   getSubjectName,
+  getTeacherName = () => 'N/A',
+  getClassName = () => 'N/A',
+  getSectionName = () => 'N/A',
   user
 }: DailyViewProps) {
   const filteredSlots = timeSlots.filter(slot => slot.dayOfWeek === selectedDay);
@@ -71,16 +77,22 @@ export function DailyView({
       <TableBody>
         {filteredSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (
           <TableRow key={slot.id}>
-            <TableCell>{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</TableCell>
+            <TableCell>
+              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+            </TableCell>
             <TableCell className="capitalize">{slot.slotType}</TableCell>
             <TableCell className="flex items-center">
               {getSlotIcon(slot.slotType)}
               {getSlotDetails(slot)}
             </TableCell>
             {user?.role === 'student' ? (
-              <TableCell>{slot.slotType === 'subject' ? `Teacher ${slot.teacherId || 'N/A'}` : '-'}</TableCell>
+              <TableCell>
+                {slot.slotType === 'subject' ? getTeacherName(slot.teacherId) : '-'}
+              </TableCell>
             ) : (
-              <TableCell>Class {slot.classId} - Section {slot.sectionId}</TableCell>
+              <TableCell>
+                {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}
+              </TableCell>
             )}
           </TableRow>
         ))}

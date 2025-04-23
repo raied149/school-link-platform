@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTimeFromParts } from '@/utils/timeUtils';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -32,7 +34,8 @@ interface TimeSlotFormProps {
 
 const formSchema = z.object({
   dayOfWeek: z.enum(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as [WeekDay, ...WeekDay[]]),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+  startHour: z.string().min(1, { message: "Hour is required" }),
+  startMinute: z.string().min(1, { message: "Minute is required" }),
   duration: z.number().min(15, { message: "Duration must be at least 15 minutes" }).max(240, { message: "Duration cannot exceed 4 hours" }),
   slotType: z.enum(['subject', 'break', 'event'] as [SlotType, ...SlotType[]]),
   title: z.string().optional(),
@@ -45,9 +48,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, sectionId, academicYearId }: TimeSlotFormProps) {
-  const [calculatedEndTime, setCalculatedEndTime] = useState<string>(
-    initialData?.endTime || ''
-  );
+  const [calculatedEndTime, setCalculatedEndTime] = useState<string>('');
   
   const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', classId],
@@ -79,11 +80,22 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
   
   const slotTypes = timetableService.getSlotTypes();
   const weekDays = timetableService.getWeekDays();
-  const timeOptions = timetableService.getTimeRange();
+  
+  // Parse initial time if available
+  const parseInitialTime = () => {
+    if (initialData?.startTime && /^([0-9]{1,2}):([0-9]{2})$/.test(initialData.startTime)) {
+      const [hour, minute] = initialData.startTime.split(':');
+      return { hour, minute };
+    }
+    return { hour: '08', minute: '00' };
+  };
+  
+  const { hour, minute } = parseInitialTime();
   
   const defaultValues: FormValues = {
     dayOfWeek: initialData?.dayOfWeek || 'Monday',
-    startTime: initialData?.startTime || '08:00',
+    startHour: hour,
+    startMinute: minute,
     duration: initialData?.duration || 60,
     slotType: initialData?.slotType || 'subject',
     title: initialData?.title || '',
@@ -98,26 +110,33 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     defaultValues
   });
   
-  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  const calculateEndTime = (hour: string, minute: string, durationMinutes: number): string => {
     try {
-      const startDate = parse(startTime, 'HH:mm', new Date());
+      const timeString = formatTimeFromParts(hour, minute);
+      if (!timeString) return '';
+      
+      const startDate = parse(timeString, 'HH:mm', new Date());
+      if (!startDate || isNaN(startDate.getTime())) return '';
+      
       const endDate = addMinutes(startDate, durationMinutes);
       return format(endDate, 'HH:mm');
     } catch (error) {
+      console.error("Error calculating end time:", error);
       return '';
     }
   };
   
-  const handleStartTimeChange = (value: string) => {
-    form.setValue('startTime', value);
-    const endTime = calculateEndTime(value, form.getValues('duration'));
+  const handleStartTimeChange = (hour: string, minute: string) => {
+    const endTime = calculateEndTime(hour, minute, form.getValues('duration'));
     setCalculatedEndTime(endTime);
   };
   
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const duration = Number(e.target.value);
     form.setValue('duration', duration);
-    const endTime = calculateEndTime(form.getValues('startTime'), duration);
+    const hour = form.getValues('startHour');
+    const minute = form.getValues('startMinute');
+    const endTime = calculateEndTime(hour, minute, duration);
     setCalculatedEndTime(endTime);
   };
   
@@ -135,10 +154,27 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     }
   };
   
+  useEffect(() => {
+    // Initialize calculated end time on component mount
+    const hour = form.getValues('startHour');
+    const minute = form.getValues('startMinute');
+    const duration = form.getValues('duration');
+    const endTime = calculateEndTime(hour, minute, duration);
+    setCalculatedEndTime(endTime);
+  }, []);
+  
   const onSubmit = (values: FormValues) => {
+    const startTime = formatTimeFromParts(values.startHour, values.startMinute);
+    
+    if (!startTime || !calculatedEndTime) {
+      console.error("Invalid time format");
+      return;
+    }
+    
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
-      startTime: values.startTime,
+      startTime: startTime,
       endTime: calculatedEndTime,
+      duration: values.duration,
       slotType: values.slotType,
       dayOfWeek: values.dayOfWeek,
       classId: values.classId,
@@ -169,7 +205,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
             <TimeFieldSection
               control={form.control}
               weekDays={weekDays}
-              timeOptions={timeOptions}
               calculatedEndTime={calculatedEndTime}
               onStartTimeChange={handleStartTimeChange}
               onDurationChange={handleDurationChange}
