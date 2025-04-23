@@ -15,8 +15,6 @@ import { Plus, Pencil, Trash, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SubjectFormDialog } from "./SubjectFormDialog";
 import { SubjectTeacherAssignment } from "./SubjectTeacherAssignment";
-import { subjectService } from "@/services/subjectService";
-import { Subject } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SubjectManagementProps {
@@ -34,76 +32,177 @@ export function SubjectManagement({
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAssignTeacherOpen, setIsAssignTeacherOpen] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<any>(null);
 
-  // Fetch school subjects for this class/grade, with teacher assignments (from global page)
+  // Fetch subjects for this class from Supabase using the subject_classes join table
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['subjects-global', classId],
+    queryKey: ['subjects', classId],
     queryFn: async () => {
-      // 1. Get all subjects for this class (grade)
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("*, teacher_subjects(*), classes(*)");
-      if (error) throw error;
-      // Only subjects assigned to this grade/class
-      const filtered = (data || []).filter((subject: any) =>
-        subject.classes?.some((c: any) => c.id === classId));
-      return filtered.map((subject: any) => ({
+      if (!classId) return [];
+      
+      // First get subject IDs from subject_classes join table
+      const { data: subjectClasses, error: subjectClassesError } = await supabase
+        .from('subject_classes')
+        .select('subject_id')
+        .eq('class_id', classId);
+        
+      if (subjectClassesError) {
+        console.error("Error fetching subject classes:", subjectClassesError);
+        throw subjectClassesError;
+      }
+      
+      if (!subjectClasses || subjectClasses.length === 0) {
+        console.log("No subjects assigned to this class");
+        return [];
+      }
+      
+      const subjectIds = subjectClasses.map(row => row.subject_id);
+      
+      // Then get actual subject details and teacher assignments
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select(`
+          *,
+          teacher_subjects (
+            teacher_id,
+            profiles:teacher_id (
+              first_name,
+              last_name
+            )
+          )
+        `)
+        .in('id', subjectIds);
+        
+      if (subjectsError) {
+        console.error("Error fetching subjects:", subjectsError);
+        throw subjectsError;
+      }
+      
+      // Transform the data for easier use in the UI
+      return (subjectsData || []).map(subject => ({
         ...subject,
-        assignedTeacherIds: subject.teacher_subjects?.map((rel: any) => rel.teacher_id) ?? [],
+        assignedTeachers: subject.teacher_subjects?.map((ts: any) => ({
+          id: ts.teacher_id,
+          name: ts.profiles ? `${ts.profiles.first_name} ${ts.profiles.last_name}` : 'Unknown'
+        })) || []
       }));
     },
-    enabled: !!classId,
+    enabled: !!classId
   });
 
-  // Create mutation
+  // Create subject mutation
   const createMutation = useMutation({
-    mutationFn: (data: Omit<Subject, 'id'>) => {
-      return subjectService.createSubject({
-        ...data,
-        classIds: [classId!]
-      });
+    mutationFn: async (data: any) => {
+      // 1. Create the subject
+      const { data: newSubject, error: subjectError } = await supabase
+        .from('subjects')
+        .insert({
+          name: data.name,
+          code: data.code
+        })
+        .select()
+        .single();
+        
+      if (subjectError) {
+        console.error("Error creating subject:", subjectError);
+        throw subjectError;
+      }
+      
+      // 2. Assign the subject to the class
+      const { error: assignError } = await supabase
+        .from('subject_classes')
+        .insert({
+          subject_id: newSubject.id,
+          class_id: classId
+        });
+        
+      if (assignError) {
+        console.error("Error assigning subject to class:", assignError);
+        throw assignError;
+      }
+      
+      return newSubject;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', classId] });
       toast({
         title: "Subject created",
-        description: "The subject has been created successfully.",
+        description: "The subject has been created and assigned to this class."
       });
       setIsFormOpen(false);
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create subject: ${error.message}`,
+        variant: "destructive"
+      });
+    }
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      return subjectService.deleteSubject(id);
+    mutationFn: async (id: string) => {
+      // First remove the subject-class assignment
+      const { error: unassignError } = await supabase
+        .from('subject_classes')
+        .delete()
+        .eq('subject_id', id)
+        .eq('class_id', classId!);
+        
+      if (unassignError) {
+        console.error("Error removing subject assignment:", unassignError);
+        throw unassignError;
+      }
+      
+      // We're just removing the assignment, not deleting the subject itself
+      // If you want to delete the subject, uncomment the code below
+      /*
+      const { error: deleteError } = await supabase
+        .from('subjects')
+        .delete()
+        .eq('id', id);
+        
+      if (deleteError) {
+        console.error("Error deleting subject:", deleteError);
+        throw deleteError;
+      }
+      */
+      
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjects', classId] });
       toast({
-        title: "Subject deleted",
-        description: "The subject has been removed successfully.",
+        title: "Subject removed",
+        description: "The subject has been removed from this class."
       });
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to remove subject: ${error.message}`,
+        variant: "destructive"
+      });
+    }
   });
 
-  const handleCreate = (data: Omit<Subject, 'id'>) => {
+  const handleCreate = (data: any) => {
     createMutation.mutate(data);
   };
 
-  const handleEdit = (subject: Subject) => {
+  const handleEdit = (subject: any) => {
     setSelectedSubject(subject);
     setIsFormOpen(true);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this subject?")) {
+    if (confirm("Are you sure you want to remove this subject from this class?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleAssignTeacher = (subject: Subject) => {
+  const handleAssignTeacher = (subject: any) => {
     setSelectedSubject(subject);
     setIsAssignTeacherOpen(true);
   };
@@ -118,8 +217,10 @@ export function SubjectManagement({
               Manage subjects for this class and assign teachers
             </p>
           </div>
-          {/* Can still add new subject, but it's now managed globally */}
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => {
+            setSelectedSubject(null);
+            setIsFormOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Add Subject
           </Button>
@@ -142,9 +243,9 @@ export function SubjectManagement({
                   <TableCell className="font-medium">{subject.name}</TableCell>
                   <TableCell>{subject.code}</TableCell>
                   <TableCell>
-                    {(subject.assignedTeacherIds || []).length === 0
-                      ? "Not assigned"
-                      : (subject.assignedTeacherIds || []).join(", ")}
+                    {subject.assignedTeachers && subject.assignedTeachers.length > 0 
+                      ? subject.assignedTeachers.map((teacher: any) => teacher.name).join(', ')
+                      : "Not assigned"}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -178,7 +279,7 @@ export function SubjectManagement({
           </Table>
         ) : (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No subjects added yet</p>
+            <p className="text-muted-foreground">No subjects added yet to this class</p>
           </div>
         )}
       </Card>

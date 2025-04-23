@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useParams } from "react-router-dom";
 import { Users, BookOpen, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
+import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -202,94 +204,6 @@ const ClassDetailsPage = () => {
     );
   };
 
-  // Modified StudentAttendanceView component
-  const StudentAttendanceView = () => {
-    return (
-      <Card className="p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Student Attendance</h2>
-          <p className="text-muted-foreground">View attendance for students in this section</p>
-        </div>
-        
-        {isLoadingStudents ? (
-          <div className="text-center py-4">Loading students...</div>
-        ) : students.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-left py-3 px-4">Present Days</th>
-                  <th className="text-left py-3 px-4">Absent Days</th>
-                  <th className="text-left py-3 px-4">Attendance %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => {
-                  // Mock attendance data - this would be replaced with real data from the attendance table
-                  const totalDays = 48;
-                  const presentDays = Math.floor(Math.random() * 20) + 25; // Between 25 and 45 days
-                  const absentDays = totalDays - presentDays;
-                  const percentage = (presentDays / totalDays) * 100;
-                  
-                  return (
-                    <tr key={student.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">{student.first_name} {student.last_name}</td>
-                      <td className="py-3 px-4">{presentDays}</td>
-                      <td className="py-3 px-4">{absentDays}</td>
-                      <td className="py-3 px-4">{percentage.toFixed(2)}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            No students assigned to this section.
-          </div>
-        )}
-      </Card>
-    );
-  };
-
-  // Simplified SubjectManagement component
-  const SubjectManagement = () => {
-    const [subjects, setSubjects] = useState([
-      { id: '1', name: 'Mathematics', code: 'MATH101' },
-      { id: '2', name: 'Science', code: 'SCI101' },
-      { id: '3', name: 'English', code: 'ENG101' },
-    ]);
-
-    return (
-      <Card className="p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Subjects for this Class</h2>
-          <p className="text-muted-foreground">Subjects assigned to this class section</p>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4">Subject Name</th>
-                <th className="text-left py-3 px-4">Code</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map((subject) => (
-                <tr key={subject.id} className="border-b hover:bg-muted/50">
-                  <td className="py-3 px-4">{subject.name}</td>
-                  <td className="py-3 px-4">{subject.code}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    );
-  };
-
   // Simplified TimetableManagement component
   const TimetableManagement = () => {
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -363,7 +277,11 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="subjects" className="py-4">
-          <SubjectManagement />
+          <SubjectManagement 
+            classId={classId} 
+            sectionId={sectionId}
+            academicYearId={yearId}
+          />
         </TabsContent>
         
         <TabsContent value="timetable" className="py-4">
@@ -371,7 +289,10 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="attendance" className="py-4">
-          <StudentAttendanceView />
+          <StudentAttendanceView 
+            classId={classId}
+            sectionId={sectionId}
+          />
         </TabsContent>
       </Tabs>
     </div>

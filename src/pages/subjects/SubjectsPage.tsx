@@ -17,15 +17,36 @@ interface SubjectRow extends Subject {
 }
 
 const fetchSubjects = async () => {
+  // Fetch subjects with teacher assignments and class assignments
   const { data, error } = await supabase
     .from("subjects")
-    .select("*, teacher_subjects(*), classes(*)");
+    .select(`
+      *,
+      teacher_subjects (
+        teacher_id,
+        profiles:teacher_id (first_name, last_name)
+      ),
+      subject_classes (
+        class_id,
+        classes:class_id (name)
+      )
+    `);
+    
   if (error) throw error;
+  
   // Transform to fit our interface
   return (data || []).map((subject: any) => ({
     ...subject,
     assignedTeacherIds: subject.teacher_subjects?.map((rel: any) => rel.teacher_id) ?? [],
-    assignedClassIds: subject.classes?.map((c: any) => c.id) ?? [],
+    assignedTeachers: subject.teacher_subjects?.map((rel: any) => ({
+      id: rel.teacher_id,
+      name: rel.profiles ? `${rel.profiles.first_name} ${rel.profiles.last_name}` : 'Unknown'
+    })) ?? [],
+    assignedClassIds: subject.subject_classes?.map((c: any) => c.class_id) ?? [],
+    assignedClasses: subject.subject_classes?.map((c: any) => ({
+      id: c.class_id,
+      name: c.classes?.name || 'Unknown'
+    })) ?? []
   }));
 };
 
@@ -34,7 +55,9 @@ const fetchTeachers = async () => {
     .from("profiles")
     .select("id, first_name, last_name")
     .eq("role", "teacher");
+    
   if (error) throw error;
+  
   return data || [];
 };
 
@@ -42,7 +65,9 @@ const fetchGrades = async () => {
   const { data, error } = await supabase
     .from("classes")
     .select("id, name");
+    
   if (error) throw error;
+  
   return data || [];
 };
 
@@ -57,10 +82,12 @@ export default function SubjectsPage() {
     queryKey: ["subjects-full"],
     queryFn: fetchSubjects,
   });
+  
   const { data: teachers = [] } = useQuery({
     queryKey: ["teachers"],
     queryFn: fetchTeachers,
   });
+  
   const { data: grades = [] } = useQuery({
     queryKey: ["grades"],
     queryFn: fetchGrades,
@@ -68,56 +95,143 @@ export default function SubjectsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (subjectData: any) => {
-      // Create subject, assign to grades, assign to teachers
       const { name, code, assignedClassIds, assignedTeacherIds } = subjectData;
-      // 1. Create or update subject
       let subjectId = editingSubject?.id;
-      let response;
-      if (subjectId) {
-        response = await supabase
-          .from("subjects")
-          .update({ name, code })
-          .eq("id", subjectId)
-          .select();
-      } else {
-        response = await supabase
-          .from("subjects")
-          .insert([{ name, code }])
-          .select();
-        subjectId = response.data?.[0]?.id;
-      }
-      // 2. Update grade assignments (subjects/classes join table) by connecting to all class ids
-      if (subjectId && assignedClassIds) {
-        // Remove existing section_subjects and add current (cleanup would be more robust in prod)
-        // Skipping code for join table (classes/subjects join) if not present -- or implement as needed
-      }
-      // 3. Update teacher assignments (teacher_subjects)
-      if (subjectId) {
-        // Remove all existing
-        await supabase.from("teacher_subjects").delete().eq("subject_id", subjectId);
-        // Add all assigned
-        for (const teacherId of assignedTeacherIds || []) {
-          await supabase.from("teacher_subjects").insert([{ subject_id: subjectId, teacher_id: teacherId }]);
+      
+      try {
+        // Begin transaction
+        if (subjectId) {
+          // Update existing subject
+          const { error } = await supabase
+            .from("subjects")
+            .update({ name, code })
+            .eq("id", subjectId);
+            
+          if (error) throw error;
+        } else {
+          // Create new subject
+          const { data, error } = await supabase
+            .from("subjects")
+            .insert({ name, code })
+            .select();
+            
+          if (error) throw error;
+          
+          subjectId = data[0].id;
         }
+        
+        // Handle class assignments
+        if (subjectId && assignedClassIds && assignedClassIds.length > 0) {
+          // Remove existing assignments
+          const { error: deleteError } = await supabase
+            .from("subject_classes")
+            .delete()
+            .eq("subject_id", subjectId);
+            
+          if (deleteError) throw deleteError;
+          
+          // Create new assignments
+          const classAssignments = assignedClassIds.map((classId: string) => ({
+            subject_id: subjectId,
+            class_id: classId
+          }));
+          
+          const { error: insertError } = await supabase
+            .from("subject_classes")
+            .insert(classAssignments);
+            
+          if (insertError) throw insertError;
+        }
+        
+        // Handle teacher assignments
+        if (subjectId) {
+          // Remove existing assignments
+          const { error: deleteError } = await supabase
+            .from("teacher_subjects")
+            .delete()
+            .eq("subject_id", subjectId);
+            
+          if (deleteError) throw deleteError;
+          
+          if (assignedTeacherIds && assignedTeacherIds.length > 0) {
+            // Create new assignments
+            const teacherAssignments = assignedTeacherIds.map((teacherId: string) => ({
+              subject_id: subjectId,
+              teacher_id: teacherId
+            }));
+            
+            const { error: insertError } = await supabase
+              .from("teacher_subjects")
+              .insert(teacherAssignments);
+              
+            if (insertError) throw insertError;
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("Error saving subject:", error);
+        throw error;
       }
-      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects-full"] });
       toast({ title: "Subject Saved", description: "The subject has been saved." });
       setFormOpen(false);
       setEditingSubject(null);
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: `Failed to save subject: ${error.message}`, 
+        variant: "destructive" 
+      });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("subjects").delete().eq("id", id);
-      await supabase.from("teacher_subjects").delete().eq("subject_id", id);
+      try {
+        // Remove teacher assignments
+        const { error: teacherError } = await supabase
+          .from("teacher_subjects")
+          .delete()
+          .eq("subject_id", id);
+          
+        if (teacherError) throw teacherError;
+        
+        // Remove class assignments
+        const { error: classError } = await supabase
+          .from("subject_classes")
+          .delete()
+          .eq("subject_id", id);
+          
+        if (classError) throw classError;
+        
+        // Delete subject
+        const { error } = await supabase
+          .from("subjects")
+          .delete()
+          .eq("id", id);
+          
+        if (error) throw error;
+        
+        return true;
+      } catch (error) {
+        console.error("Error deleting subject:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects-full"] });
-      toast({ title: "Subject Removed", description: "Subject deleted." });
+      toast({ title: "Subject Removed", description: "Subject deleted successfully." });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: `Failed to delete subject: ${error.message}`, 
+        variant: "destructive" 
+      });
     }
   });
 
@@ -148,7 +262,7 @@ export default function SubjectsPage() {
           />
         </div>
         {loadingSubjects ? (
-          <div>Loading...</div>
+          <div>Loading subjects...</div>
         ) : (
           <Table>
             <TableHeader>
@@ -166,18 +280,13 @@ export default function SubjectsPage() {
                   <TableCell>{subject.name}</TableCell>
                   <TableCell>{subject.code}</TableCell>
                   <TableCell>
-                    {(subject.assignedClassIds || [])
-                      .map((classId) => (grades.find((g: any) => g.id === classId)?.name || ""))
-                      .filter(Boolean)
+                    {(subject.assignedClasses || [])
+                      .map((grade: any) => grade.name)
                       .join(", ")}
                   </TableCell>
                   <TableCell>
-                    {(subject.assignedTeacherIds || [])
-                      .map(tid => {
-                        const teacher = teachers.find((t: any) => t.id === tid);
-                        return teacher ? `${teacher.first_name} ${teacher.last_name}` : "Unknown";
-                      })
-                      .filter(Boolean)
+                    {(subject.assignedTeachers || [])
+                      .map((teacher: any) => teacher.name)
                       .join(", ")}
                   </TableCell>
                   <TableCell className="text-right">
@@ -185,6 +294,7 @@ export default function SubjectsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => { setFormOpen(true); setEditingSubject(subject); }}
+                      className="mr-2"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -203,7 +313,7 @@ export default function SubjectsPage() {
         )}
       </Card>
 
-      {/* Form Dialog (create/edit) */}
+      {/* Subject Form Dialog */}
       {formOpen && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
           <Card className="p-8 w-full max-w-lg">
