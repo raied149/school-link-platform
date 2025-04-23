@@ -285,8 +285,11 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
           classId={classId}
           sectionId={sectionId}
           academicYearId={academicYearId}
+          selectedDay={selectedDay}
+          existingTimeSlots={timeSlots}
         />
       )}
     </div>
   );
 }
+

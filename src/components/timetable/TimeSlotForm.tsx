@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { TimeSlot, SlotType } from '@/types/timetable';
+import { TimeSlot, SlotType, WeekDay } from '@/types/timetable';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -37,7 +37,7 @@ interface TimeSlotFormProps {
   classId: string;
   sectionId: string;
   academicYearId: string;
-  selectedDay: string;
+  selectedDay: WeekDay;
   existingTimeSlots: TimeSlot[];
 }
 
@@ -193,7 +193,7 @@ export function TimeSlotForm({
       endTime: calculatedEndTime,
       duration: values.duration,
       slotType: values.slotType,
-      dayOfWeek: values.dayOfWeek,
+      dayOfWeek: values.dayOfWeek as WeekDay, // Type cast to WeekDay
       classId: values.classId,
       sectionId: values.sectionId,
       academicYearId: values.academicYearId
