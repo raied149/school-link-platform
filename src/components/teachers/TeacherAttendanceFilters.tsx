@@ -1,7 +1,7 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TeacherAttendanceFiltersProps {
@@ -17,20 +17,9 @@ export function TeacherAttendanceFilters({
   onSearchChange,
   onStatusChange
 }: TeacherAttendanceFiltersProps) {
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
   return (
-    <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-4 w-4" />
-          <span>{formattedDate}</span>
-        </div>
+    <div className="flex items-center justify-between w-full space-x-4">
+      <div className="flex items-center space-x-4 flex-grow">
         <Select value={statusFilter} onValueChange={onStatusChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Statuses" />
@@ -42,7 +31,7 @@ export function TeacherAttendanceFilters({
           </SelectContent>
         </Select>
         <Input
-          className="w-[300px]"
+          className="flex-grow max-w-[300px]"
           placeholder="Search teachers..."
           type="search"
           value={searchTerm}
