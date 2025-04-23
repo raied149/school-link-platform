@@ -1,17 +1,13 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
-import { classService } from '@/services/classService';
-import { sectionService } from '@/services/sectionService';
-import { TimetableFilter, WeekDay } from '@/types/timetable';
+import { TimeSlot, WeekDay } from '@/types/timetable';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, isValid } from 'date-fns';
 import { DailyView } from '@/components/timetable/DailyView';
-import { WeeklyView } from '@/components/timetable/WeeklyView';
-import { TimetableManagement } from '@/components/timetable/TimetableManagement';
+import { TimeSlotForm } from '@/components/timetable/TimeSlotForm';
 import {
   Select,
   SelectContent,
@@ -21,14 +17,16 @@ import {
 } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
-import { formatTimeDisplay } from '@/utils/timeUtils';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
+import { PlusIcon } from 'lucide-react';
 
 const TimetablePage = () => {
   const { user } = useAuth();
-  const [selectedView, setSelectedView] = useState<'daily' | 'weekly' | 'management'>('daily');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
   
   // Fetch classes from the database
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
@@ -82,10 +80,9 @@ const TimetablePage = () => {
   });
   
   // Fetch teachers data for display
-  const { data: teachers = [], isLoading: isLoadingTeachers } = useQuery({
+  const { data: teachers = [] } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
-      console.log("Fetching teachers data");
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -96,26 +93,6 @@ const TimetablePage = () => {
         throw error;
       }
       
-      console.log("Teachers data:", data);
-      return data || [];
-    }
-  });
-  
-  // Fetch subject-teacher assignments
-  const { data: teacherSubjects = [], isLoading: isLoadingTeacherSubjects } = useQuery({
-    queryKey: ['teacher-subjects'],
-    queryFn: async () => {
-      console.log("Fetching teacher-subject assignments");
-      const { data, error } = await supabase
-        .from('teacher_subjects')
-        .select('*');
-        
-      if (error) {
-        console.error("Error fetching teacher subjects:", error);
-        throw error;
-      }
-      
-      console.log("Teacher subjects data:", data);
       return data || [];
     }
   });
@@ -129,7 +106,7 @@ const TimetablePage = () => {
   const weekDays = timetableService.getWeekDays();
   
   // Default filters based on user role
-  const filter: TimetableFilter = {};
+  const filter: any = {};
   
   // Add selections to filter
   if (selectedClassId) {
@@ -148,16 +125,14 @@ const TimetablePage = () => {
   
   // If teacher, filter by their ID
   if (user?.role === 'teacher') {
-    filter.teacherId = '1'; // Example teacher ID
+    filter.teacherId = user.id; // Use actual teacher ID
   }
   
-  // Add day filter if in daily view
-  if (selectedView === 'daily') {
-    filter.dayOfWeek = selectedDay;
-  }
+  // Add day filter
+  filter.dayOfWeek = selectedDay;
 
-  const { data: timeSlots = [], isLoading: isLoadingTimeSlots } = useQuery({
-    queryKey: ['timetable', selectedView, selectedDay, filter],
+  const { data: timeSlots = [], isLoading: isLoadingTimeSlots, refetch } = useQuery({
+    queryKey: ['timetable', selectedDay, filter],
     queryFn: () => timetableService.getTimeSlots(filter),
     enabled: (!!selectedClassId && !!selectedSectionId) || user?.role === 'student' || user?.role === 'teacher'
   });
@@ -170,7 +145,6 @@ const TimetablePage = () => {
   const getSubjectName = (subjectId?: string) => {
     if (!subjectId) return 'N/A';
     
-    console.log("Looking for subject:", subjectId, "in", subjects);
     const subject = subjects.find(s => s.id === subjectId) || 
                    allSubjects.find(s => s.id === subjectId);
                    
@@ -188,9 +162,6 @@ const TimetablePage = () => {
   };
   
   const getTeacherName = (teacherId?: string) => {
-    console.log("Getting teacher name for:", teacherId);
-    
-    // If teacherId is provided directly, use it
     if (teacherId) {
       const teacher = teachers.find(t => t.id === teacherId);
       if (teacher) {
@@ -198,12 +169,7 @@ const TimetablePage = () => {
       }
     }
     
-    // Otherwise try to find through subject assignment (for legacy data)
     return 'No Teacher Assigned';
-  };
-  
-  const formatTime = (timeString: string) => {
-    return formatTimeDisplay(timeString);
   };
 
   const handleClassChange = (classId: string) => {
@@ -211,19 +177,50 @@ const TimetablePage = () => {
     setSelectedSectionId(''); // Reset section when class changes
   };
 
+  const handleSaveTimeSlot = async (data: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await timetableService.createTimeSlot(data);
+      toast({
+        title: "Success",
+        description: "Time slot has been saved successfully",
+      });
+      setIsFormOpen(false);
+      refetch();
+    } catch (error) {
+      console.error("Error saving time slot:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save time slot",
+        variant: "destructive",
+      });
+    }
+  };
+
   const isReadyToDisplay = (!!selectedClassId && !!selectedSectionId) || user?.role === 'student' || user?.role === 'teacher';
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Timetable</h1>
-        <p className="text-muted-foreground">
-          {user?.role === 'student' 
-            ? 'Your class schedule' 
-            : user?.role === 'teacher' 
-              ? 'Your teaching schedule' 
-              : 'Manage school timetables'}
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Timetable</h1>
+          <p className="text-muted-foreground">
+            {user?.role === 'student' 
+              ? 'Your class schedule' 
+              : user?.role === 'teacher' 
+                ? 'Your teaching schedule' 
+                : 'Manage school timetables'}
+          </p>
+        </div>
+        
+        {user?.role === 'admin' && selectedClassId && selectedSectionId && (
+          <Button 
+            onClick={() => setIsFormOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Time Slot
+          </Button>
+        )}
       </div>
       
       {user?.role === 'admin' && (
@@ -263,92 +260,56 @@ const TimetablePage = () => {
               </SelectContent>
             </Select>
           </div>
+          
+          <div>
+            <Label htmlFor="day-select">Day</Label>
+            <Select 
+              value={selectedDay} 
+              onValueChange={(day) => setSelectedDay(day as WeekDay)}
+            >
+              <SelectTrigger id="day-select">
+                <SelectValue placeholder="Select Day" />
+              </SelectTrigger>
+              <SelectContent>
+                {weekDays.map(day => (
+                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
       
       <Card className="p-6">
-        <Tabs defaultValue="daily" onValueChange={(value) => setSelectedView(value as 'daily' | 'weekly' | 'management')}>
-          <div className="flex justify-between items-center mb-6">
-            <TabsList>
-              <TabsTrigger value="daily">Daily View</TabsTrigger>
-              <TabsTrigger value="weekly">Weekly View</TabsTrigger>
-              {user?.role === 'admin' && <TabsTrigger value="management">Management</TabsTrigger>}
-            </TabsList>
-            
-            {selectedView === 'daily' && (
-              <div>
-                <TabsList>
-                  {weekDays.map(day => (
-                    <TabsTrigger 
-                      key={day} 
-                      value={day} 
-                      onClick={() => setSelectedDay(day)}
-                      className={selectedDay === day ? 'bg-primary text-primary-foreground' : ''}
-                    >
-                      {day.substring(0, 3)}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            )}
+        {isReadyToDisplay ? (
+          <DailyView
+            timeSlots={timeSlots}
+            selectedDay={selectedDay}
+            isLoading={isLoadingTimeSlots}
+            getSubjectName={getSubjectName}
+            getTeacherName={getTeacherName}
+            getClassName={getClassName}
+            getSectionName={getSectionName}
+            user={user}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <p className="text-muted-foreground">Please select a class and section to view timetable</p>
           </div>
-          
-          <TabsContent value="daily">
-            {isReadyToDisplay ? (
-              <DailyView
-                timeSlots={timeSlots}
-                selectedDay={selectedDay}
-                isLoading={isLoadingTimeSlots}
-                formatTime={formatTime}
-                getSubjectName={getSubjectName}
-                getTeacherName={getTeacherName}
-                getClassName={getClassName}
-                getSectionName={getSectionName}
-                user={user}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-muted-foreground">Please select a class and section to view timetable</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="weekly">
-            {isReadyToDisplay ? (
-              <WeeklyView
-                timeSlots={timeSlots}
-                weekDays={weekDays}
-                isLoading={isLoadingTimeSlots}
-                formatTime={formatTime}
-                getSubjectName={getSubjectName}
-                getClassName={getClassName}
-                getSectionName={getSectionName}
-                user={user}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-muted-foreground">Please select a class and section to view timetable</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          {user?.role === 'admin' && (
-            <TabsContent value="management">
-              {selectedClassId && selectedSectionId ? (
-                <TimetableManagement
-                  classId={selectedClassId}
-                  sectionId={selectedSectionId}
-                  academicYearId="1" // Default academic year for demo
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <p className="text-muted-foreground">Please select a class and section to manage timetable</p>
-                </div>
-              )}
-            </TabsContent>
-          )}
-        </Tabs>
+        )}
       </Card>
+      
+      {isFormOpen && (
+        <TimeSlotForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={handleSaveTimeSlot}
+          classId={selectedClassId}
+          sectionId={selectedSectionId}
+          academicYearId="1" // Default academic year for demo
+          selectedDay={selectedDay}
+        />
+      )}
     </div>
   );
 };

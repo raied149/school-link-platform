@@ -1,5 +1,6 @@
-import { format, isValid, parse } from 'date-fns';
+import { format, isValid, parse, addMinutes } from 'date-fns';
 
+// Generate time options for dropdowns
 export const generateTimeOptions = () => {
   const times = [];
   for (let hour = 1; hour <= 12; hour++) {
@@ -12,9 +13,10 @@ export const generateTimeOptions = () => {
   return times;
 };
 
+// Format time for display - keep in 24-hour HH:MM format
 export const formatTimeDisplay = (timeString: string): string => {
   if (!timeString || typeof timeString !== 'string') {
-    return timeString || '';
+    return '';
   }
   
   // If already in HH:mm format, return as is
@@ -87,14 +89,7 @@ export const formatTimeFromParts = (hour: string, minute: string): string => {
 
 export const isValidTimeFormat = (timeString: string): boolean => {
   if (!timeString || typeof timeString !== 'string') return false;
-  
-  // Check for HH:MM format
-  if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) return true;
-  
-  // Check for "8 AM" format
-  if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) return true;
-  
-  return false;
+  return !!timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/);
 };
 
 // Normalize time strings to standard 24-hour format (HH:MM)
@@ -121,6 +116,23 @@ export const normalizeTimeString = (timeString: string): string => {
   }
   
   return '';
+};
+
+// Calculate end time based on start time and duration
+export const calculateEndTime = (startHour: string, startMinute: string, durationMinutes: number): string => {
+  try {
+    const timeString = formatTimeFromParts(startHour, startMinute);
+    if (!timeString) return '';
+    
+    const startDate = parse(timeString, 'HH:mm', new Date());
+    if (!startDate || isNaN(startDate.getTime())) return '';
+    
+    const endDate = addMinutes(startDate, durationMinutes);
+    return format(endDate, 'HH:mm');
+  } catch (error) {
+    console.error("Error calculating end time:", error);
+    return '';
+  }
 };
 
 // Check if a time slot overlaps with any existing time slots

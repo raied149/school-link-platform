@@ -2,13 +2,11 @@
 import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { isValid } from 'date-fns';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];
   selectedDay: string;
   isLoading: boolean;
-  formatTime: (time: string) => string;
   getSubjectName: (subjectId?: string) => string;
   user?: { role?: string };
   getTeacherName?: (teacherId?: string) => string;
@@ -20,7 +18,6 @@ export function DailyView({
   timeSlots,
   selectedDay,
   isLoading,
-  formatTime,
   getSubjectName,
   getTeacherName = () => 'N/A',
   getClassName = () => 'N/A',
@@ -78,7 +75,7 @@ export function DailyView({
         {filteredSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (
           <TableRow key={slot.id}>
             <TableCell>
-              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+              {slot.startTime} - {slot.endTime}
             </TableCell>
             <TableCell className="capitalize">{slot.slotType}</TableCell>
             <TableCell className="flex items-center">

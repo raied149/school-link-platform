@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -8,7 +9,6 @@ import { timetableService } from '@/services/timetableService';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { format, parse, addMinutes } from 'date-fns';
 import { TimeFieldSection } from './TimeFieldSection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTimeFromParts, hasTimeConflict } from '@/utils/timeUtils';
+import { formatTimeFromParts, hasTimeConflict, calculateEndTime } from '@/utils/timeUtils';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -29,6 +29,7 @@ interface TimeSlotFormProps {
   classId: string;
   sectionId: string;
   academicYearId: string;
+  selectedDay: WeekDay;
 }
 
 const formSchema = z.object({
@@ -46,7 +47,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, sectionId, academicYearId }: TimeSlotFormProps) {
+export function TimeSlotForm({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialData, 
+  classId, 
+  sectionId, 
+  academicYearId,
+  selectedDay 
+}: TimeSlotFormProps) {
   const [calculatedEndTime, setCalculatedEndTime] = useState<string>('');
   const [hasConflict, setHasConflict] = useState(false);
   
@@ -88,7 +98,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
   const [selectedSlotType, setSelectedSlotType] = useState<SlotType>(initialData?.slotType || 'subject');
   
   const slotTypes = timetableService.getSlotTypes();
-  const weekDays = timetableService.getWeekDays();
   
   const parseInitialTime = () => {
     if (initialData?.startTime && /^([0-9]{1,2}):([0-9]{2})$/.test(initialData.startTime)) {
@@ -101,7 +110,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
   const { hour, minute } = parseInitialTime();
   
   const defaultValues: FormValues = {
-    dayOfWeek: initialData?.dayOfWeek || 'Monday',
+    dayOfWeek: selectedDay,
     startHour: hour,
     startMinute: minute,
     duration: initialData?.duration || 60,
@@ -117,22 +126,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     resolver: zodResolver(formSchema),
     defaultValues
   });
-  
-  const calculateEndTime = (hour: string, minute: string, durationMinutes: number): string => {
-    try {
-      const timeString = formatTimeFromParts(hour, minute);
-      if (!timeString) return '';
-      
-      const startDate = parse(timeString, 'HH:mm', new Date());
-      if (!startDate || isNaN(startDate.getTime())) return '';
-      
-      const endDate = addMinutes(startDate, durationMinutes);
-      return format(endDate, 'HH:mm');
-    } catch (error) {
-      console.error("Error calculating end time:", error);
-      return '';
-    }
-  };
   
   const checkTimeConflict = (hour: string, minute: string, durationMinutes: number, dayOfWeek: WeekDay) => {
     if (isLoadingSlots) return;
@@ -177,18 +170,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     setCalculatedEndTime(endTime);
     
     checkTimeConflict(hour, minute, duration, form.getValues('dayOfWeek'));
-  };
-  
-  const handleDayChange = (value: string) => {
-    const dayOfWeek = value as WeekDay;
-    form.setValue('dayOfWeek', dayOfWeek);
-    
-    checkTimeConflict(
-      form.getValues('startHour'),
-      form.getValues('startMinute'),
-      form.getValues('duration'),
-      dayOfWeek
-    );
   };
   
   const handleSlotTypeChange = (value: string) => {
@@ -279,24 +260,10 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
                 control={form.control}
                 name="dayOfWeek"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Day of Week</FormLabel>
-                    <Select
-                      onValueChange={handleDayChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select day" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {weekDays.map(day => (
-                          <SelectItem key={day} value={day}>{day}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="hidden" {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -331,9 +298,9 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="subject">Subject</SelectItem>
-                      <SelectItem value="break">Break</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
+                      {slotTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
