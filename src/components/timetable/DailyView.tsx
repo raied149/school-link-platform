@@ -2,6 +2,7 @@
 import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { isValid } from 'date-fns';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];

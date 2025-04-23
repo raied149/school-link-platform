@@ -2,6 +2,7 @@
 import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { isValid } from 'date-fns';
 
 interface WeeklyViewProps {
   timeSlots: TimeSlot[];
@@ -44,7 +45,10 @@ export function WeeklyView({
   // Get unique time slots
   const timeSet = new Set<string>();
   timeSlots.forEach(slot => {
-    timeSet.add(slot.startTime);
+    if (slot.startTime && typeof slot.startTime === 'string' && 
+        slot.startTime.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+      timeSet.add(slot.startTime);
+    }
   });
   
   const timeArray = Array.from(timeSet).sort();

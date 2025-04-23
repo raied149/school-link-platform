@@ -1,3 +1,6 @@
+
+import { format, isValid } from 'date-fns';
+
 export const generateTimeOptions = () => {
   const times = [];
   for (let hour = 1; hour <= 12; hour++) {
@@ -10,8 +13,28 @@ export const generateTimeOptions = () => {
   return times;
 };
 
-export const formatTimeDisplay = (time: string) => {
-  return time;
+export const formatTimeDisplay = (timeString: string): string => {
+  try {
+    // Validate the timeString format
+    if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+      return 'Invalid Time';
+    }
+    
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours, 10));
+    date.setMinutes(parseInt(minutes, 10));
+    
+    // Double-check if the date is valid before formatting
+    if (!isValid(date)) {
+      return 'Invalid Time';
+    }
+    
+    return format(date, 'h:mm a');
+  } catch (error) {
+    console.error("Error formatting time:", timeString, error);
+    return 'Invalid Time';
+  }
 };
 
 export const convertTo24Hour = (time: string, period: string) => {
@@ -28,6 +51,10 @@ export const convertTo24Hour = (time: string, period: string) => {
 };
 
 export const convertTo12Hour = (time: string) => {
+  if (!time || typeof time !== 'string' || !time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    return { time: '00:00', period: 'AM' };
+  }
+  
   const [hours, minutes] = time.split(':').map(Number);
   let period = 'AM';
   let hour12 = hours;
@@ -57,4 +84,8 @@ export const validateMinute = (minute: string): boolean => {
 
 export const formatTimeFromParts = (hour: string, minute: string): string => {
   return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+};
+
+export const isValidTimeFormat = (timeString: string): boolean => {
+  return !!timeString && typeof timeString === 'string' && !!timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/);
 };

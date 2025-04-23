@@ -9,7 +9,7 @@ import { classService } from '@/services/classService';
 import { sectionService } from '@/services/sectionService';
 import { TimetableFilter, WeekDay } from '@/types/timetable';
 import { useAuth } from '@/contexts/AuthContext';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { DailyView } from '@/components/timetable/DailyView';
 import { WeeklyView } from '@/components/timetable/WeeklyView';
 import { TimetableManagement } from '@/components/timetable/TimetableManagement';
@@ -139,11 +139,25 @@ const TimetablePage = () => {
   };
   
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
-    return format(date, 'h:mm a');
+    try {
+      if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+        return 'Invalid Time';
+      }
+      
+      const [hours, minutes] = timeString.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10));
+      date.setMinutes(parseInt(minutes, 10));
+      
+      if (!isValid(date)) {
+        return 'Invalid Time';
+      }
+      
+      return format(date, 'h:mm a');
+    } catch (error) {
+      console.error("Error formatting time:", timeString, error);
+      return 'Invalid Time';
+    }
   };
 
   const handleClassChange = (classId: string) => {

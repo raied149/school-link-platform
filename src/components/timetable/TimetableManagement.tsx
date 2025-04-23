@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TimeSlotForm } from './TimeSlotForm';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -149,12 +149,27 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
   };
   
   const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
-    
-    return format(date, 'h:mm a');
+    try {
+      // Validate the timeString format first
+      if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+        return 'Invalid Time';
+      }
+      
+      const [hours, minutes] = timeString.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10));
+      date.setMinutes(parseInt(minutes, 10));
+      
+      // Double-check if the date is valid before formatting
+      if (!isValid(date)) {
+        return 'Invalid Time';
+      }
+      
+      return format(date, 'h:mm a');
+    } catch (error) {
+      console.error("Error formatting time:", timeString, error);
+      return 'Invalid Time';
+    }
   };
 
   return (
