@@ -83,6 +83,7 @@ const AdminDashboard = () => {
           <DailyEvents
             date={selectedDate}
             events={eventsForSelectedDate}
+            isLoading={false}
           />
         </Card>
       </div>
@@ -142,6 +143,7 @@ const TeacherDashboard = () => {
           <DailyEvents
             date={selectedDate}
             events={eventsForSelectedDate}
+            isLoading={false}
           />
         </Card>
       </div>
@@ -200,6 +202,7 @@ const StudentDashboard = () => {
           <DailyEvents
             date={selectedDate}
             events={eventsForSelectedDate}
+            isLoading={false}
           />
         </Card>
       </div>
@@ -258,6 +261,7 @@ const ParentDashboard = () => {
           <DailyEvents
             date={selectedDate}
             events={eventsForSelectedDate}
+            isLoading={false}
           />
         </Card>
       </div>

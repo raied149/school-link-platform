@@ -54,6 +54,7 @@ const CalendarPage = () => {
           <DailyEvents
             date={selectedDate}
             events={eventsForSelectedDate}
+            isLoading={false}
           />
         </Card>
       </div>

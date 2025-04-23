@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { CalendarDatePicker } from "@/components/calendar/CalendarDatePicker";
 import { EventForm } from "@/components/calendar/EventForm";
 import { DailyEvents } from "@/components/calendar/DailyEvents";
-import { SchoolEvent } from "@/types";
+import { SchoolEvent, EventType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -30,7 +30,7 @@ const CalendarPage = () => {
       return data.map(event => ({
         id: event.id,
         name: event.name,
-        type: event.type,
+        type: event.type as EventType,
         date: event.date,
         startTime: event.start_time,
         endTime: event.end_time,

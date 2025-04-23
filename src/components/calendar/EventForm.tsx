@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ interface EventFormProps {
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
   const [showReminderTime, setShowReminderTime] = useState(false);
+  const [showTeacherSelection, setShowTeacherSelection] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
