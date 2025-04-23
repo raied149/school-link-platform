@@ -33,18 +33,17 @@ export function UserTabs({
   
   return (
     <Tabs defaultValue={defaultTab}>
-      <TabsList className="mb-4">
-        {!showTeachersOnly && (
+      {/* Only show TabsList if we're showing both types of users */}
+      {!showStudentsOnly && !showTeachersOnly && (
+        <TabsList className="mb-4">
           <TabsTrigger value="students" className="flex-1">
             Students
           </TabsTrigger>
-        )}
-        {!showStudentsOnly && (
           <TabsTrigger value="teachers" className="flex-1">
             Teachers
           </TabsTrigger>
-        )}
-      </TabsList>
+        </TabsList>
+      )}
       
       {!showTeachersOnly && (
         <TabsContent value="students" className="space-y-4">
