@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -10,13 +9,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Download } from "lucide-react";
+import { Calendar as CalendarIcon, Download } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 const StudentAttendancePage = () => {
@@ -27,11 +27,9 @@ const StudentAttendancePage = () => {
   const [sectionFilter, setSectionFilter] = useState("all-sections");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // Format the selected date for database queries
+
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch classes (grades)
   const { data: classes = [] } = useQuery({
     queryKey: ['classes'],
     queryFn: async () => {
@@ -48,7 +46,6 @@ const StudentAttendancePage = () => {
     }
   });
 
-  // Fetch sections based on selected class
   const { data: sections = [] } = useQuery({
     queryKey: ['sections', gradeFilter],
     queryFn: async () => {
@@ -72,13 +69,11 @@ const StudentAttendancePage = () => {
     enabled: !!classes.length
   });
 
-  // Fetch student profiles with their class and section data
   const { data: studentsData = [], isLoading } = useQuery({
     queryKey: ['students-with-details', gradeFilter, sectionFilter],
     queryFn: async () => {
       console.log("Fetching students for attendance page");
       
-      // Basic query to get student profiles
       let query = supabase.from('profiles')
         .select(`
           *,
@@ -97,7 +92,6 @@ const StudentAttendancePage = () => {
         `)
         .eq('role', 'student');
         
-      // Apply filters if selected
       if (sectionFilter !== 'all-sections') {
         query = query.eq('student_sections.section_id', sectionFilter);
       } else if (gradeFilter !== 'all-grades') {
@@ -117,7 +111,6 @@ const StudentAttendancePage = () => {
     enabled: true
   });
 
-  // Fetch attendance records for the selected date
   const { data: attendanceRecords = [] } = useQuery({
     queryKey: ['student-attendance', formattedDate],
     queryFn: async () => {
@@ -135,8 +128,7 @@ const StudentAttendancePage = () => {
     },
     enabled: true
   });
-  
-  // Process students to include their classes and sections
+
   const students = studentsData.map(student => {
     const section = student.student_sections?.[0]?.sections;
     const attendanceRecord = attendanceRecords.find(
@@ -153,21 +145,16 @@ const StudentAttendancePage = () => {
     };
   });
 
-  // Filter students based on selected filters
   const filteredStudents = students.filter((student) => {
-    // Apply search filter
     const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
     const matchesSearch = searchTerm === "" || 
                           fullName.includes(searchTerm.toLowerCase()) || 
                           student.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Apply grade filter
     const matchesGrade = gradeFilter === "all-grades" || student.classId === gradeFilter;
     
-    // Apply section filter
     const matchesSection = sectionFilter === "all-sections" || student.sectionId === sectionFilter;
     
-    // Apply status filter
     const matchesStatus = statusFilter === "all" || 
                           (statusFilter === "present" && student.attendance === "present") ||
                           (statusFilter === "absent" && student.attendance === "absent") ||
@@ -177,7 +164,6 @@ const StudentAttendancePage = () => {
     return matchesSearch && matchesGrade && matchesSection && matchesStatus;
   });
 
-  // Mutation to update attendance
   const markAttendanceMutation = useMutation({
     mutationFn: async ({ studentId, status, sectionId }: { 
       studentId: string, 
@@ -188,7 +174,6 @@ const StudentAttendancePage = () => {
         throw new Error("Student is not assigned to a section");
       }
 
-      // Check if attendance record already exists
       const { data: existingRecord } = await supabase
         .from('student_attendance')
         .select('id')
@@ -197,7 +182,6 @@ const StudentAttendancePage = () => {
         .maybeSingle();
         
       if (existingRecord) {
-        // Update existing record
         const { data, error } = await supabase
           .from('student_attendance')
           .update({ status })
@@ -207,7 +191,6 @@ const StudentAttendancePage = () => {
         if (error) throw error;
         return data;
       } else {
-        // Create new record
         const { data, error } = await supabase
           .from('student_attendance')
           .insert({
@@ -298,7 +281,7 @@ const StudentAttendancePage = () => {
                     "w-[200px] justify-start text-left font-normal",
                   )}
                 >
-                  <Calendar className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(selectedDate, 'MMMM d, yyyy')}
                 </Button>
               </PopoverTrigger>
