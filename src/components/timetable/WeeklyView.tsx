@@ -12,6 +12,7 @@ interface WeeklyViewProps {
   getSubjectName: (subjectId?: string) => string;
   getClassName: (classId: string) => string;
   getSectionName: (sectionId: string) => string;
+  getTeacherName?: (teacherId?: string) => string;
   user?: { role?: string };
 }
 
@@ -23,6 +24,7 @@ export function WeeklyView({
   getSubjectName,
   getClassName,
   getSectionName,
+  getTeacherName = () => 'N/A',
   user
 }: WeeklyViewProps) {
   if (isLoading) {
@@ -105,7 +107,7 @@ export function WeeklyView({
                         {getSlotIcon(slot.slotType)}
                         <p className="font-medium">{getSlotDetails(slot)}</p>
                         <p className="text-xs text-muted-foreground">
-                          Teacher: {slot.teacherId ? 'Assigned' : 'N/A'}
+                          Teacher: {slot.teacherId ? getTeacherName(slot.teacherId) : 'N/A'}
                         </p>
                         <p className="text-xs">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</p>
                       </div>

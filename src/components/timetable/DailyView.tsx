@@ -86,7 +86,7 @@ export function DailyView({
               {getSlotDetails(slot)}
             </TableCell>
             <TableCell>
-              {slot.slotType === 'subject' ? getTeacherName(slot.teacherId) : '-'}
+              {slot.slotType === 'subject' && slot.teacherId ? getTeacherName(slot.teacherId) : '-'}
             </TableCell>
             <TableCell>
               {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}

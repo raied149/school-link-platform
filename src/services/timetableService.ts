@@ -210,7 +210,7 @@ export const timetableService = {
         throw new Error("Invalid end time format");
       }
       
-      // If this is a subject slot, try to get the teacher_id from teacher_subjects
+      // Get teacher for this subject if this is a subject slot
       let teacherId = timeSlotData.teacherId;
       
       if (timeSlotData.slotType === 'subject' && timeSlotData.subjectId && !teacherId) {
@@ -226,14 +226,23 @@ export const timetableService = {
         }
       }
       
+      console.log("Creating time slot:", {
+        start_time: startTime,
+        end_time: endTime,
+        day_of_week: dayOfWeek,
+        subject_id: timeSlotData.subjectId || null,
+        teacher_id: teacherId || null,
+        section_id: timeSlotData.sectionId,
+      });
+      
       const { data, error } = await supabase
         .from('timetable')
         .insert({
           start_time: startTime,
           end_time: endTime,
           day_of_week: dayOfWeek,
-          subject_id: timeSlotData.subjectId,
-          teacher_id: teacherId,
+          subject_id: timeSlotData.subjectId || null,
+          teacher_id: teacherId || null,
           section_id: timeSlotData.sectionId,
         })
         .select()
@@ -244,10 +253,20 @@ export const timetableService = {
         throw error;
       }
       
+      console.log("Created time slot:", data);
+      
       return {
         id: data.id,
-        ...timeSlotData,
-        teacherId,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        dayOfWeek: timeSlotData.dayOfWeek,
+        slotType: timeSlotData.slotType,
+        subjectId: data.subject_id || undefined,
+        title: timeSlotData.title,
+        teacherId: data.teacher_id || undefined,
+        classId: timeSlotData.classId,
+        sectionId: data.section_id,
+        academicYearId: timeSlotData.academicYearId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -269,8 +288,13 @@ export const timetableService = {
     try {
       const updateData: any = {};
       
-      if (timeSlotData.startTime) updateData.start_time = timeSlotData.startTime;
-      if (timeSlotData.endTime) updateData.end_time = timeSlotData.endTime;
+      if (timeSlotData.startTime) {
+        updateData.start_time = normalizeTimeString(timeSlotData.startTime);
+      }
+      
+      if (timeSlotData.endTime) {
+        updateData.end_time = normalizeTimeString(timeSlotData.endTime);
+      }
       
       if (timeSlotData.dayOfWeek) {
         // Convert day name to number (0-6 for Sunday-Saturday)

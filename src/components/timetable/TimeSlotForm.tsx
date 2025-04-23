@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -49,6 +48,16 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, sectionId, academicYearId }: TimeSlotFormProps) {
   const [calculatedEndTime, setCalculatedEndTime] = useState<string>('');
+  const [hasConflict, setHasConflict] = useState(false);
+  
+  const { data: timeSlots = [], isLoading: isLoadingSlots } = useQuery({
+    queryKey: ['timetable-all-slots'],
+    queryFn: () => timetableService.getTimeSlots({
+      classId,
+      sectionId,
+      academicYearId
+    })
+  });
   
   const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', classId],
@@ -81,7 +90,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
   const slotTypes = timetableService.getSlotTypes();
   const weekDays = timetableService.getWeekDays();
   
-  // Parse initial time if available
   const parseInitialTime = () => {
     if (initialData?.startTime && /^([0-9]{1,2}):([0-9]{2})$/.test(initialData.startTime)) {
       const [hour, minute] = initialData.startTime.split(':');
@@ -126,9 +134,38 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     }
   };
   
+  const checkTimeConflict = (hour: string, minute: string, durationMinutes: number, dayOfWeek: WeekDay) => {
+    if (isLoadingSlots) return;
+    
+    const startTime = formatTimeFromParts(hour, minute);
+    const endTime = calculateEndTime(hour, minute, durationMinutes);
+    
+    if (!startTime || !endTime) {
+      setHasConflict(false);
+      return;
+    }
+    
+    const conflict = hasTimeConflict(
+      startTime, 
+      endTime, 
+      dayOfWeek, 
+      timeSlots, 
+      initialData?.id
+    );
+    
+    setHasConflict(conflict);
+  };
+  
   const handleStartTimeChange = (hour: string, minute: string) => {
     const endTime = calculateEndTime(hour, minute, form.getValues('duration'));
     setCalculatedEndTime(endTime);
+    
+    checkTimeConflict(
+      hour, 
+      minute, 
+      form.getValues('duration'),
+      form.getValues('dayOfWeek')
+    );
   };
   
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,6 +175,20 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
     const minute = form.getValues('startMinute');
     const endTime = calculateEndTime(hour, minute, duration);
     setCalculatedEndTime(endTime);
+    
+    checkTimeConflict(hour, minute, duration, form.getValues('dayOfWeek'));
+  };
+  
+  const handleDayChange = (value: string) => {
+    const dayOfWeek = value as WeekDay;
+    form.setValue('dayOfWeek', dayOfWeek);
+    
+    checkTimeConflict(
+      form.getValues('startHour'),
+      form.getValues('startMinute'),
+      form.getValues('duration'),
+      dayOfWeek
+    );
   };
   
   const handleSlotTypeChange = (value: string) => {
@@ -155,19 +206,40 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
   };
   
   useEffect(() => {
-    // Initialize calculated end time on component mount
     const hour = form.getValues('startHour');
     const minute = form.getValues('startMinute');
     const duration = form.getValues('duration');
     const endTime = calculateEndTime(hour, minute, duration);
     setCalculatedEndTime(endTime);
-  }, []);
+    
+    if (!isLoadingSlots) {
+      checkTimeConflict(
+        hour, 
+        minute, 
+        duration, 
+        form.getValues('dayOfWeek')
+      );
+    }
+  }, [timeSlots, isLoadingSlots]);
   
   const onSubmit = (values: FormValues) => {
     const startTime = formatTimeFromParts(values.startHour, values.startMinute);
     
     if (!startTime || !calculatedEndTime) {
       console.error("Invalid time format");
+      return;
+    }
+    
+    const conflict = hasTimeConflict(
+      startTime,
+      calculatedEndTime,
+      values.dayOfWeek,
+      timeSlots,
+      initialData?.id
+    );
+    
+    if (conflict) {
+      setHasConflict(true);
       return;
     }
     
@@ -202,13 +274,50 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <TimeFieldSection
-              control={form.control}
-              weekDays={weekDays}
-              calculatedEndTime={calculatedEndTime}
-              onStartTimeChange={handleStartTimeChange}
-              onDurationChange={handleDurationChange}
-            />
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="dayOfWeek"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Day of Week</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleDayChange(value);
+                      }}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {weekDays.map(day => (
+                          <SelectItem key={day} value={day}>{day}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <TimeFieldSection
+                control={form.control}
+                weekDays={weekDays}
+                calculatedEndTime={calculatedEndTime}
+                onStartTimeChange={handleStartTimeChange}
+                onDurationChange={handleDurationChange}
+              />
+            </div>
+            
+            {hasConflict && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md">
+                This time slot conflicts with an existing slot on the same day. Please choose a different time.
+              </div>
+            )}
             
             <FormField
               control={form.control}
@@ -291,7 +400,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
               <Button variant="outline" type="button" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={hasConflict}>
                 {initialData?.id ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>

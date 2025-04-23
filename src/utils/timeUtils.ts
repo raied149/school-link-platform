@@ -36,11 +36,16 @@ export const formatTimeDisplay = (timeString: string): string => {
     else if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) {
       const match = timeString.match(/^(\d{1,2})\s*(am|pm)$/i);
       if (match) {
-        const hours = parseInt(match[1]);
+        let hours = parseInt(match[1]);
         const isPM = match[2].toLowerCase() === 'pm';
         
+        // Adjust hours for PM (except 12 PM)
+        if (isPM && hours < 12) hours += 12;
+        // Adjust 12 AM to 0 hours
+        if (!isPM && hours === 12) hours = 0;
+        
         date = new Date();
-        date.setHours(isPM && hours < 12 ? hours + 12 : hours);
+        date.setHours(hours);
         date.setMinutes(0);
         date.setSeconds(0);
         date.setMilliseconds(0);
@@ -157,4 +162,51 @@ export const normalizeTimeString = (timeString: string): string => {
   }
   
   return '';
+};
+
+// Check if a time slot overlaps with any existing time slots
+export const hasTimeConflict = (
+  newStartTime: string, 
+  newEndTime: string, 
+  dayOfWeek: string,
+  existingSlots: Array<{startTime: string, endTime: string, dayOfWeek: string}>,
+  currentSlotId?: string
+): boolean => {
+  // Normalize the new times
+  const normalizedStart = normalizeTimeString(newStartTime);
+  const normalizedEnd = normalizeTimeString(newEndTime);
+  
+  if (!normalizedStart || !normalizedEnd) return false;
+  
+  // Convert times to minutes for easier comparison
+  const newStart = timeToMinutes(normalizedStart);
+  const newEnd = timeToMinutes(normalizedEnd);
+  
+  return existingSlots.some(slot => {
+    // Skip comparing with itself when editing
+    if (currentSlotId && slot.id === currentSlotId) {
+      return false;
+    }
+    
+    // Only check slots on the same day
+    if (slot.dayOfWeek !== dayOfWeek) {
+      return false;
+    }
+    
+    const slotStart = timeToMinutes(normalizeTimeString(slot.startTime));
+    const slotEnd = timeToMinutes(normalizeTimeString(slot.endTime));
+    
+    // Check for overlap
+    return (
+      (newStart >= slotStart && newStart < slotEnd) || // New slot starts during existing slot
+      (newEnd > slotStart && newEnd <= slotEnd) || // New slot ends during existing slot
+      (newStart <= slotStart && newEnd >= slotEnd) // New slot completely contains existing slot
+    );
+  });
+};
+
+// Helper to convert "HH:MM" to minutes since midnight
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
 };
