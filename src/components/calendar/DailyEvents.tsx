@@ -59,7 +59,7 @@ export function DailyEvents({ date, events, isLoading }: DailyEventsProps) {
                       <span>
                         {event.reminderTimes.length > 1 
                           ? `${event.reminderTimes.length} reminders set` 
-                          : `Reminder set for ${format(new Date(event.reminderTimes[0]), "MMM d, h:mm a")}`}
+                          : `Reminder set for ${format(new Date(event.reminderTimes[0]), "MMM d")}`}
                       </span>
                     </div>
                   )}
