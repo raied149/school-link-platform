@@ -1,8 +1,9 @@
 
-import { Clock, BookOpen, Coffee, Calendar, Edit, Trash2 } from 'lucide-react';
+import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { format, parse } from 'date-fns';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];
@@ -34,12 +35,22 @@ export function DailyView({
     }
   };
 
+  const formatTimeDisplay = (timeString: string): string => {
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const date = parse(`${hours}:${minutes}`, 'HH:mm', new Date());
+      return format(date, 'hh:mm a');
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return timeString;
+    }
+  };
+
   const getSlotDetails = (slot: TimeSlot) => {
     if (slot.slotType === 'subject' && slot.subjectId) {
       return getSubjectName(slot.subjectId);
-    } else {
-      return slot.title || 'Untitled';
     }
+    return slot.title || 'Untitled';
   };
 
   if (isLoading) {
@@ -73,7 +84,7 @@ export function DailyView({
         {filteredSlots.sort((a, b) => a.startTime.localeCompare(b.startTime)).map(slot => (
           <TableRow key={slot.id}>
             <TableCell>
-              {slot.startTime} - {slot.endTime}
+              {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
             </TableCell>
             <TableCell className="capitalize">{slot.slotType}</TableCell>
             <TableCell className="flex items-center">
@@ -87,7 +98,6 @@ export function DailyView({
                   size="sm"
                   onClick={() => onEdit?.(slot)}
                 >
-                  <Edit className="h-4 w-4" />
                   <span className="sr-only">Edit</span>
                 </Button>
                 <Button
@@ -95,7 +105,6 @@ export function DailyView({
                   size="sm"
                   onClick={() => onDelete?.(slot.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
                   <span className="sr-only">Delete</span>
                 </Button>
               </TableCell>
