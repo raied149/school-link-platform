@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,15 +24,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { CalendarPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
-import { formatTimeFromParts, convertTo24Hour } from "@/utils/timeUtils";
 import { formSchema } from "./schema";
 import { TimeInputFields } from "./TimeInputFields";
 import { TeacherSelection } from "./TeacherSelection";
 import { z } from "zod";
+import { format } from "date-fns";
 
 interface EventFormProps {
   date: Date;
@@ -43,11 +43,12 @@ interface EventFormProps {
 
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
+  const [showReminderTime, setShowReminderTime] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: date.toISOString().split('T')[0],
+      date: format(date, 'yyyy-MM-dd'),
       type: "meeting",
       name: "",
       startHour: "09",
@@ -57,27 +58,23 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       endMinute: "00",
       endPeriod: "AM",
       teacherIds: [],
+      reminderSet: false,
+      reminderTime: null,
     },
   });
 
-  const currentType = form.watch('type');
-  const showTeacherSelection = currentType === 'meeting' || currentType === 'function';
-
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const startTime = formatTimeFromParts(values.startHour, values.startMinute);
-    const endTime = formatTimeFromParts(values.endHour, values.endMinute);
-
-    const eventData: Omit<SchoolEvent, "id"> = {
+    onSubmit({
       name: values.name,
-      type: values.type,
+      type: values.type as EventType,
       date: values.date,
-      startTime: convertTo24Hour(startTime, values.startPeriod),
-      endTime: convertTo24Hour(endTime, values.endPeriod),
+      startTime: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
+      endTime: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
       description: values.description,
       teacherIds: values.teacherIds,
-    };
-    
-    onSubmit(eventData);
+      reminderSet: values.reminderSet,
+      reminderTime: values.reminderTime,
+    });
     setOpen(false);
     form.reset();
   };
@@ -164,6 +161,47 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="reminderSet"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Set Reminder</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        setShowReminderTime(checked);
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {showReminderTime && (
+              <FormField
+                control={form.control}
+                name="reminderTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reminder Time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <Button type="submit" className="w-full">
               Create Event

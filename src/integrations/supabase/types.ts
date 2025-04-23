@@ -71,6 +71,71 @@ export type Database = {
           },
         ]
       }
+      calendar_event_teachers: {
+        Row: {
+          event_id: string
+          teacher_id: string
+        }
+        Insert: {
+          event_id: string
+          teacher_id: string
+        }
+        Update: {
+          event_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_teachers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          end_time: string | null
+          id: string
+          name: string
+          reminder_set: boolean | null
+          reminder_time: string | null
+          start_time: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          name: string
+          reminder_set?: boolean | null
+          reminder_time?: string | null
+          start_time?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          name?: string
+          reminder_set?: boolean | null
+          reminder_time?: string | null
+          start_time?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       classes: {
         Row: {
           created_at: string

@@ -1,15 +1,20 @@
 
 import { SchoolEvent } from "@/types";
 import { format } from "date-fns";
-import { CalendarClock, Users } from "lucide-react";
-import { Card } from "../ui/card";
+import { CalendarClock, Users, Bell } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 interface DailyEventsProps {
   date: Date;
   events: SchoolEvent[];
+  isLoading: boolean;
 }
 
-export function DailyEvents({ date, events }: DailyEventsProps) {
+export function DailyEvents({ date, events, isLoading }: DailyEventsProps) {
+  if (isLoading) {
+    return <div className="text-center p-4">Loading events...</div>;
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">
@@ -41,12 +46,23 @@ export function DailyEvents({ date, events }: DailyEventsProps) {
                     {event.description}
                   </p>
                 )}
-                {event.teacherIds && event.teacherIds.length > 0 && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>{event.teacherIds.length} teachers assigned</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  {event.teacherIds && event.teacherIds.length > 0 && (
+                    <div className="flex items-center">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>{event.teacherIds.length} teachers assigned</span>
+                    </div>
+                  )}
+                  {event.reminderSet && (
+                    <div className="flex items-center">
+                      <Bell className="mr-2 h-4 w-4" />
+                      <span>Reminder set for {format(new Date(event.reminderTime!), "MMM d, h:mm a")}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Added {format(new Date(event.createdAt!), "MMM d, yyyy")}
+                </div>
               </div>
             </Card>
           ))}

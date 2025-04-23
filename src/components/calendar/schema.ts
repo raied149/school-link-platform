@@ -14,4 +14,6 @@ export const formSchema = z.object({
   endPeriod: z.enum(['AM', 'PM']),
   description: z.string().optional(),
   teacherIds: z.array(z.string()).optional(),
+  reminderSet: z.boolean().default(false),
+  reminderTime: z.string().nullable(),
 });
