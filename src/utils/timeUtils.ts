@@ -1,3 +1,4 @@
+
 import { format, isValid, parse } from 'date-fns';
 
 export const generateTimeOptions = () => {
@@ -30,6 +31,13 @@ export const formatTimeDisplay = (timeString: string): string => {
       date.setMinutes(minutes);
       date.setSeconds(0);
       date.setMilliseconds(0);
+      
+      // Check if date is valid before formatting
+      if (!isValid(date)) {
+        return 'Invalid Time';
+      }
+      
+      return format(date, 'h:mm a');
     } 
     // Handle "8 AM" or similar format
     else if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) {
@@ -48,17 +56,28 @@ export const formatTimeDisplay = (timeString: string): string => {
         date.setMinutes(0);
         date.setSeconds(0);
         date.setMilliseconds(0);
+        
+        // Check if date is valid before formatting
+        if (!isValid(date)) {
+          return 'Invalid Time';
+        }
+        
+        return format(date, 'h:mm a');
       }
-    } else {
-      return 'Invalid Time';
     }
     
-    // Double-check if the date is valid before formatting
-    if (!isValid(date)) {
-      return 'Invalid Time';
+    // If we've reached here, try one more approach for handling time formats
+    try {
+      // Try to parse as a standard time string
+      const parsedDate = parse(timeString, 'HH:mm', new Date());
+      if (isValid(parsedDate)) {
+        return format(parsedDate, 'h:mm a');
+      }
+    } catch (innerError) {
+      console.error("Error in secondary parsing attempt:", innerError);
     }
     
-    return format(date, 'h:mm a');
+    return 'Invalid Time';
   } catch (error) {
     console.error("Error formatting time:", timeString, error);
     return 'Invalid Time';

@@ -1,137 +1,41 @@
-
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { WeekDay } from '@/types/timetable';
-import { validateHour, validateMinute } from '@/utils/timeUtils';
 
 interface TimeFieldSectionProps {
   control: Control<any>;
-  weekDays: WeekDay[];
   calculatedEndTime: string;
   onStartTimeChange: (hour: string, minute: string) => void;
   onDurationChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function TimeFieldSection({
+export function TimeFieldSection({ 
   control,
-  weekDays,
   calculatedEndTime,
   onStartTimeChange,
-  onDurationChange,
+  onDurationChange
 }: TimeFieldSectionProps) {
   return (
-    <>
-      <FormField
-        control={control}
-        name="dayOfWeek"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Day</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {weekDays.map(day => (
-                  <SelectItem key={day} value={day}>{day}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      
-      <div className="space-y-2">
-        <FormLabel>Start Time</FormLabel>
-        <div className="flex items-center gap-2">
-          <FormField
-            control={control}
-            name="startHour"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="HH"
-                    maxLength={2}
-                    className="text-center"
-                    {...field}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || validateHour(value)) {
-                        field.onChange(value);
-                        onStartTimeChange(value, control._formValues.startMinute || '00');
-                      }
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <span className="text-lg">:</span>
-          <FormField
-            control={control}
-            name="startMinute"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="MM"
-                    maxLength={2}
-                    className="text-center"
-                    {...field}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || validateMinute(value)) {
-                        field.onChange(value);
-                        onStartTimeChange(control._formValues.startHour || '00', value);
-                      }
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      </div>
-      
+    <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
-          name="duration"
+          name="startHour"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Duration (minutes)</FormLabel>
+              <FormLabel>Start Hour</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  min={15}
-                  step={15}
+                <Input 
+                  type="number" 
+                  placeholder="Hour (0-23)" 
+                  min={0} 
+                  max={23}
                   {...field}
                   onChange={(e) => {
-                    field.onChange(Number(e.target.value));
-                    onDurationChange(e);
+                    field.onChange(e);
+                    onStartTimeChange(e.target.value, control._getWatch('startMinute'));
                   }}
-                  value={field.value}
                 />
               </FormControl>
               <FormMessage />
@@ -139,11 +43,60 @@ export function TimeFieldSection({
           )}
         />
         
-        <div className="space-y-2">
-          <Label>End Time</Label>
-          <Input value={calculatedEndTime} readOnly disabled />
-        </div>
+        <FormField
+          control={control}
+          name="startMinute"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Start Minute</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="Minute (0-59)" 
+                  min={0} 
+                  max={59}
+                  {...field}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onStartTimeChange(control._getWatch('startHour'), e.target.value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
-    </>
+      
+      <FormField
+        control={control}
+        name="duration"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Duration (minutes)</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                placeholder="Duration in minutes" 
+                min={15} 
+                max={240} 
+                step={5} 
+                {...field}
+                onChange={onDurationChange}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+      <div>
+        <FormLabel>End Time</FormLabel>
+        <Input value={calculatedEndTime} disabled readOnly />
+        <p className="text-sm text-muted-foreground mt-1">
+          End time is automatically calculated based on start time and duration
+        </p>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -306,7 +307,6 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
               
               <TimeFieldSection
                 control={form.control}
-                weekDays={weekDays}
                 calculatedEndTime={calculatedEndTime}
                 onStartTimeChange={handleStartTimeChange}
                 onDurationChange={handleDurationChange}
