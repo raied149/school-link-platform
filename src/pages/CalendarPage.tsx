@@ -14,8 +14,10 @@ const CalendarPage = () => {
     const newEvent: SchoolEvent = {
       ...eventData,
       id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
     };
     setEvents([...events, newEvent]);
+    console.log("Event created:", newEvent); // Log the event creation
   };
 
   const eventsForSelectedDate = events.filter(

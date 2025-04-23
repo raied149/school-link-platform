@@ -1,3 +1,4 @@
+
 // User Types
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
 
@@ -198,6 +199,7 @@ export interface SchoolEvent {
   createdAt?: string;
   reminderSet?: boolean;
   reminderTime?: string | null;
+  reminderTimes?: string[] | null;
 }
 
 // Incident Management Types

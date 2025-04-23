@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Calendar as CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent, Teacher } from "@/types";
@@ -34,7 +34,11 @@ import { formSchema } from "./schema";
 import { TimeInputFields } from "./TimeInputFields";
 import { TeacherSelection } from "./TeacherSelection";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EventFormProps {
   date: Date;
@@ -42,10 +46,19 @@ interface EventFormProps {
   onSubmit: (event: Omit<SchoolEvent, "id">) => void;
 }
 
+const reminderDayOptions = [
+  { id: "same_day", label: "Same day", value: 0 },
+  { id: "one_day", label: "1 day before", value: 1 },
+  { id: "two_days", label: "2 days before", value: 2 },
+  { id: "three_days", label: "3 days before", value: 3 },
+  { id: "one_week", label: "1 week before", value: 7 },
+];
+
 export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
   const [showReminderTime, setShowReminderTime] = useState(false);
   const [showTeacherSelection, setShowTeacherSelection] = useState(true);
+  const [selectedReminderDays, setSelectedReminderDays] = useState<number[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,7 +78,22 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
     },
   });
 
+  const handleReminderDayToggle = (dayValue: number) => {
+    setSelectedReminderDays(prev => 
+      prev.includes(dayValue)
+        ? prev.filter(d => d !== dayValue)
+        : [...prev, dayValue]
+    );
+  };
+
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    // Create reminder times for each selected day before the event
+    const reminderTimes = selectedReminderDays.map(daysBeforeEvent => {
+      const eventDate = new Date(values.date);
+      const reminderDate = addDays(eventDate, -daysBeforeEvent);
+      return format(reminderDate, 'yyyy-MM-dd') + 'T09:00';
+    });
+
     onSubmit({
       name: values.name,
       type: values.type as EventType,
@@ -74,11 +102,13 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       endTime: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
       description: values.description,
       teacherIds: values.teacherIds,
-      reminderSet: values.reminderSet,
-      reminderTime: values.reminderTime,
+      reminderSet: values.reminderSet && reminderTimes.length > 0,
+      reminderTimes: values.reminderSet ? reminderTimes : null,
     });
+    
     setOpen(false);
     form.reset();
+    setSelectedReminderDays([]);
   };
 
   return (
@@ -135,6 +165,46 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Event Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(new Date(field.value), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ? new Date(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <TimeInputFields form={form} prefix="start" label="Start Time" />
               <TimeInputFields form={form} prefix="end" label="End Time" />
@@ -186,23 +256,29 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
             />
 
             {showReminderTime && (
-              <FormField
-                control={form.control}
-                name="reminderTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reminder Time</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="datetime-local"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value)}
+              <div className="space-y-2">
+                <FormLabel>Reminder Days (select multiple)</FormLabel>
+                <div className="space-y-2">
+                  {reminderDayOptions.map((option) => (
+                    <div key={option.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={option.id}
+                        checked={selectedReminderDays.includes(option.value)} 
+                        onCheckedChange={() => handleReminderDayToggle(option.value)}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                      <label 
+                        htmlFor={option.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {selectedReminderDays.length === 0 && showReminderTime && (
+                  <p className="text-sm text-destructive">Please select at least one reminder day</p>
                 )}
-              />
+              </div>
             )}
 
             <Button type="submit" className="w-full">

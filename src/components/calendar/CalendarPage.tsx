@@ -8,75 +8,97 @@ import { SchoolEvent, EventType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const CalendarPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading, refetch } = useQuery({
     queryKey: ['calendar-events', format(selectedDate, 'yyyy-MM-dd')],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select(`
-          *,
-          calendar_event_teachers (
-            teacher_id
-          )
-        `)
-        .eq('date', format(selectedDate, 'yyyy-MM-dd'));
-      
-      if (error) throw error;
-      
-      return data.map(event => ({
-        id: event.id,
-        name: event.name,
-        type: event.type as EventType,
-        date: event.date,
-        startTime: event.start_time,
-        endTime: event.end_time,
-        description: event.description,
-        createdAt: event.created_at,
-        reminderSet: event.reminder_set,
-        reminderTime: event.reminder_time,
-        teacherIds: event.calendar_event_teachers?.map(t => t.teacher_id) || []
-      }));
+      try {
+        const { data, error } = await supabase
+          .from('calendar_events')
+          .select(`
+            *,
+            calendar_event_teachers (
+              teacher_id
+            )
+          `)
+          .eq('date', format(selectedDate, 'yyyy-MM-dd'));
+        
+        if (error) throw error;
+        
+        return data.map(event => ({
+          id: event.id,
+          name: event.name,
+          type: event.type as EventType,
+          date: event.date,
+          startTime: event.start_time,
+          endTime: event.end_time,
+          description: event.description,
+          createdAt: event.created_at,
+          reminderSet: event.reminder_set,
+          reminderTime: event.reminder_time,
+          reminderTimes: event.reminder_times,
+          teacherIds: event.calendar_event_teachers?.map(t => t.teacher_id) || []
+        }));
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        toast.error('Failed to load events');
+        return [];
+      }
     }
   });
 
   const handleAddEvent = async (eventData: Omit<SchoolEvent, "id">) => {
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .insert([{
-        name: eventData.name,
-        type: eventData.type,
-        date: eventData.date,
-        start_time: eventData.startTime,
-        end_time: eventData.endTime,
-        description: eventData.description,
-        reminder_set: eventData.reminderSet,
-        reminder_time: eventData.reminderTime
-      }])
-      .select()
-      .single();
+    try {
+      // First insert the event
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert([{
+          name: eventData.name,
+          type: eventData.type,
+          date: eventData.date,
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
+          description: eventData.description,
+          reminder_set: eventData.reminderSet,
+          reminder_times: eventData.reminderTimes
+        }])
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error adding event:', error);
-      return;
-    }
-
-    if (eventData.teacherIds?.length) {
-      const { error: teacherError } = await supabase
-        .from('calendar_event_teachers')
-        .insert(
-          eventData.teacherIds.map(teacherId => ({
-            event_id: data.id,
-            teacher_id: teacherId
-          }))
-        );
-
-      if (teacherError) {
-        console.error('Error assigning teachers:', teacherError);
+      if (error) {
+        console.error('Error adding event:', error);
+        toast.error('Failed to add event');
+        return;
       }
+
+      toast.success('Event added successfully');
+
+      // Then insert teacher assignments if any
+      if (eventData.teacherIds?.length) {
+        const teacherAssignments = eventData.teacherIds.map(teacherId => ({
+          event_id: data.id,
+          teacher_id: teacherId
+        }));
+
+        const { error: teacherError } = await supabase
+          .from('calendar_event_teachers')
+          .insert(teacherAssignments);
+
+        if (teacherError) {
+          console.error('Error assigning teachers:', teacherError);
+          toast.error('Failed to assign teachers');
+        }
+      }
+
+      // Refresh the events list
+      refetch();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 

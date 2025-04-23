@@ -53,16 +53,22 @@ export function DailyEvents({ date, events, isLoading }: DailyEventsProps) {
                       <span>{event.teacherIds.length} teachers assigned</span>
                     </div>
                   )}
-                  {event.reminderSet && (
+                  {event.reminderSet && event.reminderTimes && (
                     <div className="flex items-center">
                       <Bell className="mr-2 h-4 w-4" />
-                      <span>Reminder set for {format(new Date(event.reminderTime!), "MMM d, h:mm a")}</span>
+                      <span>
+                        {event.reminderTimes.length > 1 
+                          ? `${event.reminderTimes.length} reminders set` 
+                          : `Reminder set for ${format(new Date(event.reminderTimes[0]), "MMM d, h:mm a")}`}
+                      </span>
                     </div>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Added {format(new Date(event.createdAt!), "MMM d, yyyy")}
-                </div>
+                {event.createdAt && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Added {format(new Date(event.createdAt), "MMM d, yyyy")}
+                  </div>
+                )}
               </div>
             </Card>
           ))}
