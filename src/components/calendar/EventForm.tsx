@@ -29,30 +29,34 @@ import { supabase } from "@/integrations/supabase/client";
 interface EventFormProps {
   date: Date;
   teachers: any[];
+  event?: SchoolEvent;  // Add this prop for editing existing events
   onSubmit: (event: Omit<SchoolEvent, "id">) => void;
 }
 
-export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
+export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
   const [open, setOpen] = useState(false);
   const [showTeacherDialog, setShowTeacherDialog] = useState(false);
-  const [reminderDates, setReminderDates] = useState<Date[]>([]);
+  const [reminderDates, setReminderDates] = useState<Date[]>(
+    event?.reminderTimes ? event.reminderTimes.map(t => new Date(t)) : []
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: format(date, 'yyyy-MM-dd'),
-      type: "meeting",
-      name: "",
-      startHour: "09",
-      startMinute: "00",
-      startPeriod: "AM",
-      endHour: "10",
-      endMinute: "00",
-      endPeriod: "AM",
-      teacherIds: [],
-      reminderSet: false,
-      reminderDates: [],
+      type: event?.type || "meeting",
+      name: event?.name || "",
+      startHour: event?.startTime ? event.startTime.split(':')[0] : "09",
+      startMinute: event?.startTime ? event.startTime.split(':')[1].split(' ')[0] : "00",
+      startPeriod: event?.startTime ? event.startTime.split(' ')[1] : "AM",
+      endHour: event?.endTime ? event.endTime.split(':')[0] : "10",
+      endMinute: event?.endTime ? event.endTime.split(':')[1].split(' ')[0] : "00",
+      endPeriod: event?.endTime ? event.endTime.split(' ')[1] : "AM",
+      description: event?.description || "",
+      teacherIds: event?.teacherIds || [],
+      reminderSet: event?.reminderSet || false,
+      reminderDates: event?.reminderTimes || [],
     },
   });
 
@@ -136,7 +140,7 @@ export function EventForm({ date, teachers, onSubmit }: EventFormProps) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <CalendarPlus className="mr-2 h-4 w-4" />
-          Add Event
+          {event ? "Edit Event" : "Add Event"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

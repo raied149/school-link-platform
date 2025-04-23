@@ -50,9 +50,78 @@ const CalendarPage = () => {
     }
   });
 
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error: teacherError } = await supabase
+        .from('calendar_event_teachers')
+        .delete()
+        .eq('event_id', eventId);
+
+      if (teacherError) throw teacherError;
+
+      const { error: eventError } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (eventError) throw eventError;
+
+      toast.success('Event deleted successfully');
+      refetch();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
+
+  const handleUpdateEvent = async (eventId: string, eventData: Partial<SchoolEvent>) => {
+    try {
+      const { error: eventError } = await supabase
+        .from('calendar_events')
+        .update({
+          name: eventData.name,
+          type: eventData.type,
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
+          description: eventData.description,
+          reminder_set: eventData.reminderSet,
+          reminder_times: eventData.reminderTimes,
+        })
+        .eq('id', eventId);
+
+      if (eventError) throw eventError;
+
+      if (eventData.teacherIds) {
+        // First delete existing teacher assignments
+        const { error: deleteError } = await supabase
+          .from('calendar_event_teachers')
+          .delete()
+          .eq('event_id', eventId);
+
+        if (deleteError) throw deleteError;
+
+        // Then insert new teacher assignments
+        const teacherAssignments = eventData.teacherIds.map(teacherId => ({
+          event_id: eventId,
+          teacher_id: teacherId,
+        }));
+
+        const { error: teacherError } = await supabase
+          .from('calendar_event_teachers')
+          .insert(teacherAssignments);
+
+        if (teacherError) throw teacherError;
+      }
+
+      toast.success('Event updated successfully');
+      refetch();
+    } catch (error) {
+      console.error('Error updating event:', error);
+      toast.error('Failed to update event');
+    }
+  };
+
   const handleAddEvent = async (eventData: Omit<SchoolEvent, "id">) => {
-    // The actual insertion to the database is now handled in the EventForm component
-    // We just need to refetch the events to update the UI
     refetch();
   };
 
@@ -89,6 +158,8 @@ const CalendarPage = () => {
             date={selectedDate}
             events={events}
             isLoading={isLoading}
+            onDelete={handleDeleteEvent}
+            onUpdate={handleUpdateEvent}
           />
         </Card>
       </div>
