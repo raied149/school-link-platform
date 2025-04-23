@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Control } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -92,7 +93,12 @@ export function TimeFieldSection({
       
       <div>
         <FormLabel>End Time</FormLabel>
-        <Input value={calculatedEndTime} disabled readOnly />
+        <Input 
+          value={calculatedEndTime || ''} 
+          disabled 
+          readOnly 
+          placeholder="Will be calculated automatically"
+        />
         <p className="text-sm text-muted-foreground mt-1">
           End time is automatically calculated based on start time and duration
         </p>

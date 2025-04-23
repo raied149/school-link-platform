@@ -283,10 +283,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
                   <FormItem>
                     <FormLabel>Day of Week</FormLabel>
                     <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleDayChange(value);
-                      }}
+                      onValueChange={handleDayChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -326,10 +323,7 @@ export function TimeSlotForm({ isOpen, onClose, onSave, initialData, classId, se
                 <FormItem>
                   <FormLabel>Slot Type</FormLabel>
                   <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleSlotTypeChange(value);
-                    }}
+                    onValueChange={handleSlotTypeChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
