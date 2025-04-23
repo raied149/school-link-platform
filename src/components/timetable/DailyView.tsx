@@ -1,17 +1,17 @@
 
-import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
+import { Clock, BookOpen, Coffee, Calendar, Edit, Trash2 } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];
   selectedDay: string;
   isLoading: boolean;
   getSubjectName: (subjectId?: string) => string;
+  onEdit?: (timeSlot: TimeSlot) => void;
+  onDelete?: (id: string) => void;
   user?: { role?: string };
-  getTeacherName?: (teacherId?: string) => string;
-  getClassName?: (classId: string) => string;
-  getSectionName?: (sectionId: string) => string;
 }
 
 export function DailyView({
@@ -19,9 +19,8 @@ export function DailyView({
   selectedDay,
   isLoading,
   getSubjectName,
-  getTeacherName = () => 'N/A',
-  getClassName = () => 'N/A',
-  getSectionName = () => 'N/A',
+  onEdit,
+  onDelete,
   user
 }: DailyViewProps) {
   const filteredSlots = timeSlots.filter(slot => slot.dayOfWeek === selectedDay);
@@ -67,8 +66,7 @@ export function DailyView({
           <TableHead>Time</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Details</TableHead>
-          <TableHead>Teacher</TableHead>
-          <TableHead>Class/Section</TableHead>
+          {user?.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -82,12 +80,26 @@ export function DailyView({
               {getSlotIcon(slot.slotType)}
               {getSlotDetails(slot)}
             </TableCell>
-            <TableCell>
-              {slot.slotType === 'subject' && slot.teacherId ? getTeacherName(slot.teacherId) : '-'}
-            </TableCell>
-            <TableCell>
-              {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}
-            </TableCell>
+            {user?.role === 'admin' && (
+              <TableCell className="text-right space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit?.(slot)}
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete?.(slot.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete</span>
+                </Button>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

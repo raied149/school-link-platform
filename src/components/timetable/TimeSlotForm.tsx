@@ -1,25 +1,33 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
-import { timetableService } from '@/services/timetableService';
+import { TimeSlot, SlotType } from '@/types/timetable';
 import { Button } from '@/components/ui/button';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { TimeFieldSection } from './TimeFieldSection';
+import { Form } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTimeFromParts, hasTimeConflict, calculateEndTime } from '@/utils/timeUtils';
+import { TimeFieldSection } from './TimeFieldSection';
+import { TimeSlotFields } from './TimeSlotFields';
+import { validateTimeSlotConflict } from '@/utils/timeSlotValidation';
+import { calculateEndTime, formatTimeFromParts } from '@/utils/timeUtils';
+
+const formSchema = z.object({
+  startHour: z.string().min(1, { message: "Hour is required" }),
+  startMinute: z.string().min(1, { message: "Minute is required" }),
+  duration: z.number().min(15, { message: "Duration must be at least 15 minutes" }).max(240, { message: "Duration cannot exceed 4 hours" }),
+  slotType: z.enum(['subject', 'break', 'event'] as const),
+  title: z.string().optional(),
+  subjectId: z.string().optional(),
+  classId: z.string(),
+  sectionId: z.string(),
+  academicYearId: z.string(),
+  dayOfWeek: z.string(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface TimeSlotFormProps {
   isOpen: boolean;
@@ -29,76 +37,47 @@ interface TimeSlotFormProps {
   classId: string;
   sectionId: string;
   academicYearId: string;
-  selectedDay: WeekDay;
+  selectedDay: string;
+  existingTimeSlots: TimeSlot[];
 }
 
-const formSchema = z.object({
-  dayOfWeek: z.enum(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as [WeekDay, ...WeekDay[]]),
-  startHour: z.string().min(1, { message: "Hour is required" }),
-  startMinute: z.string().min(1, { message: "Minute is required" }),
-  duration: z.number().min(15, { message: "Duration must be at least 15 minutes" }).max(240, { message: "Duration cannot exceed 4 hours" }),
-  slotType: z.enum(['subject', 'break', 'event'] as [SlotType, ...SlotType[]]),
-  title: z.string().optional(),
-  subjectId: z.string().optional(),
-  classId: z.string(),
-  sectionId: z.string(),
-  academicYearId: z.string(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-export function TimeSlotForm({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  initialData, 
-  classId, 
-  sectionId, 
+export function TimeSlotForm({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+  classId,
+  sectionId,
   academicYearId,
-  selectedDay 
+  selectedDay,
+  existingTimeSlots
 }: TimeSlotFormProps) {
   const [calculatedEndTime, setCalculatedEndTime] = useState<string>('');
   const [hasConflict, setHasConflict] = useState(false);
-  
-  const { data: timeSlots = [], isLoading: isLoadingSlots } = useQuery({
-    queryKey: ['timetable-all-slots'],
-    queryFn: () => timetableService.getTimeSlots({
-      classId,
-      sectionId,
-      academicYearId
-    })
-  });
-  
+  const [selectedSlotType, setSelectedSlotType] = useState<SlotType>(initialData?.slotType || 'subject');
+
   const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', classId],
     queryFn: async () => {
-      const { data: subjectClasses, error: subjectClassesError } = await supabase
+      const { data: subjectClasses } = await supabase
         .from('subject_classes')
         .select('subject_id')
         .eq('class_id', classId);
-
-      if (subjectClassesError) throw subjectClassesError;
 
       if (!subjectClasses?.length) return [];
 
       const subjectIds = subjectClasses.map(sc => sc.subject_id);
 
-      const { data: subjects, error: subjectsError } = await supabase
+      const { data: subjects } = await supabase
         .from('subjects')
         .select('*')
         .in('id', subjectIds);
-
-      if (subjectsError) throw subjectsError;
 
       return subjects || [];
     },
     enabled: !!classId
   });
-  
-  const [selectedSlotType, setSelectedSlotType] = useState<SlotType>(initialData?.slotType || 'subject');
-  
-  const slotTypes = timetableService.getSlotTypes();
-  
+
   const parseInitialTime = () => {
     if (initialData?.startTime && /^([0-9]{1,2}):([0-9]{2})$/.test(initialData.startTime)) {
       const [hour, minute] = initialData.startTime.split(':');
@@ -106,126 +85,111 @@ export function TimeSlotForm({
     }
     return { hour: '08', minute: '00' };
   };
-  
+
   const { hour, minute } = parseInitialTime();
-  
-  const defaultValues: FormValues = {
-    dayOfWeek: selectedDay,
-    startHour: hour,
-    startMinute: minute,
-    duration: initialData?.duration || 60,
-    slotType: initialData?.slotType || 'subject',
-    title: initialData?.title || '',
-    subjectId: initialData?.subjectId || '',
-    classId: initialData?.classId || classId,
-    sectionId: initialData?.sectionId || sectionId,
-    academicYearId: initialData?.academicYearId || academicYearId,
-  };
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues
-  });
-  
-  const checkTimeConflict = (hour: string, minute: string, durationMinutes: number, dayOfWeek: WeekDay) => {
-    if (isLoadingSlots) return;
-    
-    const startTime = formatTimeFromParts(hour, minute);
-    const endTime = calculateEndTime(hour, minute, durationMinutes);
-    
-    if (!startTime || !endTime) {
-      setHasConflict(false);
-      return;
+    defaultValues: {
+      startHour: hour,
+      startMinute: minute,
+      duration: initialData?.duration || 60,
+      slotType: initialData?.slotType || 'subject',
+      title: initialData?.title || '',
+      subjectId: initialData?.subjectId || '',
+      classId,
+      sectionId,
+      academicYearId,
+      dayOfWeek: selectedDay,
     }
-    
-    const conflict = hasTimeConflict(
-      startTime, 
-      endTime, 
-      dayOfWeek, 
-      timeSlots, 
-      initialData?.id
-    );
-    
-    setHasConflict(conflict);
-  };
-  
+  });
+
   const handleStartTimeChange = (hour: string, minute: string) => {
+    const startTime = formatTimeFromParts(hour, minute);
     const endTime = calculateEndTime(hour, minute, form.getValues('duration'));
     setCalculatedEndTime(endTime);
-    
-    checkTimeConflict(
-      hour, 
-      minute, 
-      form.getValues('duration'),
-      form.getValues('dayOfWeek')
-    );
+
+    if (startTime && endTime) {
+      const conflict = validateTimeSlotConflict(
+        startTime,
+        endTime,
+        selectedDay,
+        sectionId,
+        existingTimeSlots,
+        initialData?.id
+      );
+      setHasConflict(conflict);
+    }
   };
-  
+
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const duration = Number(e.target.value);
     form.setValue('duration', duration);
-    const hour = form.getValues('startHour');
-    const minute = form.getValues('startMinute');
-    const endTime = calculateEndTime(hour, minute, duration);
-    setCalculatedEndTime(endTime);
     
-    checkTimeConflict(hour, minute, duration, form.getValues('dayOfWeek'));
+    const startTime = formatTimeFromParts(
+      form.getValues('startHour'),
+      form.getValues('startMinute')
+    );
+    
+    const endTime = calculateEndTime(
+      form.getValues('startHour'),
+      form.getValues('startMinute'),
+      duration
+    );
+    
+    setCalculatedEndTime(endTime);
+
+    if (startTime && endTime) {
+      const conflict = validateTimeSlotConflict(
+        startTime,
+        endTime,
+        selectedDay,
+        sectionId,
+        existingTimeSlots,
+        initialData?.id
+      );
+      setHasConflict(conflict);
+    }
   };
-  
+
   const handleSlotTypeChange = (value: string) => {
     const slotType = value as SlotType;
     setSelectedSlotType(slotType);
     form.setValue('slotType', slotType);
-    
+
     if (slotType !== 'subject') {
       form.setValue('subjectId', undefined);
     }
-    
+
     if (slotType === 'subject') {
       form.setValue('title', '');
     }
   };
-  
-  useEffect(() => {
-    const hour = form.getValues('startHour');
-    const minute = form.getValues('startMinute');
-    const duration = form.getValues('duration');
-    const endTime = calculateEndTime(hour, minute, duration);
-    setCalculatedEndTime(endTime);
-    
-    if (!isLoadingSlots) {
-      checkTimeConflict(
-        hour, 
-        minute, 
-        duration, 
-        form.getValues('dayOfWeek')
-      );
-    }
-  }, [timeSlots, isLoadingSlots]);
-  
+
   const onSubmit = (values: FormValues) => {
     const startTime = formatTimeFromParts(values.startHour, values.startMinute);
-    
+
     if (!startTime || !calculatedEndTime) {
       console.error("Invalid time format");
       return;
     }
-    
-    const conflict = hasTimeConflict(
+
+    const conflict = validateTimeSlotConflict(
       startTime,
       calculatedEndTime,
-      values.dayOfWeek,
-      timeSlots,
+      selectedDay,
+      sectionId,
+      existingTimeSlots,
       initialData?.id
     );
-    
+
     if (conflict) {
       setHasConflict(true);
       return;
     }
-    
+
     const timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'> = {
-      startTime: startTime,
+      startTime,
       endTime: calculatedEndTime,
       duration: values.duration,
       slotType: values.slotType,
@@ -234,13 +198,13 @@ export function TimeSlotForm({
       sectionId: values.sectionId,
       academicYearId: values.academicYearId
     };
-    
+
     if (values.slotType === 'subject' && values.subjectId) {
       timeSlotData.subjectId = values.subjectId;
     } else if (values.slotType === 'break' || values.slotType === 'event') {
       timeSlotData.title = values.title;
     }
-    
+
     onSave(timeSlotData);
   };
 
@@ -252,110 +216,30 @@ export function TimeSlotForm({
             {initialData?.id ? 'Edit Time Slot' : 'Add Time Slot'}
           </DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="dayOfWeek"
-                render={({ field }) => (
-                  <FormItem className="hidden">
-                    <FormControl>
-                      <Input type="hidden" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <TimeFieldSection
-                control={form.control}
-                calculatedEndTime={calculatedEndTime}
-                onStartTimeChange={handleStartTimeChange}
-                onDurationChange={handleDurationChange}
-              />
-            </div>
-            
+            <TimeFieldSection
+              control={form.control}
+              calculatedEndTime={calculatedEndTime}
+              onStartTimeChange={handleStartTimeChange}
+              onDurationChange={handleDurationChange}
+            />
+
             {hasConflict && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md">
-                This time slot conflicts with an existing slot on the same day. Please choose a different time.
+                This time slot conflicts with an existing slot. Please choose a different time.
               </div>
             )}
-            
-            <FormField
-              control={form.control}
-              name="slotType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slot Type</FormLabel>
-                  <Select
-                    onValueChange={handleSlotTypeChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select slot type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {slotTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+
+            <TimeSlotFields
+              form={form}
+              selectedSlotType={selectedSlotType}
+              onSlotTypeChange={handleSlotTypeChange}
+              subjects={subjects}
+              isLoadingSubjects={isLoadingSubjects}
             />
-            
-            {selectedSlotType === 'subject' ? (
-              <FormField
-                control={form.control}
-                name="subjectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={isLoadingSubjects}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingSubjects ? "Loading subjects..." : "Select subject"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subjects.map(subject => (
-                          <SelectItem key={subject.id} value={subject.id}>
-                            {subject.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{selectedSlotType === 'break' ? 'Break Name' : 'Event Name'}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder={selectedSlotType === 'break' ? 'Enter break name' : 'Enter event name'} 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
+
             <DialogFooter>
               <Button variant="outline" type="button" onClick={onClose}>
                 Cancel
@@ -370,3 +254,4 @@ export function TimeSlotForm({
     </Dialog>
   );
 }
+
