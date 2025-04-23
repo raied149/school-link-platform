@@ -1,4 +1,3 @@
-
 import { format, isValid, parse } from 'date-fns';
 
 export const generateTimeOptions = () => {
@@ -14,74 +13,16 @@ export const generateTimeOptions = () => {
 };
 
 export const formatTimeDisplay = (timeString: string): string => {
-  try {
-    // If the string is empty or invalid format
-    if (!timeString || typeof timeString !== 'string') {
-      return 'Invalid Time';
-    }
-    
-    // Handle different time formats
-    let date;
-    
-    // Try to parse HH:MM format 
-    if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-      const [hours, minutes] = timeString.split(':').map(Number);
-      date = new Date();
-      date.setHours(hours);
-      date.setMinutes(minutes);
-      date.setSeconds(0);
-      date.setMilliseconds(0);
-      
-      // Check if date is valid before formatting
-      if (!isValid(date)) {
-        return 'Invalid Time';
-      }
-      
-      return format(date, 'h:mm a');
-    } 
-    // Handle "8 AM" or similar format
-    else if (timeString.match(/^(\d{1,2})\s*(am|pm)$/i)) {
-      const match = timeString.match(/^(\d{1,2})\s*(am|pm)$/i);
-      if (match) {
-        let hours = parseInt(match[1]);
-        const isPM = match[2].toLowerCase() === 'pm';
-        
-        // Adjust hours for PM (except 12 PM)
-        if (isPM && hours < 12) hours += 12;
-        // Adjust 12 AM to 0 hours
-        if (!isPM && hours === 12) hours = 0;
-        
-        date = new Date();
-        date.setHours(hours);
-        date.setMinutes(0);
-        date.setSeconds(0);
-        date.setMilliseconds(0);
-        
-        // Check if date is valid before formatting
-        if (!isValid(date)) {
-          return 'Invalid Time';
-        }
-        
-        return format(date, 'h:mm a');
-      }
-    }
-    
-    // If we've reached here, try one more approach for handling time formats
-    try {
-      // Try to parse as a standard time string
-      const parsedDate = parse(timeString, 'HH:mm', new Date());
-      if (isValid(parsedDate)) {
-        return format(parsedDate, 'h:mm a');
-      }
-    } catch (innerError) {
-      console.error("Error in secondary parsing attempt:", innerError);
-    }
-    
-    return 'Invalid Time';
-  } catch (error) {
-    console.error("Error formatting time:", timeString, error);
-    return 'Invalid Time';
+  if (!timeString || typeof timeString !== 'string') {
+    return timeString || '';
   }
+  
+  // If already in HH:mm format, return as is
+  if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+    return timeString;
+  }
+  
+  return '';
 };
 
 export const convertTo24Hour = (time: string, period: string) => {

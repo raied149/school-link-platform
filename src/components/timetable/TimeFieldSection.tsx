@@ -94,10 +94,9 @@ export function TimeFieldSection({
       <div>
         <FormLabel>End Time</FormLabel>
         <Input 
-          value={calculatedEndTime || ''} 
+          value={calculatedEndTime} 
           disabled 
           readOnly 
-          placeholder="Will be calculated automatically"
         />
         <p className="text-sm text-muted-foreground mt-1">
           End time is automatically calculated based on start time and duration
