@@ -107,6 +107,11 @@ const TimetablePage = () => {
     return format(date, 'h:mm a');
   };
 
+  const handleClassChange = (classId: string) => {
+    setSelectedClassId(classId);
+    setSelectedSectionId(''); // Reset section when class changes
+  };
+
   const isReadyToDisplay = (!!selectedClassId && !!selectedSectionId) || user?.role === 'student' || user?.role === 'teacher';
 
   return (
@@ -128,7 +133,7 @@ const TimetablePage = () => {
             <Label htmlFor="class-select">Class</Label>
             <Select 
               value={selectedClassId} 
-              onValueChange={setSelectedClassId}
+              onValueChange={handleClassChange}
               disabled={isLoadingClasses}
             >
               <SelectTrigger id="class-select">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timetableService } from '@/services/timetableService';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2, Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TimeSlotForm } from './TimeSlotForm';
-import { TimeSlot, WeekDay } from '@/types/timetable';
+import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,8 +110,6 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
     const subject = subjects.find(s => s.id === subjectId);
     if (!subject) return 'Unknown Teacher';
 
-    // In a real app, you would lookup the teacher assigned to this subject for this class
-    // For now, we'll return a placeholder based on the subject ID
     return `Teacher ${parseInt(subjectId) + 1}`;
   };
   
@@ -126,13 +123,12 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
   };
   
   const formatTime = (timeString: string) => {
-    // Convert HH:MM to a date object for formatting
     const [hours, minutes] = timeString.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10));
     date.setMinutes(parseInt(minutes, 10));
     
-    return format(date, 'h:mm a'); // e.g., "2:30 PM"
+    return format(date, 'h:mm a');
   };
 
   return (
