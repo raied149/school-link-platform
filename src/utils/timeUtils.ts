@@ -1,4 +1,3 @@
-
 import { format, isValid, parse } from 'date-fns';
 
 export const generateTimeOptions = () => {
@@ -169,7 +168,7 @@ export const hasTimeConflict = (
   newStartTime: string, 
   newEndTime: string, 
   dayOfWeek: string,
-  existingSlots: Array<{startTime: string, endTime: string, dayOfWeek: string}>,
+  existingSlots: Array<{id?: string; startTime: string, endTime: string, dayOfWeek: string}>,
   currentSlotId?: string
 ): boolean => {
   // Normalize the new times

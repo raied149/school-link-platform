@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTimeFromParts } from '@/utils/timeUtils';
+import { formatTimeFromParts, hasTimeConflict } from '@/utils/timeUtils';
 
 interface TimeSlotFormProps {
   isOpen: boolean;
