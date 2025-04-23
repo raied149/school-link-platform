@@ -1,23 +1,35 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash, Users, ListCheck } from "lucide-react";
+import { Plus, Pencil, Trash } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Teacher, Subject } from "@/types";
 
-interface SubjectRow extends Subject {
+interface Teacher {
+  id: string;
+  name: string;
+}
+
+interface Class {
+  id: string;
+  name: string;
+}
+
+interface SubjectRow {
+  id: string;
+  name: string;
+  code: string;
   assignedTeacherIds?: string[];
   assignedClassIds?: string[];
+  teacherAssignments?: Array<{id: string, name: string}>;
+  classAssignments?: Array<{id: string, name: string}>;
 }
 
 const fetchSubjects = async () => {
-  // Fetch subjects with teacher assignments and class assignments
   const { data, error } = await supabase
     .from("subjects")
     .select(`
@@ -34,16 +46,15 @@ const fetchSubjects = async () => {
     
   if (error) throw error;
   
-  // Transform to fit our interface
   return (data || []).map((subject: any) => ({
     ...subject,
     assignedTeacherIds: subject.teacher_subjects?.map((rel: any) => rel.teacher_id) ?? [],
-    assignedTeachers: subject.teacher_subjects?.map((rel: any) => ({
+    teacherAssignments: subject.teacher_subjects?.map((rel: any) => ({
       id: rel.teacher_id,
       name: rel.profiles ? `${rel.profiles.first_name} ${rel.profiles.last_name}` : 'Unknown'
     })) ?? [],
     assignedClassIds: subject.subject_classes?.map((c: any) => c.class_id) ?? [],
-    assignedClasses: subject.subject_classes?.map((c: any) => ({
+    classAssignments: subject.subject_classes?.map((c: any) => ({
       id: c.class_id,
       name: c.classes?.name || 'Unknown'
     })) ?? []
@@ -99,9 +110,7 @@ export default function SubjectsPage() {
       let subjectId = editingSubject?.id;
       
       try {
-        // Begin transaction
         if (subjectId) {
-          // Update existing subject
           const { error } = await supabase
             .from("subjects")
             .update({ name, code })
@@ -109,7 +118,6 @@ export default function SubjectsPage() {
             
           if (error) throw error;
         } else {
-          // Create new subject
           const { data, error } = await supabase
             .from("subjects")
             .insert({ name, code })
@@ -120,9 +128,7 @@ export default function SubjectsPage() {
           subjectId = data[0].id;
         }
         
-        // Handle class assignments
         if (subjectId && assignedClassIds && assignedClassIds.length > 0) {
-          // Remove existing assignments
           const { error: deleteError } = await supabase
             .from("subject_classes")
             .delete()
@@ -130,7 +136,6 @@ export default function SubjectsPage() {
             
           if (deleteError) throw deleteError;
           
-          // Create new assignments
           const classAssignments = assignedClassIds.map((classId: string) => ({
             subject_id: subjectId,
             class_id: classId
@@ -143,9 +148,7 @@ export default function SubjectsPage() {
           if (insertError) throw insertError;
         }
         
-        // Handle teacher assignments
         if (subjectId) {
-          // Remove existing assignments
           const { error: deleteError } = await supabase
             .from("teacher_subjects")
             .delete()
@@ -154,7 +157,6 @@ export default function SubjectsPage() {
           if (deleteError) throw deleteError;
           
           if (assignedTeacherIds && assignedTeacherIds.length > 0) {
-            // Create new assignments
             const teacherAssignments = assignedTeacherIds.map((teacherId: string) => ({
               subject_id: subjectId,
               teacher_id: teacherId
@@ -192,7 +194,6 @@ export default function SubjectsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       try {
-        // Remove teacher assignments
         const { error: teacherError } = await supabase
           .from("teacher_subjects")
           .delete()
@@ -200,7 +201,6 @@ export default function SubjectsPage() {
           
         if (teacherError) throw teacherError;
         
-        // Remove class assignments
         const { error: classError } = await supabase
           .from("subject_classes")
           .delete()
@@ -208,7 +208,6 @@ export default function SubjectsPage() {
           
         if (classError) throw classError;
         
-        // Delete subject
         const { error } = await supabase
           .from("subjects")
           .delete()
@@ -280,12 +279,12 @@ export default function SubjectsPage() {
                   <TableCell>{subject.name}</TableCell>
                   <TableCell>{subject.code}</TableCell>
                   <TableCell>
-                    {(subject.assignedClasses || [])
+                    {(subject.classAssignments || [])
                       .map((grade: any) => grade.name)
                       .join(", ")}
                   </TableCell>
                   <TableCell>
-                    {(subject.assignedTeachers || [])
+                    {(subject.teacherAssignments || [])
                       .map((teacher: any) => teacher.name)
                       .join(", ")}
                   </TableCell>
@@ -313,7 +312,6 @@ export default function SubjectsPage() {
         )}
       </Card>
 
-      {/* Subject Form Dialog */}
       {formOpen && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
           <Card className="p-8 w-full max-w-lg">

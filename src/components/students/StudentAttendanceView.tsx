@@ -18,6 +18,10 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StudentAttendanceViewProps {
   classId?: string;
@@ -49,12 +53,12 @@ export function StudentAttendanceView({
 }: StudentAttendanceViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
+  // Format current date to string for Supabase query
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+  
   // Fetch students for this section
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ['section-students-for-attendance', sectionId],
@@ -102,15 +106,10 @@ export function StudentAttendanceView({
     },
     enabled: !!sectionId
   });
-
-  // Format current date to string for Supabase query
-  const currentDate = dateRange?.from 
-    ? format(dateRange.from, 'yyyy-MM-dd') 
-    : format(new Date(), 'yyyy-MM-dd');
   
   // Fetch today's attendance records
   const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ['attendance-records', sectionId, currentDate],
+    queryKey: ['attendance-records', sectionId, formattedDate],
     queryFn: async () => {
       if (!sectionId) return [];
       
@@ -118,7 +117,7 @@ export function StudentAttendanceView({
         .from('student_attendance')
         .select('*')
         .eq('section_id', sectionId)
-        .eq('date', currentDate);
+        .eq('date', formattedDate);
         
       if (error) {
         console.error("Error fetching attendance records:", error);
@@ -179,7 +178,7 @@ export function StudentAttendanceView({
         .select('id')
         .eq('student_id', studentId)
         .eq('section_id', sectionId!)
-        .eq('date', currentDate)
+        .eq('date', formattedDate)
         .maybeSingle();
         
       if (checkError) {
@@ -203,7 +202,7 @@ export function StudentAttendanceView({
           .insert({
             student_id: studentId,
             section_id: sectionId!,
-            date: currentDate,
+            date: formattedDate,
             status
           })
           .select()
@@ -216,7 +215,7 @@ export function StudentAttendanceView({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ['attendance-records', sectionId, currentDate] 
+        queryKey: ['attendance-records', sectionId, formattedDate] 
       });
       queryClient.invalidateQueries({
         queryKey: ['attendance-stats', sectionId]
@@ -287,10 +286,31 @@ export function StudentAttendanceView({
           <div>
             <h2 className="text-xl font-semibold">Student Attendance Records</h2>
             <p className="text-muted-foreground">
-              {dateRange?.from ? format(dateRange.from, 'MMMM d, yyyy') : 'Today'}
+              {format(selectedDate, 'MMMM d, yyyy')}
             </p>
           </div>
-          <AttendanceDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(selectedDate, 'MMMM d, yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
