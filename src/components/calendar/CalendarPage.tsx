@@ -14,9 +14,10 @@ const CalendarPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const { data: events = [], isLoading, refetch } = useQuery({
-    queryKey: ['calendar-events', format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['calendar-events'],
     queryFn: async () => {
       try {
+        // Fetch all events to also get reminders for other dates
         const { data, error } = await supabase
           .from('calendar_events')
           .select(`
@@ -24,8 +25,7 @@ const CalendarPage = () => {
             calendar_event_teachers (
               teacher_id
             )
-          `)
-          .eq('date', format(selectedDate, 'yyyy-MM-dd'));
+          `);
         
         if (error) throw error;
         
@@ -40,6 +40,7 @@ const CalendarPage = () => {
           createdAt: event.created_at,
           reminderSet: event.reminder_set,
           reminderTimes: event.reminder_times,
+          reminderText: event.reminder_text,
           teacherIds: event.calendar_event_teachers?.map(t => t.teacher_id) || []
         }));
       } catch (error) {
@@ -86,6 +87,7 @@ const CalendarPage = () => {
           description: eventData.description,
           reminder_set: eventData.reminderSet,
           reminder_times: eventData.reminderTimes,
+          reminder_text: eventData.reminderText,
         })
         .eq('id', eventId);
 
@@ -125,6 +127,22 @@ const CalendarPage = () => {
     refetch();
   };
 
+  // Get events and reminders for the selected date
+  const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
+  const filteredEvents = events.filter(event => {
+    // Include events on this specific date
+    if (event.date === formattedSelectedDate) return true;
+    
+    // Include events where this date is in the reminder times
+    if (event.reminderSet && 
+        event.reminderTimes && 
+        event.reminderTimes.includes(formattedSelectedDate)) {
+      return true;
+    }
+    
+    return false;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -156,7 +174,7 @@ const CalendarPage = () => {
         <Card className="p-6">
           <DailyEvents
             date={selectedDate}
-            events={events}
+            events={filteredEvents}
             isLoading={isLoading}
             onDelete={handleDeleteEvent}
             onUpdate={handleUpdateEvent}

@@ -35,6 +35,16 @@ const AdminDashboard = () => {
     (event) => event.date === selectedDate.toISOString().split('T')[0]
   );
 
+  const handleDeleteEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
+
+  const handleUpdateEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -84,6 +94,8 @@ const AdminDashboard = () => {
             date={selectedDate}
             events={eventsForSelectedDate}
             isLoading={false}
+            onDelete={handleDeleteEvent}
+            onUpdate={handleUpdateEvent}
           />
         </Card>
       </div>
@@ -99,6 +111,16 @@ const TeacherDashboard = () => {
   const eventsForSelectedDate = events.filter(
     (event) => event.date === selectedDate.toISOString().split('T')[0]
   );
+
+  const handleDeleteEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
+
+  const handleUpdateEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
 
   return (
     <div className="space-y-6">
@@ -144,6 +166,8 @@ const TeacherDashboard = () => {
             date={selectedDate}
             events={eventsForSelectedDate}
             isLoading={false}
+            onDelete={handleDeleteEvent}
+            onUpdate={handleUpdateEvent}
           />
         </Card>
       </div>
@@ -159,6 +183,16 @@ const StudentDashboard = () => {
   const eventsForSelectedDate = events.filter(
     (event) => event.date === selectedDate.toISOString().split('T')[0]
   );
+
+  const handleDeleteEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
+
+  const handleUpdateEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
 
   return (
     <div className="space-y-6">
@@ -203,6 +237,8 @@ const StudentDashboard = () => {
             date={selectedDate}
             events={eventsForSelectedDate}
             isLoading={false}
+            onDelete={handleDeleteEvent}
+            onUpdate={handleUpdateEvent}
           />
         </Card>
       </div>
@@ -218,6 +254,16 @@ const ParentDashboard = () => {
   const eventsForSelectedDate = events.filter(
     (event) => event.date === selectedDate.toISOString().split('T')[0]
   );
+
+  const handleDeleteEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
+
+  const handleUpdateEvent = async () => {
+    // Placeholder function
+    return Promise.resolve();
+  };
 
   return (
     <div className="space-y-6">
@@ -262,6 +308,8 @@ const ParentDashboard = () => {
             date={selectedDate}
             events={eventsForSelectedDate}
             isLoading={false}
+            onDelete={handleDeleteEvent}
+            onUpdate={handleUpdateEvent}
           />
         </Card>
       </div>

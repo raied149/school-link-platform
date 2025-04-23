@@ -198,6 +198,7 @@ export interface SchoolEvent {
   createdAt?: string;
   reminderSet?: boolean;
   reminderTimes?: string[] | null;
+  reminderText?: string;
 }
 
 // Incident Management Types

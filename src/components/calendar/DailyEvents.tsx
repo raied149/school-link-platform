@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { SchoolEvent } from "@/types";
 import { format } from "date-fns";
-import { CalendarClock, Users, Bell, Trash2, Edit } from "lucide-react";
+import { CalendarClock, Users, Bell, Trash2, Edit, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -19,21 +19,35 @@ interface DailyEventsProps {
 export function DailyEvents({ date, events, isLoading, onDelete, onUpdate }: DailyEventsProps) {
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [eventToEdit, setEventToEdit] = useState<SchoolEvent | null>(null);
+  
+  // Find events that have reminders set for this date
+  const formattedCurrentDate = format(date, 'yyyy-MM-dd');
+  const remindersForToday = events.filter(event => 
+    event.reminderSet && 
+    event.reminderTimes && 
+    event.reminderTimes.includes(formattedCurrentDate) &&
+    event.date !== formattedCurrentDate // Only include reminders for events on other dates
+  );
 
   if (isLoading) {
     return <div className="text-center p-4">Loading events...</div>;
   }
+
+  // Filter for events that actually occur on this date
+  const eventsForToday = events.filter(event => event.date === formattedCurrentDate);
 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">
         Events for {format(date, "MMMM d, yyyy")}
       </h3>
-      {events.length === 0 ? (
+      
+      {/* Display events for today */}
+      {eventsForToday.length === 0 && remindersForToday.length === 0 ? (
         <p className="text-muted-foreground">No events scheduled for this day</p>
       ) : (
         <div className="space-y-3">
-          {events.map((event) => (
+          {eventsForToday.map((event) => (
             <Card key={event.id} className="p-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -99,6 +113,36 @@ export function DailyEvents({ date, events, isLoading, onDelete, onUpdate }: Dai
               </div>
             </Card>
           ))}
+          
+          {/* Display reminders for events on other days */}
+          {remindersForToday.length > 0 && (
+            <>
+              <h4 className="text-md font-medium mt-4">Reminders</h4>
+              {remindersForToday.map((event) => (
+                <Card key={`reminder-${event.id}`} className="p-4 border-l-4 border-l-amber-400">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Bell className="mr-2 h-4 w-4 text-amber-500" />
+                        <h4 className="font-medium">Reminder: {event.name}</h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      <span>Upcoming event on {format(new Date(event.date), "MMMM d")}</span>
+                      <ArrowRight className="mx-1 h-3 w-3" />
+                      <span>{event.startTime}</span>
+                    </div>
+                    {event.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {event.description}
+                      </p>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
         </div>
       )}
 

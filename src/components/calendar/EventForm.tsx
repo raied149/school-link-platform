@@ -49,14 +49,15 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
       name: event?.name || "",
       startHour: event?.startTime ? event.startTime.split(':')[0] : "09",
       startMinute: event?.startTime ? event.startTime.split(':')[1].split(' ')[0] : "00",
-      startPeriod: event?.startTime ? event.startTime.split(' ')[1] : "AM",
+      startPeriod: event?.startTime ? (event.startTime.split(' ')[1] as "AM" | "PM") : "AM",
       endHour: event?.endTime ? event.endTime.split(':')[0] : "10",
       endMinute: event?.endTime ? event.endTime.split(':')[1].split(' ')[0] : "00",
-      endPeriod: event?.endTime ? event.endTime.split(' ')[1] : "AM",
+      endPeriod: event?.endTime ? (event.endTime.split(' ')[1] as "AM" | "PM") : "AM",
       description: event?.description || "",
       teacherIds: event?.teacherIds || [],
       reminderSet: event?.reminderSet || false,
       reminderDates: event?.reminderTimes || [],
+      reminderText: "",
     },
   });
 
@@ -77,37 +78,80 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
         description: values.description || "",
         reminder_set: values.reminderSet && reminderDates.length > 0,
         reminder_times: formattedReminderDates,
+        reminder_text: values.reminderText || "",
       };
       
-      // Insert the event into Supabase
-      const { data: eventResult, error: eventError } = await supabase
-        .from('calendar_events')
-        .insert(eventData)
-        .select()
-        .single();
-        
-      if (eventError) {
-        throw eventError;
-      }
-      
-      // If teachers are selected, assign them to the event
-      if (values.teacherIds && values.teacherIds.length > 0) {
-        const teacherAssignments = values.teacherIds.map(teacherId => ({
-          event_id: eventResult.id,
-          teacher_id: teacherId,
-        }));
-        
-        const { error: teacherError } = await supabase
-          .from('calendar_event_teachers')
-          .insert(teacherAssignments);
+      if (event) {
+        // Update existing event
+        const { error: eventError } = await supabase
+          .from('calendar_events')
+          .update(eventData)
+          .eq('id', event.id);
           
-        if (teacherError) {
-          console.error("Error assigning teachers:", teacherError);
-          toast.error("Event saved but there was an issue assigning teachers");
+        if (eventError) {
+          throw eventError;
         }
+        
+        // Handle teacher assignments for updates
+        if (values.teacherIds) {
+          // First delete existing teacher assignments
+          const { error: deleteError } = await supabase
+            .from('calendar_event_teachers')
+            .delete()
+            .eq('event_id', event.id);
+            
+          if (deleteError) throw deleteError;
+          
+          // Insert new teacher assignments if any are selected
+          if (values.teacherIds.length > 0) {
+            const teacherAssignments = values.teacherIds.map(teacherId => ({
+              event_id: event.id,
+              teacher_id: teacherId,
+            }));
+            
+            const { error: teacherError } = await supabase
+              .from('calendar_event_teachers')
+              .insert(teacherAssignments);
+              
+            if (teacherError) {
+              console.error("Error assigning teachers:", teacherError);
+              toast.error("Event updated but there was an issue assigning teachers");
+            }
+          }
+        }
+        
+        toast.success("Event updated successfully!");
+      } else {
+        // Insert the event into Supabase
+        const { data: eventResult, error: eventError } = await supabase
+          .from('calendar_events')
+          .insert(eventData)
+          .select()
+          .single();
+          
+        if (eventError) {
+          throw eventError;
+        }
+        
+        // If teachers are selected, assign them to the event
+        if (values.teacherIds && values.teacherIds.length > 0) {
+          const teacherAssignments = values.teacherIds.map(teacherId => ({
+            event_id: eventResult.id,
+            teacher_id: teacherId,
+          }));
+          
+          const { error: teacherError } = await supabase
+            .from('calendar_event_teachers')
+            .insert(teacherAssignments);
+            
+          if (teacherError) {
+            console.error("Error assigning teachers:", teacherError);
+            toast.error("Event saved but there was an issue assigning teachers");
+          }
+        }
+        
+        toast.success("Event saved successfully!");
       }
-      
-      toast.success("Event saved successfully!");
       
       // Call the onSubmit callback with the full event data
       onSubmit({
@@ -120,6 +164,7 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
         teacherIds: values.teacherIds,
         reminderSet: values.reminderSet && reminderDates.length > 0,
         reminderTimes: formattedReminderDates,
+        reminderText: values.reminderText,
       });
       
       // Reset form and close dialog
@@ -145,7 +190,7 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add New Event</DialogTitle>
+          <DialogTitle>{event ? "Edit Event" : "Add New Event"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -187,7 +232,7 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
             />
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Creating Event..." : "Create Event"}
+              {isSubmitting ? (event ? "Updating Event..." : "Creating Event...") : (event ? "Update Event" : "Create Event")}
             </Button>
           </form>
         </Form>
