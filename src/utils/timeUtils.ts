@@ -20,10 +20,12 @@ export const formatTimeDisplay = (timeString: string): string => {
       return 'Invalid Time';
     }
     
-    const [hours, minutes] = timeString.split(':');
+    const [hours, minutes] = timeString.split(':').map(Number);
     const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
     
     // Double-check if the date is valid before formatting
     if (!isValid(date)) {
@@ -74,7 +76,7 @@ export const convertTo12Hour = (time: string) => {
 
 export const validateHour = (hour: string): boolean => {
   const hourNum = parseInt(hour);
-  return !isNaN(hourNum) && hourNum >= 1 && hourNum <= 23;
+  return !isNaN(hourNum) && hourNum >= 0 && hourNum <= 23;
 };
 
 export const validateMinute = (minute: string): boolean => {

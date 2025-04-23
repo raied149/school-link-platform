@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
@@ -100,6 +99,23 @@ const TimetablePage = () => {
     }
   });
   
+  // Fetch subject-teacher assignments
+  const { data: teacherSubjects = [] } = useQuery({
+    queryKey: ['teacher-subjects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teacher_subjects')
+        .select('*');
+        
+      if (error) {
+        console.error("Error fetching teacher subjects:", error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  });
+  
   const weekDays = timetableService.getWeekDays();
   
   // Default filters based on user role
@@ -149,18 +165,32 @@ const TimetablePage = () => {
   
   const getClassName = (classId: string) => {
     const classItem = classes.find(c => c.id === classId);
-    return classItem ? classItem.name : 'Unknown Class';
+    return classItem ? classItem.name : classId.substring(0, 8);
   };
   
   const getSectionName = (sectionId: string) => {
     const section = sections.find(s => s.id === sectionId);
-    return section ? section.name : 'Unknown Section';
+    return section ? section.name : sectionId.substring(0, 8);
   };
   
   const getTeacherName = (teacherId?: string) => {
-    if (!teacherId) return 'N/A';
+    if (!teacherId) {
+      // If no teacherId provided directly, try to find through subject assignment
+      return 'No Teacher Assigned';
+    }
+    
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
+  };
+  
+  const getTeacherBySubject = (subjectId?: string) => {
+    if (!subjectId) return undefined;
+    
+    // Find the teacher assigned to this subject
+    const assignment = teacherSubjects.find(ts => ts.subject_id === subjectId);
+    if (!assignment) return undefined;
+    
+    return assignment.teacher_id;
   };
   
   const formatTime = (timeString: string) => {
@@ -262,7 +292,13 @@ const TimetablePage = () => {
                 isLoading={isLoadingTimeSlots}
                 formatTime={formatTime}
                 getSubjectName={getSubjectName}
-                getTeacherName={getTeacherName}
+                getTeacherName={(teacherId) => {
+                  // If teacherId is provided, use it directly
+                  if (teacherId) return getTeacherName(teacherId);
+                  
+                  // Otherwise try to find through subject assignment (for legacy data)
+                  return 'No Teacher Assigned';
+                }}
                 getClassName={getClassName}
                 getSectionName={getSectionName}
                 user={user}

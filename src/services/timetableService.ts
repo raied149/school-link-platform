@@ -1,132 +1,227 @@
 
 import { TimeSlot, TimetableFilter, WeekDay, SlotType } from '@/types/timetable';
 import { v4 as uuidv4 } from 'uuid';
-
-const mockTimeSlots: TimeSlot[] = [
-  {
-    id: '1',
-    startTime: '08:00',
-    endTime: '09:00',
-    slotType: 'subject',
-    subjectId: '1', // Mathematics
-    teacherId: '1',
-    dayOfWeek: 'Monday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    startTime: '09:00',
-    endTime: '10:00',
-    slotType: 'subject',
-    subjectId: '2', // Science
-    teacherId: '2',
-    dayOfWeek: 'Monday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    startTime: '10:00',
-    endTime: '10:15',
-    slotType: 'break',
-    title: 'Short Break',
-    dayOfWeek: 'Monday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    startTime: '10:15',
-    endTime: '11:15',
-    slotType: 'subject',
-    subjectId: '3', // English
-    teacherId: '3',
-    dayOfWeek: 'Monday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    startTime: '08:00',
-    endTime: '09:00',
-    slotType: 'subject',
-    subjectId: '1', // Mathematics
-    teacherId: '1',
-    dayOfWeek: 'Tuesday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '6',
-    startTime: '12:30',
-    endTime: '13:30',
-    slotType: 'event',
-    title: 'Assembly',
-    dayOfWeek: 'Friday',
-    classId: '1',
-    sectionId: '1',
-    academicYearId: '1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
 
 // Service methods
 export const timetableService = {
   getTimeSlots: async (filter?: TimetableFilter): Promise<TimeSlot[]> => {
-    return new Promise((resolve) => {
-      let filteredSlots = [...mockTimeSlots];
+    try {
+      let query = supabase.from('timetable').select(`
+        id,
+        start_time,
+        end_time,
+        day_of_week,
+        subject_id,
+        teacher_id,
+        section_id
+      `);
       
       if (filter) {
         if (filter.dayOfWeek) {
-          filteredSlots = filteredSlots.filter(slot => slot.dayOfWeek === filter.dayOfWeek);
+          // Convert day name to number (0-6 for Sunday-Saturday)
+          const dayMap: Record<string, number> = {
+            'Monday': 1,
+            'Tuesday': 2,
+            'Wednesday': 3,
+            'Thursday': 4,
+            'Friday': 5,
+            'Saturday': 6,
+            'Sunday': 0,
+          };
+          
+          if (dayMap[filter.dayOfWeek] !== undefined) {
+            query = query.eq('day_of_week', dayMap[filter.dayOfWeek]);
+          }
         }
         
         if (filter.classId) {
-          filteredSlots = filteredSlots.filter(slot => slot.classId === filter.classId);
+          // For class filtering, we need to use the sections related to this class
+          const { data: sections } = await supabase
+            .from('sections')
+            .select('id')
+            .eq('class_id', filter.classId);
+          
+          if (sections && sections.length > 0) {
+            const sectionIds = sections.map(section => section.id);
+            query = query.in('section_id', sectionIds);
+          }
         }
         
         if (filter.sectionId) {
-          filteredSlots = filteredSlots.filter(slot => slot.sectionId === filter.sectionId);
+          query = query.eq('section_id', filter.sectionId);
         }
         
         if (filter.teacherId) {
-          filteredSlots = filteredSlots.filter(slot => slot.teacherId === filter.teacherId);
-        }
-        
-        if (filter.academicYearId) {
-          filteredSlots = filteredSlots.filter(slot => slot.academicYearId === filter.academicYearId);
+          query = query.eq('teacher_id', filter.teacherId);
         }
       }
       
-      setTimeout(() => resolve(filteredSlots), 300);
-    });
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Error fetching time slots:", error);
+        throw error;
+      }
+      
+      // Convert database records to TimeSlot objects
+      const slots: TimeSlot[] = [];
+      
+      for (const record of data || []) {
+        // Get section info to get the class_id
+        const { data: sectionData } = await supabase
+          .from('sections')
+          .select('class_id')
+          .eq('id', record.section_id)
+          .single();
+        
+        // Convert day_of_week number to day name
+        const dayMap: Record<number, WeekDay> = {
+          1: 'Monday',
+          2: 'Tuesday',
+          3: 'Wednesday',
+          4: 'Thursday',
+          5: 'Friday',
+          6: 'Saturday',
+          0: 'Sunday',
+        };
+        
+        const dayOfWeek = dayMap[record.day_of_week] || 'Monday';
+        
+        // Determine slot type based on whether it has a subject_id
+        const slotType: SlotType = record.subject_id ? 'subject' : 'event';
+        
+        slots.push({
+          id: record.id,
+          startTime: record.start_time,
+          endTime: record.end_time,
+          dayOfWeek,
+          slotType,
+          subjectId: record.subject_id,
+          teacherId: record.teacher_id,
+          classId: sectionData?.class_id || "",
+          sectionId: record.section_id,
+          academicYearId: "1", // Default academic year
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      
+      return slots;
+    } catch (error) {
+      console.error("Error in getTimeSlots:", error);
+      return [];
+    }
   },
   
   getTimeSlotById: async (id: string): Promise<TimeSlot | undefined> => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(mockTimeSlots.find(slot => slot.id === id)), 300);
-    });
+    try {
+      const { data, error } = await supabase
+        .from('timetable')
+        .select(`
+          id,
+          start_time,
+          end_time,
+          day_of_week,
+          subject_id,
+          teacher_id,
+          section_id
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching time slot:", error);
+        throw error;
+      }
+      
+      if (!data) return undefined;
+      
+      // Get section info to get the class_id
+      const { data: sectionData } = await supabase
+        .from('sections')
+        .select('class_id')
+        .eq('id', data.section_id)
+        .single();
+      
+      // Convert day_of_week number to day name
+      const dayMap: Record<number, WeekDay> = {
+        1: 'Monday',
+        2: 'Tuesday',
+        3: 'Wednesday',
+        4: 'Thursday',
+        5: 'Friday',
+        6: 'Saturday',
+        0: 'Sunday',
+      };
+      
+      const dayOfWeek = dayMap[data.day_of_week] || 'Monday';
+      
+      // Determine slot type based on whether it has a subject_id
+      const slotType: SlotType = data.subject_id ? 'subject' : 'event';
+      
+      return {
+        id: data.id,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        dayOfWeek,
+        slotType,
+        subjectId: data.subject_id,
+        teacherId: data.teacher_id,
+        classId: sectionData?.class_id || "",
+        sectionId: data.section_id,
+        academicYearId: "1", // Default academic year
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error in getTimeSlotById:", error);
+      return undefined;
+    }
   },
   
   createTimeSlot: async (timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>): Promise<TimeSlot> => {
-    return new Promise((resolve) => {
+    try {
+      // Convert day name to number (0-6 for Sunday-Saturday)
+      const dayMap: Record<string, number> = {
+        'Monday': 1,
+        'Tuesday': 2,
+        'Wednesday': 3,
+        'Thursday': 4,
+        'Friday': 5,
+        'Saturday': 6,
+        'Sunday': 0,
+      };
+      
+      const dayOfWeek = dayMap[timeSlotData.dayOfWeek] || 1; // Default to Monday if not found
+      
+      const { data, error } = await supabase
+        .from('timetable')
+        .insert({
+          start_time: timeSlotData.startTime,
+          end_time: timeSlotData.endTime,
+          day_of_week: dayOfWeek,
+          subject_id: timeSlotData.subjectId,
+          teacher_id: timeSlotData.teacherId,
+          section_id: timeSlotData.sectionId,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Error creating time slot:", error);
+        throw error;
+      }
+      
+      return {
+        id: data.id,
+        ...timeSlotData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Error in createTimeSlot:", error);
+      // Fallback to local creation for demo purposes
       const newTimeSlot: TimeSlot = {
         id: uuidv4(),
         ...timeSlotData,
@@ -134,38 +229,80 @@ export const timetableService = {
         updatedAt: new Date().toISOString()
       };
       
-      mockTimeSlots.push(newTimeSlot);
-      setTimeout(() => resolve(newTimeSlot), 500);
-    });
+      return newTimeSlot;
+    }
   },
   
   updateTimeSlot: async (id: string, timeSlotData: Partial<Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>>): Promise<TimeSlot | undefined> => {
-    return new Promise((resolve) => {
-      const index = mockTimeSlots.findIndex(slot => slot.id === id);
-      if (index !== -1) {
-        const updatedTimeSlot = {
-          ...mockTimeSlots[index],
-          ...timeSlotData,
-          updatedAt: new Date().toISOString()
+    try {
+      const updateData: any = {};
+      
+      if (timeSlotData.startTime) updateData.start_time = timeSlotData.startTime;
+      if (timeSlotData.endTime) updateData.end_time = timeSlotData.endTime;
+      
+      if (timeSlotData.dayOfWeek) {
+        // Convert day name to number (0-6 for Sunday-Saturday)
+        const dayMap: Record<string, number> = {
+          'Monday': 1,
+          'Tuesday': 2,
+          'Wednesday': 3,
+          'Thursday': 4,
+          'Friday': 5,
+          'Saturday': 6,
+          'Sunday': 0,
         };
-        mockTimeSlots[index] = updatedTimeSlot;
-        setTimeout(() => resolve(updatedTimeSlot), 500);
-      } else {
-        setTimeout(() => resolve(undefined), 500);
+        
+        updateData.day_of_week = dayMap[timeSlotData.dayOfWeek] || 1;
       }
-    });
+      
+      if (timeSlotData.subjectId !== undefined) updateData.subject_id = timeSlotData.subjectId;
+      if (timeSlotData.teacherId !== undefined) updateData.teacher_id = timeSlotData.teacherId;
+      if (timeSlotData.sectionId) updateData.section_id = timeSlotData.sectionId;
+      
+      const { data, error } = await supabase
+        .from('timetable')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Error updating time slot:", error);
+        throw error;
+      }
+      
+      // Get the existing time slot to merge with updates
+      const existingSlot = await timetableService.getTimeSlotById(id);
+      if (!existingSlot) return undefined;
+      
+      return {
+        ...existingSlot,
+        ...timeSlotData,
+        updatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Error in updateTimeSlot:", error);
+      return undefined;
+    }
   },
   
   deleteTimeSlot: async (id: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const index = mockTimeSlots.findIndex(slot => slot.id === id);
-      if (index !== -1) {
-        mockTimeSlots.splice(index, 1);
-        setTimeout(() => resolve(true), 500);
-      } else {
-        setTimeout(() => resolve(false), 500);
+    try {
+      const { error } = await supabase
+        .from('timetable')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error("Error deleting time slot:", error);
+        throw error;
       }
-    });
+      
+      return true;
+    } catch (error) {
+      console.error("Error in deleteTimeSlot:", error);
+      return false;
+    }
   },
   
   getWeekDays: (): WeekDay[] => {

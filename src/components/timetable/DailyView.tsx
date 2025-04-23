@@ -70,7 +70,7 @@ export function DailyView({
           <TableHead>Time</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Details</TableHead>
-          {user?.role === 'student' && <TableHead>Teacher</TableHead>}
+          <TableHead>Teacher</TableHead>
           {user?.role !== 'student' && <TableHead>Class/Section</TableHead>}
         </TableRow>
       </TableHeader>
@@ -85,11 +85,10 @@ export function DailyView({
               {getSlotIcon(slot.slotType)}
               {getSlotDetails(slot)}
             </TableCell>
-            {user?.role === 'student' ? (
-              <TableCell>
-                {slot.slotType === 'subject' ? getTeacherName(slot.teacherId) : '-'}
-              </TableCell>
-            ) : (
+            <TableCell>
+              {slot.slotType === 'subject' ? getTeacherName(slot.teacherId) : '-'}
+            </TableCell>
+            {user?.role !== 'student' && (
               <TableCell>
                 {getClassName(slot.classId)} - {getSectionName(slot.sectionId)}
               </TableCell>
