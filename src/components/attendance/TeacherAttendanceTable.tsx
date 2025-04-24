@@ -42,7 +42,7 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
   const markAttendanceMutation = useMutation({
     mutationFn: async ({ teacherId, status, checkIn = null, checkOut = null }: { 
       teacherId: string; 
-      status: string; 
+      status: 'present' | 'absent' | 'not-marked'; 
       checkIn?: string | null; 
       checkOut?: string | null;
     }) => {
@@ -176,13 +176,18 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
           {teachers.map((teacher) => {
             const attendance = attendanceRecords.find(record => record.teacher_id === teacher.id);
             
+            // Fix the type issue by ensuring status is always one of the allowed values
+            const attendanceStatus = attendance 
+              ? (attendance.status as 'present' | 'absent' | 'not-marked') 
+              : 'not-marked';
+            
             return (
               <TeacherAttendanceRecord
                 key={teacher.id}
                 teacherId={teacher.id}
                 teacherName={teacher.name}
                 attendance={{
-                  status: attendance ? attendance.status : 'not-marked',
+                  status: attendanceStatus,
                   checkIn: attendance?.check_in ? attendance.check_in : null,
                   checkOut: attendance?.check_out ? attendance.check_out : null
                 }}
