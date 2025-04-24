@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogIn } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 
 interface TeacherAttendanceStatus {
   status: 'present' | 'absent' | 'not-marked';
@@ -38,8 +38,8 @@ export function TeacherAttendanceRecord({
           <Badge variant="outline" className="bg-gray-50 text-gray-600">Not marked</Badge>
         )}
       </td>
-      <td className="p-4">{attendance.checkIn || "-"}</td>
-      <td className="p-4">{attendance.checkOut || "-"}</td>
+      <td className="p-4">{attendance.checkIn ? new Date(`2000-01-01T${attendance.checkIn}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}</td>
+      <td className="p-4">{attendance.checkOut ? new Date(`2000-01-01T${attendance.checkOut}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}</td>
       <td className="p-4">
         <div className="flex gap-2">
           {attendance.status !== 'present' ? (
@@ -49,7 +49,7 @@ export function TeacherAttendanceRecord({
             </Button>
           ) : !attendance.checkOut ? (
             <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-700" onClick={() => onCheckOut(teacherId)}>
-              <LogIn className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4" />
               Check Out
             </Button>
           ) : null}

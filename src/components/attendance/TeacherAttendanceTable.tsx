@@ -9,11 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { TeacherAttendanceRecord } from "@/components/teachers/TeacherAttendanceRecord";
 
 interface TeacherAttendanceTableProps {
   selectedDate: Date;
@@ -33,7 +31,10 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
         .select('*')
         .eq('date', formattedDate);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching attendance records:", error);
+        throw error;
+      }
       return data || [];
     }
   });
@@ -45,21 +46,31 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
       checkIn?: string | null; 
       checkOut?: string | null;
     }) => {
+      // Check if record exists for the teacher on the selected date
       const { data: existingRecord } = await supabase
         .from('teacher_attendance')
-        .select('id')
+        .select('id, check_in, check_out')
         .eq('teacher_id', teacherId)
         .eq('date', formattedDate)
         .maybeSingle();
 
       if (existingRecord) {
+        // Update existing record
+        const updateData: any = { status };
+        if (checkIn !== null) updateData.check_in = checkIn;
+        if (checkOut !== null) updateData.check_out = checkOut;
+        
         const { error } = await supabase
           .from('teacher_attendance')
-          .update({ status, check_in: checkIn, check_out: checkOut })
+          .update(updateData)
           .eq('id', existingRecord.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating attendance:", error);
+          throw error;
+        }
       } else {
+        // Create new record
         const { error } = await supabase
           .from('teacher_attendance')
           .insert({
@@ -70,11 +81,22 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
             check_out: checkOut
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error inserting attendance:", error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-attendance', formattedDate] });
+    },
+    onError: (error) => {
+      console.error("Mutation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update attendance record. Please try again.",
+        variant: "destructive"
+      });
     }
   });
 
@@ -82,44 +104,56 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
     const now = new Date();
     const checkInTime = format(now, 'HH:mm:ss');
     
-    await markAttendanceMutation.mutateAsync({
-      teacherId,
-      status: 'present',
-      checkIn: checkInTime
-    });
+    try {
+      await markAttendanceMutation.mutateAsync({
+        teacherId,
+        status: 'present',
+        checkIn: checkInTime
+      });
 
-    toast({
-      title: "Check-in recorded",
-      description: `Teacher checked in at ${format(now, 'h:mm a')}`,
-    });
+      toast({
+        title: "Check-in recorded",
+        description: `Teacher checked in at ${format(now, 'h:mm a')}`,
+      });
+    } catch (error) {
+      console.error("Check-in failed:", error);
+    }
   };
 
   const handleCheckOut = async (teacherId: string) => {
     const now = new Date();
     const checkOutTime = format(now, 'HH:mm:ss');
     
-    await markAttendanceMutation.mutateAsync({
-      teacherId,
-      status: 'present',
-      checkOut: checkOutTime
-    });
+    try {
+      await markAttendanceMutation.mutateAsync({
+        teacherId,
+        status: 'present',
+        checkOut: checkOutTime
+      });
 
-    toast({
-      title: "Check-out recorded",
-      description: `Teacher checked out at ${format(now, 'h:mm a')}`,
-    });
+      toast({
+        title: "Check-out recorded",
+        description: `Teacher checked out at ${format(now, 'h:mm a')}`,
+      });
+    } catch (error) {
+      console.error("Check-out failed:", error);
+    }
   };
 
   const handleMarkAbsent = async (teacherId: string) => {
-    await markAttendanceMutation.mutateAsync({
-      teacherId,
-      status: 'absent'
-    });
+    try {
+      await markAttendanceMutation.mutateAsync({
+        teacherId,
+        status: 'absent'
+      });
 
-    toast({
-      title: "Attendance updated",
-      description: "Teacher marked as absent",
-    });
+      toast({
+        title: "Attendance updated",
+        description: "Teacher marked as absent",
+      });
+    } catch (error) {
+      console.error("Mark absent failed:", error);
+    }
   };
 
   if (isLoadingAttendance) {
@@ -143,58 +177,19 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
             const attendance = attendanceRecords.find(record => record.teacher_id === teacher.id);
             
             return (
-              <TableRow key={teacher.id}>
-                <TableCell>{teacher.name}</TableCell>
-                <TableCell>
-                  {attendance ? (
-                    <Badge className={
-                      attendance.status === 'present' ? 'bg-green-100 text-green-800' : 
-                      attendance.status === 'absent' ? 'bg-red-100 text-red-800' : 
-                      'bg-yellow-100 text-yellow-800'
-                    }>
-                      {attendance.status}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">Not marked</Badge>
-                  )}
-                </TableCell>
-                <TableCell>{attendance?.check_in ? format(new Date(`2000-01-01T${attendance.check_in}`), 'h:mm a') : '-'}</TableCell>
-                <TableCell>{attendance?.check_out ? format(new Date(`2000-01-01T${attendance.check_out}`), 'h:mm a') : '-'}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    {!attendance || !attendance.check_in ? (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
-                        onClick={() => handleCheckIn(teacher.id)}
-                      >
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Check In
-                      </Button>
-                    ) : !attendance.check_out ? (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700"
-                        onClick={() => handleCheckOut(teacher.id)}
-                      >
-                        Check Out
-                      </Button>
-                    ) : null}
-                    {(!attendance || attendance.status !== 'absent') && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
-                        onClick={() => handleMarkAbsent(teacher.id)}
-                      >
-                        Mark Absent
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+              <TeacherAttendanceRecord
+                key={teacher.id}
+                teacherId={teacher.id}
+                teacherName={teacher.name}
+                attendance={{
+                  status: attendance ? attendance.status : 'not-marked',
+                  checkIn: attendance?.check_in ? attendance.check_in : null,
+                  checkOut: attendance?.check_out ? attendance.check_out : null
+                }}
+                onCheckIn={handleCheckIn}
+                onCheckOut={handleCheckOut}
+                onMarkAbsent={handleMarkAbsent}
+              />
             );
           })}
         </TableBody>
