@@ -70,7 +70,7 @@ export function IncidentDetail({
     }
     
     if (assignedTo !== null) {
-      updates.assignedTo = assignedTo || undefined;
+      updates.assignedTo = assignedTo === "unassigned" ? undefined : assignedTo;
     }
     
     onUpdate(incident.id, updates);
