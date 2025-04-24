@@ -345,7 +345,7 @@ export function IncidentFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {availableUsers
                         .filter((user) => user.role === "admin" || user.role === "teacher")
                         .map((user) => (
