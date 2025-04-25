@@ -1,10 +1,15 @@
 
 import { z } from "zod";
+import { startOfDay, isBefore } from "date-fns";
 
 export const formSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   type: z.enum(["meeting", "function", "holiday"]),
-  date: z.string(),
+  date: z.string().refine((date) => {
+    const selectedDate = startOfDay(new Date(date));
+    const today = startOfDay(new Date());
+    return !isBefore(selectedDate, today);
+  }, "Cannot create events for past dates"),
   startHour: z.string(),
   startMinute: z.string(),
   startPeriod: z.enum(["AM", "PM"]),

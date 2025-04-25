@@ -18,7 +18,7 @@ import { EventType, SchoolEvent } from "@/types";
 import { formSchema } from "./schema";
 import { TimeInputFields } from "./TimeInputFields";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 import { TeacherSelectionDialog } from "./TeacherSelectionDialog";
 import { EventFormHeader } from "./EventFormHeader";
 import { DateReminderSelection } from "./DateReminderSelection";
@@ -29,7 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface EventFormProps {
   date: Date;
   teachers: any[];
-  event?: SchoolEvent;  // Add this prop for editing existing events
+  event?: SchoolEvent;
   onSubmit: (event: Omit<SchoolEvent, "id">) => void;
 }
 
@@ -40,6 +40,9 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
     event?.reminderTimes ? event.reminderTimes.map(t => new Date(t)) : []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if the selected date is in the past
+  const isPastDate = isBefore(startOfDay(date), startOfDay(new Date()));
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -180,9 +183,13 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button 
+          variant="outline" 
+          size="sm"
+          disabled={isPastDate && !event} // Disable button for past dates unless editing existing event
+        >
           <CalendarPlus className="mr-2 h-4 w-4" />
-          {event ? "Edit Event" : "Add Event"}
+          {event ? "Edit Event" : (isPastDate ? "Cannot Add Past Event" : "Add Event")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
