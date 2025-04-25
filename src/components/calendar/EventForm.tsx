@@ -8,23 +8,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-} from "@/components/ui/form";
-import { CalendarPlus, Users } from "lucide-react";
+import { Form } from "@/components/ui/form";
+import { CalendarPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent } from "@/types";
 import { formSchema } from "./schema";
 import { TimeInputFields } from "./TimeInputFields";
-import { z } from "zod";
 import { format, isBefore, startOfDay } from "date-fns";
 import { TeacherSelectionDialog } from "./TeacherSelectionDialog";
 import { EventFormHeader } from "./EventFormHeader";
 import { DateReminderSelection } from "./DateReminderSelection";
 import { EventDescription } from "./EventDescription";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useEventFormSubmit } from "./hooks/useEventFormSubmit";
 
 interface EventFormProps {
   date: Date;
@@ -39,7 +35,6 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
   const [reminderDates, setReminderDates] = useState<Date[]>(
     event?.reminderTimes ? event.reminderTimes.map(t => new Date(t)) : []
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if the selected date is in the past
   const isPastDate = isBefore(startOfDay(date), startOfDay(new Date()));
@@ -63,120 +58,14 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
     },
   });
 
-  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Format the reminder dates to string format
-      const formattedReminderDates = reminderDates.map(date => format(date, 'yyyy-MM-dd'));
-      
-      // Create the event object
-      const eventData = {
-        name: values.name,
-        type: values.type as EventType,
-        date: values.date,
-        start_time: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
-        end_time: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
-        description: values.description || "",
-        reminder_set: values.reminderSet && reminderDates.length > 0,
-        reminder_times: formattedReminderDates,
-      };
-      
-      if (event) {
-        // Update existing event
-        const { error: eventError } = await supabase
-          .from('calendar_events')
-          .update(eventData)
-          .eq('id', event.id);
-          
-        if (eventError) {
-          throw eventError;
-        }
-        
-        // Handle teacher assignments for updates
-        if (values.teacherIds) {
-          // First delete existing teacher assignments
-          const { error: deleteError } = await supabase
-            .from('calendar_event_teachers')
-            .delete()
-            .eq('event_id', event.id);
-            
-          if (deleteError) throw deleteError;
-          
-          // Insert new teacher assignments if any are selected
-          if (values.teacherIds.length > 0) {
-            const teacherAssignments = values.teacherIds.map(teacherId => ({
-              event_id: event.id,
-              teacher_id: teacherId,
-            }));
-            
-            const { error: teacherError } = await supabase
-              .from('calendar_event_teachers')
-              .insert(teacherAssignments);
-              
-            if (teacherError) {
-              console.error("Error assigning teachers:", teacherError);
-              toast.error("Event updated but there was an issue assigning teachers");
-            }
-          }
-        }
-        
-        toast.success("Event updated successfully!");
-      } else {
-        // Insert the event into Supabase
-        const { data: eventResult, error: eventError } = await supabase
-          .from('calendar_events')
-          .insert(eventData)
-          .select()
-          .single();
-          
-        if (eventError) {
-          throw eventError;
-        }
-        
-        // If teachers are selected, assign them to the event
-        if (values.teacherIds && values.teacherIds.length > 0) {
-          const teacherAssignments = values.teacherIds.map(teacherId => ({
-            event_id: eventResult.id,
-            teacher_id: teacherId,
-          }));
-          
-          const { error: teacherError } = await supabase
-            .from('calendar_event_teachers')
-            .insert(teacherAssignments);
-            
-          if (teacherError) {
-            console.error("Error assigning teachers:", teacherError);
-            toast.error("Event saved but there was an issue assigning teachers");
-          }
-        }
-        
-        toast.success("Event saved successfully!");
-      }
-      
-      // Call the onSubmit callback with the full event data
-      onSubmit({
-        name: values.name,
-        type: values.type as EventType,
-        date: values.date,
-        startTime: `${values.startHour}:${values.startMinute} ${values.startPeriod}`,
-        endTime: `${values.endHour}:${values.endMinute} ${values.endPeriod}`,
-        description: values.description,
-        teacherIds: values.teacherIds,
-        reminderSet: values.reminderSet && reminderDates.length > 0,
-        reminderTimes: formattedReminderDates,
-      });
-      
-      // Reset form and close dialog
+  const { handleSubmit, isSubmitting } = useEventFormSubmit(event, onSubmit);
+
+  const onFormSubmit = async (values: z.infer<typeof formSchema>) => {
+    const success = await handleSubmit(values, reminderDates);
+    if (success) {
       setOpen(false);
       form.reset();
       setReminderDates([]);
-      
-    } catch (error) {
-      console.error("Error saving event:", error);
-      toast.error("Failed to save event");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -186,7 +75,7 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
         <Button 
           variant="outline" 
           size="sm"
-          disabled={isPastDate && !event} // Disable button for past dates unless editing existing event
+          disabled={isPastDate && !event}
         >
           <CalendarPlus className="mr-2 h-4 w-4" />
           {event ? "Edit Event" : (isPastDate ? "Cannot Add Past Event" : "Add Event")}
@@ -197,7 +86,7 @@ export function EventForm({ date, teachers, event, onSubmit }: EventFormProps) {
           <DialogTitle>{event ? "Edit Event" : "Add New Event"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
             <EventFormHeader form={form} />
             
             <DateReminderSelection 
