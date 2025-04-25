@@ -1,8 +1,7 @@
-
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock database for incidents
+// Mock database for incidents - keeping this for reference
 let incidents: Incident[] = [
   {
     id: "1",
@@ -69,51 +68,191 @@ let incidents: Incident[] = [
 ];
 
 // Get all incidents
-export const getIncidents = (): Promise<Incident[]> => {
-  return Promise.resolve([...incidents]);
+export const getIncidents = async (): Promise<Incident[]> => {
+  const { data: incidents, error } = await supabase
+    .from('school_incidents')
+    .select(`
+      *,
+      school_incident_involved (
+        user_id,
+        role
+      )
+    `);
+
+  if (error) {
+    console.error("Error fetching incidents:", error);
+    throw error;
+  }
+
+  return incidents.map(incident => ({
+    id: incident.id,
+    title: incident.title,
+    date: incident.date,
+    time: incident.time,
+    location: incident.location,
+    type: incident.type as IncidentType,
+    subType: incident.sub_type,
+    description: incident.description,
+    severity: incident.severity as IncidentSeverity,
+    status: incident.status as IncidentStatus,
+    reportedBy: incident.reported_by,
+    assignedTo: incident.assigned_to,
+    investigationNotes: incident.investigation_notes,
+    resolutionDetails: incident.resolution_details,
+    resolutionDate: incident.resolution_date,
+    involvedPersons: incident.school_incident_involved || [],
+    createdAt: incident.created_at,
+    updatedAt: incident.updated_at,
+  }));
 };
 
 // Get incident by ID
-export const getIncidentById = (id: string): Promise<Incident | undefined> => {
-  const incident = incidents.find(incident => incident.id === id);
-  return Promise.resolve(incident);
+export const getIncidentById = async (id: string): Promise<Incident | undefined> => {
+  const { data: incident, error } = await supabase
+    .from('school_incidents')
+    .select(`
+      *,
+      school_incident_involved (
+        user_id,
+        role
+      )
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching incident:", error);
+    throw error;
+  }
+
+  if (!incident) return undefined;
+
+  return {
+    id: incident.id,
+    title: incident.title,
+    date: incident.date,
+    time: incident.time,
+    location: incident.location,
+    type: incident.type as IncidentType,
+    subType: incident.sub_type,
+    description: incident.description,
+    severity: incident.severity as IncidentSeverity,
+    status: incident.status as IncidentStatus,
+    reportedBy: incident.reported_by,
+    assignedTo: incident.assigned_to,
+    investigationNotes: incident.investigation_notes,
+    resolutionDetails: incident.resolution_details,
+    resolutionDate: incident.resolution_date,
+    involvedPersons: incident.school_incident_involved || [],
+    createdAt: incident.created_at,
+    updatedAt: incident.updated_at,
+  };
 };
 
 // Create a new incident
-export const createIncident = (incidentData: Omit<Incident, "id" | "createdAt" | "updatedAt">): Promise<Incident> => {
-  const now = new Date().toISOString();
-  const newIncident: Incident = {
-    id: uuidv4(),
-    ...incidentData,
-    createdAt: now,
-    updatedAt: now
-  };
-  
-  incidents.push(newIncident);
-  return Promise.resolve(newIncident);
+export const createIncident = async (incidentData: Omit<Incident, "id" | "createdAt" | "updatedAt">): Promise<Incident> => {
+  const { data: incident, error: incidentError } = await supabase
+    .from('school_incidents')
+    .insert({
+      title: incidentData.title,
+      date: incidentData.date,
+      time: incidentData.time,
+      location: incidentData.location,
+      type: incidentData.type,
+      sub_type: incidentData.subType,
+      description: incidentData.description,
+      severity: incidentData.severity,
+      status: incidentData.status,
+      reported_by: incidentData.reportedBy,
+      assigned_to: incidentData.assignedTo,
+      investigation_notes: incidentData.investigationNotes,
+      resolution_details: incidentData.resolutionDetails,
+      resolution_date: incidentData.resolutionDate,
+    })
+    .select()
+    .single();
+
+  if (incidentError) throw incidentError;
+
+  if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
+    const { error: involvedError } = await supabase
+      .from('school_incident_involved')
+      .insert(
+        incidentData.involvedPersons.map(person => ({
+          incident_id: incident.id,
+          user_id: person.userId,
+          role: person.role,
+        }))
+      );
+
+    if (involvedError) throw involvedError;
+  }
+
+  return await getIncidentById(incident.id) as Incident;
 };
 
 // Update an incident
-export const updateIncident = (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
-  const index = incidents.findIndex(incident => incident.id === id);
-  
-  if (index !== -1) {
-    incidents[index] = {
-      ...incidents[index],
-      ...incidentData,
-      updatedAt: new Date().toISOString()
-    };
-    return Promise.resolve(incidents[index]);
+export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
+  const updateData: any = {
+    ...(incidentData.title && { title: incidentData.title }),
+    ...(incidentData.date && { date: incidentData.date }),
+    ...(incidentData.time && { time: incidentData.time }),
+    ...(incidentData.location && { location: incidentData.location }),
+    ...(incidentData.type && { type: incidentData.type }),
+    ...(incidentData.subType !== undefined && { sub_type: incidentData.subType }),
+    ...(incidentData.description && { description: incidentData.description }),
+    ...(incidentData.severity && { severity: incidentData.severity }),
+    ...(incidentData.status && { status: incidentData.status }),
+    ...(incidentData.assignedTo !== undefined && { assigned_to: incidentData.assignedTo }),
+    ...(incidentData.investigationNotes !== undefined && { investigation_notes: incidentData.investigationNotes }),
+    ...(incidentData.resolutionDetails !== undefined && { resolution_details: incidentData.resolutionDetails }),
+    ...(incidentData.resolutionDate !== undefined && { resolution_date: incidentData.resolutionDate }),
+  };
+
+  const { error: incidentError } = await supabase
+    .from('school_incidents')
+    .update(updateData)
+    .eq('id', id);
+
+  if (incidentError) throw incidentError;
+
+  if (incidentData.involvedPersons) {
+    // Delete existing involved persons
+    const { error: deleteError } = await supabase
+      .from('school_incident_involved')
+      .delete()
+      .eq('incident_id', id);
+
+    if (deleteError) throw deleteError;
+
+    // Insert new involved persons
+    if (incidentData.involvedPersons.length > 0) {
+      const { error: involvedError } = await supabase
+        .from('school_incident_involved')
+        .insert(
+          incidentData.involvedPersons.map(person => ({
+            incident_id: id,
+            user_id: person.userId,
+            role: person.role,
+          }))
+        );
+
+      if (involvedError) throw involvedError;
+    }
   }
-  
-  return Promise.resolve(undefined);
+
+  return await getIncidentById(id);
 };
 
 // Delete an incident
-export const deleteIncident = (id: string): Promise<boolean> => {
-  const initialLength = incidents.length;
-  incidents = incidents.filter(incident => incident.id !== id);
-  return Promise.resolve(initialLength > incidents.length);
+export const deleteIncident = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('school_incidents')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
 };
 
 // Filter incidents by status
@@ -171,4 +310,3 @@ export const getIncidentSeverityInfo = (severity: IncidentSeverity): { label: st
   
   return severityMap[severity] || { label: "Unknown", color: "bg-gray-100 text-gray-800" };
 };
-

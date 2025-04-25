@@ -404,6 +404,92 @@ export type Database = {
         }
         Relationships: []
       }
+      school_incident_involved: {
+        Row: {
+          incident_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          incident_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          incident_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_incident_involved_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "school_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_incidents: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          investigation_notes: string | null
+          location: string
+          reported_by: string | null
+          resolution_date: string | null
+          resolution_details: string | null
+          severity: string
+          status: string
+          sub_type: string | null
+          time: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          investigation_notes?: string | null
+          location: string
+          reported_by?: string | null
+          resolution_date?: string | null
+          resolution_details?: string | null
+          severity: string
+          status: string
+          sub_type?: string | null
+          time: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          investigation_notes?: string | null
+          location?: string
+          reported_by?: string | null
+          resolution_date?: string | null
+          resolution_details?: string | null
+          severity?: string
+          status?: string
+          sub_type?: string | null
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sections: {
         Row: {
           class_id: string | null
