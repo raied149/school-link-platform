@@ -1,3 +1,4 @@
+
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -100,7 +101,11 @@ export const getIncidents = async (): Promise<Incident[]> => {
     investigationNotes: incident.investigation_notes,
     resolutionDetails: incident.resolution_details,
     resolutionDate: incident.resolution_date,
-    involvedPersons: incident.school_incident_involved || [],
+    // Map the database field names to our TypeScript type field names
+    involvedPersons: (incident.school_incident_involved || []).map(person => ({
+      userId: person.user_id,
+      role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+    })),
     createdAt: incident.created_at,
     updatedAt: incident.updated_at,
   }));
@@ -143,7 +148,11 @@ export const getIncidentById = async (id: string): Promise<Incident | undefined>
     investigationNotes: incident.investigation_notes,
     resolutionDetails: incident.resolution_details,
     resolutionDate: incident.resolution_date,
-    involvedPersons: incident.school_incident_involved || [],
+    // Map the database field names to our TypeScript type field names
+    involvedPersons: (incident.school_incident_involved || []).map(person => ({
+      userId: person.user_id,
+      role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+    })),
     createdAt: incident.created_at,
     updatedAt: incident.updated_at,
   };
@@ -175,6 +184,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
   if (incidentError) throw incidentError;
 
   if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
+    // Map our TypeScript field names to the database field names
     const { error: involvedError } = await supabase
       .from('school_incident_involved')
       .insert(
@@ -225,7 +235,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
 
     if (deleteError) throw deleteError;
 
-    // Insert new involved persons
+    // Insert new involved persons with the correct field mappings
     if (incidentData.involvedPersons.length > 0) {
       const { error: involvedError } = await supabase
         .from('school_incident_involved')
