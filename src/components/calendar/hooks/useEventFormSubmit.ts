@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { SchoolEvent } from "@/types";
+import { SchoolEvent, EventType } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";

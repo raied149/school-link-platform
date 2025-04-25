@@ -9,11 +9,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventType, SchoolEvent } from "@/types";
 import { formSchema } from "./schema";
+import * as z from "zod";
 import { TimeInputFields } from "./TimeInputFields";
 import { format, isBefore, startOfDay } from "date-fns";
 import { TeacherSelectionDialog } from "./TeacherSelectionDialog";
