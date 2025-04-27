@@ -21,6 +21,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSubjectAttendance } from "@/hooks/useSubjectAttendance";
+import { SubjectFilter } from "@/components/attendance/SubjectFilter";
 
 interface StudentAttendanceViewProps {
   classId?: string;
@@ -53,7 +55,15 @@ export function StudentAttendanceView({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedSubject, setSelectedSubject] = useState("all");
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+
+  const {
+    sectionSubjects,
+    attendanceRecords,
+    isLoading,
+    markAttendance
+  } = useSubjectAttendance(sectionId, selectedDate);
 
   // Format current date to string for Supabase query
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -107,26 +117,26 @@ export function StudentAttendanceView({
   });
   
   // Fetch today's attendance records
-  const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ['attendance-records', sectionId, formattedDate],
-    queryFn: async () => {
-      if (!sectionId) return [];
+  // const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
+  //   queryKey: ['attendance-records', sectionId, formattedDate],
+  //   queryFn: async () => {
+  //     if (!sectionId) return [];
       
-      const { data, error } = await supabase
-        .from('student_attendance')
-        .select('*')
-        .eq('section_id', sectionId)
-        .eq('date', formattedDate);
+  //     const { data, error } = await supabase
+  //       .from('student_attendance')
+  //       .select('*')
+  //       .eq('section_id', sectionId)
+  //       .eq('date', formattedDate);
         
-      if (error) {
-        console.error("Error fetching attendance records:", error);
-        throw error;
-      }
+  //     if (error) {
+  //       console.error("Error fetching attendance records:", error);
+  //       throw error;
+  //     }
       
-      return data || [];
-    },
-    enabled: !!sectionId
-  });
+  //     return data || [];
+  //   },
+  //   enabled: !!sectionId
+  // });
 
   // Fetch historical attendance data for percentage calculation
   const { data: attendanceStats = [], isLoading: isLoadingStats } = useQuery({
@@ -167,106 +177,124 @@ export function StudentAttendanceView({
   });
 
   // Mark attendance mutation
-  const markAttendanceMutation = useMutation({
-    mutationFn: async ({ studentId, status }: { studentId: string, status: string }) => {
-      setLoading(prev => ({ ...prev, [studentId]: true }));
+  // const markAttendanceMutation = useMutation({
+  //   mutationFn: async ({ studentId, status }: { studentId: string, status: string }) => {
+  //     setLoading(prev => ({ ...prev, [studentId]: true }));
       
-      // Check if attendance record already exists for this student on this date
-      const { data: existingRecord, error: checkError } = await supabase
-        .from('student_attendance')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('section_id', sectionId!)
-        .eq('date', formattedDate)
-        .maybeSingle();
+  //     // Check if attendance record already exists for this student on this date
+  //     const { data: existingRecord, error: checkError } = await supabase
+  //       .from('student_attendance')
+  //       .select('id')
+  //       .eq('student_id', studentId)
+  //       .eq('section_id', sectionId!)
+  //       .eq('date', formattedDate)
+  //       .maybeSingle();
         
-      if (checkError) {
-        throw checkError;
-      }
+  //     if (checkError) {
+  //       throw checkError;
+  //     }
       
-      if (existingRecord) {
-        // Update existing record
-        const { error } = await supabase
-          .from('student_attendance')
-          .update({ status })
-          .eq('id', existingRecord.id);
+  //     if (existingRecord) {
+  //       // Update existing record
+  //       const { error } = await supabase
+  //         .from('student_attendance')
+  //         .update({ status })
+  //         .eq('id', existingRecord.id);
           
-        if (error) throw error;
+  //       if (error) throw error;
         
-        return { id: existingRecord.id, status };
-      } else {
-        // Create new record
-        const { data, error } = await supabase
-          .from('student_attendance')
-          .insert({
-            student_id: studentId,
-            section_id: sectionId!,
-            date: formattedDate,
-            status
-          })
-          .select()
-          .single();
+  //       return { id: existingRecord.id, status };
+  //     } else {
+  //       // Create new record
+  //       const { data, error } = await supabase
+  //         .from('student_attendance')
+  //         .insert({
+  //           student_id: studentId,
+  //           section_id: sectionId!,
+  //           date: formattedDate,
+  //           status
+  //         })
+  //         .select()
+  //         .single();
           
-        if (error) throw error;
+  //       if (error) throw error;
         
-        return data;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['attendance-records', sectionId, formattedDate] 
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['attendance-stats', sectionId]
-      });
-    },
-    onSettled: (_, __, variables) => {
-      setLoading(prev => ({ ...prev, [variables.studentId]: false }));
-    }
-  });
+  //       return data;
+  //     }
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ 
+  //       queryKey: ['attendance-records', sectionId, formattedDate] 
+  //     });
+  //     queryClient.invalidateQueries({
+  //       queryKey: ['attendance-stats', sectionId]
+  //     });
+  //   },
+  //   onSettled: (_, __, variables) => {
+  //     setLoading(prev => ({ ...prev, [variables.studentId]: false }));
+  //   }
+  // });
 
-  // Combine student data with attendance records
-  const processedData: AttendanceRecord[] = students.map(student => {
-    // Find today's attendance record for this student
-    const attendanceRecord = attendanceRecords.find(
-      record => record.student_id === student.id
+  // Filter attendance records by subject
+  const filteredAttendanceRecords = attendanceRecords.filter(record => 
+    selectedSubject === "all" || record.subject_id === selectedSubject
+  );
+
+  const handleMarkAttendance = (studentId: string, status: string, subjectId: string) => {
+    setLoading(prev => ({ ...prev, [`${studentId}-${subjectId}`]: true }));
+    
+    markAttendance(
+      { studentId, status, subjectId },
+      {
+        onSettled: () => {
+          setLoading(prev => ({ ...prev, [`${studentId}-${subjectId}`]: false }));
+        }
+      }
     );
-    
-    // Get attendance statistics for this student
-    const stats = attendanceStats[student.id] || { present: 0, absent: 0, total: 0 };
-    const percentage = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-    
-    return {
-      studentId: student.id,
-      studentName: `${student.first_name} ${student.last_name}`,
-      admissionNumber: student.student_details?.admission_number || student.id.substring(0, 8),
-      attendanceRecord: attendanceRecord ? {
-        id: attendanceRecord.id,
-        date: attendanceRecord.date,
-        status: attendanceRecord.status
-      } : undefined,
-      attendance: {
-        present: stats.present,
-        absent: stats.absent,
-        total: stats.total,
-        percentage: parseFloat(percentage.toFixed(2))
-      }
-    };
-  });
-
-  // Handler for marking attendance
-  const handleMarkAttendance = (studentId: string, status: string) => {
-    markAttendanceMutation.mutate({ studentId, status });
-    
-    toast({
-      title: "Attendance marked",
-      description: `Student marked as ${status}`
-    });
   };
 
-  const isLoading = isLoadingStudents || isLoadingAttendance || isLoadingStats;
+  // Combine student data with attendance records
+  // const processedData: AttendanceRecord[] = students.map(student => {
+  //   // Find today's attendance record for this student
+  //   const attendanceRecord = attendanceRecords.find(
+  //     record => record.student_id === student.id
+  //   );
+    
+  //   // Get attendance statistics for this student
+  //   const stats = attendanceStats[student.id] || { present: 0, absent: 0, total: 0 };
+  //   const percentage = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+    
+  //   return {
+  //     studentId: student.id,
+  //     studentName: `${student.first_name} ${student.last_name}`,
+  //     admissionNumber: student.student_details?.admission_number || student.id.substring(0, 8),
+  //     attendanceRecord: attendanceRecord ? {
+  //       id: attendanceRecord.id,
+  //       date: attendanceRecord.date,
+  //       status: attendanceRecord.status
+  //     } : undefined,
+  //     attendance: {
+  //       present: stats.present,
+  //       absent: stats.absent,
+  //       total: stats.total,
+  //       percentage: parseFloat(percentage.toFixed(2))
+  //     }
+  //   };
+  // });
 
-  if (isLoading) {
+  // Handler for marking attendance
+  // const handleMarkAttendance = (studentId: string, status: string) => {
+  //   markAttendanceMutation.mutate({ studentId, status });
+    
+  //   toast({
+  //     title: "Attendance marked",
+  //     description: `Student marked as ${status}`
+  //   });
+  // };
+
+  const isLoadingCombined = isLoadingStudents || isLoading || isLoadingStats;
+
+  if (isLoadingCombined) {
     return <div className="text-center py-8">Loading student attendance data...</div>;
   }
 
@@ -288,28 +316,35 @@ export function StudentAttendanceView({
               {format(selectedDate, 'MMMM d, yyyy')}
             </p>
           </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(selectedDate, 'MMMM d, yyyy')}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-4">
+            <SubjectFilter
+              subjects={sectionSubjects}
+              selectedSubject={selectedSubject}
+              onSubjectChange={setSelectedSubject}
+            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-[280px] justify-start text-left font-normal",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, 'MMMM d, yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
 
@@ -319,60 +354,61 @@ export function StudentAttendanceView({
             <TableRow>
               <TableHead>Student ID</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Today's Status</TableHead>
-              <TableHead>Overall Attendance</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {processedData.map((record) => (
-              <TableRow key={record.studentId}>
-                <TableCell>{record.admissionNumber}</TableCell>
-                <TableCell>{record.studentName}</TableCell>
-                <TableCell>
-                  {record.attendanceRecord ? (
-                    <Badge className={
-                      record.attendanceRecord.status === 'present' ? 'bg-green-100 text-green-800' : 
-                      record.attendanceRecord.status === 'absent' ? 'bg-red-100 text-red-800' : 
-                      'bg-yellow-100 text-yellow-800'
-                    }>
-                      {record.attendanceRecord.status}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">Not marked</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span>{record.attendance.percentage}%</span>
-                    <span className="text-xs text-muted-foreground">
-                      {record.attendance.present} present / {record.attendance.absent} absent
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
-                      onClick={() => handleMarkAttendance(record.studentId, 'present')}
-                      disabled={loading[record.studentId]}
-                    >
-                      Present
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
-                      onClick={() => handleMarkAttendance(record.studentId, 'absent')}
-                      disabled={loading[record.studentId]}
-                    >
-                      Absent
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+            {students.map((student) => (
+              sectionSubjects.map((subject) => {
+                const attendanceRecord = filteredAttendanceRecords.find(
+                  record => record.student_id === student.id && record.subject_id === subject.id
+                );
+
+                return (
+                  <TableRow key={`${student.id}-${subject.id}`}>
+                    <TableCell>{student.id.substring(0, 8)}</TableCell>
+                    <TableCell>{student.first_name} {student.last_name}</TableCell>
+                    <TableCell>{subject.name} ({subject.code})</TableCell>
+                    <TableCell>
+                      {attendanceRecord ? (
+                        <Badge className={
+                          attendanceRecord.status === 'present' ? 'bg-green-100 text-green-800' : 
+                          attendanceRecord.status === 'absent' ? 'bg-red-100 text-red-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }>
+                          {attendanceRecord.status}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Not marked</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
+                          onClick={() => handleMarkAttendance(student.id, 'present', subject.id)}
+                          disabled={loading[`${student.id}-${subject.id}`]}
+                        >
+                          Present
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                          onClick={() => handleMarkAttendance(student.id, 'absent', subject.id)}
+                          disabled={loading[`${student.id}-${subject.id}`]}
+                        >
+                          Absent
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ))}
           </TableBody>
         </Table>

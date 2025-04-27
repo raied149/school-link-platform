@@ -539,6 +539,7 @@ export type Database = {
           section_id: string
           status: string
           student_id: string
+          subject_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -549,6 +550,7 @@ export type Database = {
           section_id: string
           status: string
           student_id: string
+          subject_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -559,6 +561,7 @@ export type Database = {
           section_id?: string
           status?: string
           student_id?: string
+          subject_id?: string | null
         }
         Relationships: [
           {
@@ -580,6 +583,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
