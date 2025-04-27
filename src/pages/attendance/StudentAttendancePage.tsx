@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -18,6 +19,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { SubjectFilter } from "@/components/attendance/SubjectFilter";
 
 const StudentAttendancePage = () => {
   const queryClient = useQueryClient();
@@ -26,6 +28,7 @@ const StudentAttendancePage = () => {
   const [gradeFilter, setGradeFilter] = useState("all-grades");
   const [sectionFilter, setSectionFilter] = useState("all-sections");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -67,6 +70,43 @@ const StudentAttendancePage = () => {
       return data || [];
     },
     enabled: !!classes.length
+  });
+
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects', sectionFilter],
+    queryFn: async () => {
+      if (sectionFilter === 'all-sections') {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('timetable')
+        .select(`
+          subject_id,
+          subjects (
+            id,
+            name,
+            code
+          )
+        `)
+        .eq('section_id', sectionFilter)
+        .not('subject_id', 'is', null);
+
+      if (error) {
+        console.error("Error fetching subjects:", error);
+        throw error;
+      }
+
+      // Get unique subjects
+      const uniqueSubjects = Array.from(
+        new Set(data.map(s => s.subject_id))
+      ).map(subjectId => 
+        data.find(s => s.subject_id === subjectId)?.subjects
+      ).filter(Boolean);
+
+      return uniqueSubjects;
+    },
+    enabled: sectionFilter !== 'all-sections'
   });
 
   const { data: studentsData = [], isLoading } = useQuery({
@@ -112,12 +152,18 @@ const StudentAttendancePage = () => {
   });
 
   const { data: attendanceRecords = [] } = useQuery({
-    queryKey: ['student-attendance', formattedDate],
+    queryKey: ['student-attendance', formattedDate, selectedSubject],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('student_attendance')
         .select('*')
         .eq('date', formattedDate);
+
+      if (selectedSubject !== 'all') {
+        query = query.eq('subject_id', selectedSubject);
+      }
+        
+      const { data, error } = await query;
         
       if (error) {
         console.error("Error fetching attendance records:", error);
@@ -131,9 +177,21 @@ const StudentAttendancePage = () => {
 
   const students = studentsData.map(student => {
     const section = student.student_sections?.[0]?.sections;
-    const attendanceRecord = attendanceRecords.find(
-      record => record.student_id === student.id && record.date === formattedDate
-    );
+    let attendanceRecord;
+
+    if (selectedSubject === 'all') {
+      // If no subject filter is applied, just find any attendance record for that day
+      attendanceRecord = attendanceRecords.find(
+        record => record.student_id === student.id && record.date === formattedDate
+      );
+    } else {
+      // If subject filter is applied, find attendance record for that subject
+      attendanceRecord = attendanceRecords.find(
+        record => record.student_id === student.id && 
+                  record.date === formattedDate && 
+                  record.subject_id === selectedSubject
+      );
+    }
 
     return {
       ...student,
@@ -165,10 +223,16 @@ const StudentAttendancePage = () => {
   });
 
   const markAttendanceMutation = useMutation({
-    mutationFn: async ({ studentId, status, sectionId }: { 
-      studentId: string, 
-      status: 'present' | 'absent' | 'late' | 'leave',
-      sectionId: string
+    mutationFn: async ({ 
+      studentId, 
+      status, 
+      sectionId,
+      subjectId
+    }: { 
+      studentId: string; 
+      status: 'present' | 'absent' | 'late' | 'leave';
+      sectionId: string;
+      subjectId?: string;
     }) => {
       if (!sectionId) {
         throw new Error("Student is not assigned to a section");
@@ -179,6 +243,8 @@ const StudentAttendancePage = () => {
         .select('id')
         .eq('student_id', studentId)
         .eq('date', formattedDate)
+        .eq('section_id', sectionId)
+        .eq(subjectId ? 'subject_id' : 'id', subjectId || '')
         .maybeSingle();
         
       if (existingRecord) {
@@ -191,14 +257,20 @@ const StudentAttendancePage = () => {
         if (error) throw error;
         return data;
       } else {
+        const record: any = {
+          student_id: studentId,
+          section_id: sectionId,
+          date: formattedDate,
+          status
+        };
+
+        if (subjectId) {
+          record.subject_id = subjectId;
+        }
+
         const { data, error } = await supabase
           .from('student_attendance')
-          .insert({
-            student_id: studentId,
-            section_id: sectionId,
-            date: formattedDate,
-            status
-          })
+          .insert(record)
           .select();
           
         if (error) throw error;
@@ -206,7 +278,7 @@ const StudentAttendancePage = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-attendance', formattedDate] });
+      queryClient.invalidateQueries({ queryKey: ['student-attendance', formattedDate, selectedSubject] });
       toast({
         title: "Attendance recorded",
         description: "The attendance has been saved successfully."
@@ -236,7 +308,8 @@ const StudentAttendancePage = () => {
     markAttendanceMutation.mutate({ 
       studentId, 
       status, 
-      sectionId: student.sectionId 
+      sectionId: student.sectionId,
+      subjectId: selectedSubject === 'all' ? undefined : selectedSubject
     });
   };
 
@@ -323,6 +396,14 @@ const StudentAttendancePage = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            {sectionFilter !== 'all-sections' && (
+              <SubjectFilter 
+                subjects={subjects} 
+                selectedSubject={selectedSubject} 
+                onSubjectChange={setSelectedSubject} 
+              />
+            )}
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
