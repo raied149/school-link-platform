@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -10,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Download } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +72,7 @@ const StudentAttendancePage = () => {
     enabled: !!classes.length
   });
 
-  const { data: subjects = [] } = useQuery({
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
     queryKey: ['subjects', sectionFilter],
     queryFn: async () => {
       if (sectionFilter === 'all-sections') {
@@ -103,6 +104,7 @@ const StudentAttendancePage = () => {
         data.find(s => s.subject_id === subjectId)?.subjects
       ).filter(Boolean);
 
+      console.log("Fetched subjects:", uniqueSubjects);
       return uniqueSubjects;
     },
     enabled: sectionFilter !== 'all-sections'
@@ -150,8 +152,8 @@ const StudentAttendancePage = () => {
     enabled: true
   });
 
-  const { data: attendanceRecords = [] } = useQuery({
-    queryKey: ['student-attendance', formattedDate, selectedSubject],
+  const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
+    queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter],
     queryFn: async () => {
       let query = supabase
         .from('student_attendance')
@@ -161,6 +163,10 @@ const StudentAttendancePage = () => {
       if (selectedSubject !== 'all') {
         query = query.eq('subject_id', selectedSubject);
       }
+      
+      if (sectionFilter !== 'all-sections') {
+        query = query.eq('section_id', sectionFilter);
+      }
         
       const { data, error } = await query;
         
@@ -169,10 +175,16 @@ const StudentAttendancePage = () => {
         throw error;
       }
       
+      console.log("Fetched attendance records:", data);
       return data || [];
     },
     enabled: true
   });
+
+  // Reset selected subject when section changes
+  useEffect(() => {
+    setSelectedSubject('all');
+  }, [sectionFilter]);
 
   const students = studentsData.map(student => {
     const section = student.student_sections?.[0]?.sections;
@@ -336,7 +348,9 @@ const StudentAttendancePage = () => {
     }
   };
 
-  if (isLoading) {
+  const isLoadingCombined = isLoading || isLoadingAttendance || isLoadingSubjects;
+
+  if (isLoadingCombined) {
     return <div className="text-center py-8">Loading students...</div>;
   }
 
