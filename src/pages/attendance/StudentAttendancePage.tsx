@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -406,7 +405,7 @@ const StudentAttendancePage = () => {
               </SelectContent>
             </Select>
 
-            {sectionFilter !== 'all-sections' && (
+            {sectionFilter !== 'all-sections' && subjects.length > 0 && (
               <SubjectFilter 
                 subjects={subjects} 
                 selectedSubject={selectedSubject} 

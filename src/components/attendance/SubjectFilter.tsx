@@ -13,18 +13,20 @@ interface SubjectFilterProps {
 
 export function SubjectFilter({ subjects, selectedSubject, onSubjectChange }: SubjectFilterProps) {
   return (
-    <Select value={selectedSubject} onValueChange={onSubjectChange}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Select Subject" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All Subjects</SelectItem>
-        {subjects.map((subject) => (
-          <SelectItem key={subject.id} value={subject.id}>
-            {subject.name} ({subject.code})
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="subject-filter">
+      <Select value={selectedSubject} onValueChange={onSubjectChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Select Subject" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Subjects</SelectItem>
+          {subjects && subjects.map((subject) => (
+            <SelectItem key={subject.id} value={subject.id}>
+              {subject.name} ({subject.code})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
