@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -33,6 +32,7 @@ const StudentAttendancePage = () => {
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
+  // Fetch classes
   const { data: classes = [] } = useQuery({
     queryKey: ['classes'],
     queryFn: async () => {
@@ -49,6 +49,7 @@ const StudentAttendancePage = () => {
     }
   });
 
+  // Fetch sections based on grade filter
   const { data: sections = [] } = useQuery({
     queryKey: ['sections', gradeFilter],
     queryFn: async () => {
@@ -72,45 +73,83 @@ const StudentAttendancePage = () => {
     enabled: !!classes.length
   });
 
+  // Fetch subjects based on grade or section filter
   const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
-    queryKey: ['subjects', sectionFilter],
+    queryKey: ['subjects', gradeFilter, sectionFilter],
     queryFn: async () => {
-      if (sectionFilter === 'all-sections') {
+      // If both grade and section are set to "all", don't fetch subjects
+      if (gradeFilter === 'all-grades' && sectionFilter === 'all-sections') {
         return [];
       }
 
-      const { data, error } = await supabase
-        .from('timetable')
-        .select(`
-          subject_id,
-          subjects (
-            id,
-            name,
-            code
-          )
-        `)
-        .eq('section_id', sectionFilter)
-        .not('subject_id', 'is', null);
+      // If a specific section is selected, fetch subjects for that section
+      if (sectionFilter !== 'all-sections') {
+        const { data, error } = await supabase
+          .from('timetable')
+          .select(`
+            subject_id,
+            subjects (
+              id,
+              name,
+              code
+            )
+          `)
+          .eq('section_id', sectionFilter)
+          .not('subject_id', 'is', null);
 
-      if (error) {
-        console.error("Error fetching subjects:", error);
-        throw error;
+        if (error) {
+          console.error("Error fetching subjects for section:", error);
+          throw error;
+        }
+
+        // Get unique subjects for this section
+        const uniqueSubjects = Array.from(
+          new Set(data.map(s => s.subject_id))
+        ).map(subjectId => 
+          data.find(s => s.subject_id === subjectId)?.subjects
+        ).filter(Boolean);
+
+        console.log("Fetched subjects for section:", uniqueSubjects);
+        return uniqueSubjects;
+      } 
+      // If only a grade is selected, fetch subjects for the grade
+      else if (gradeFilter !== 'all-grades') {
+        const { data: subjectClasses, error } = await supabase
+          .from('subject_classes')
+          .select(`
+            subject_id,
+            subjects (
+              id,
+              name,
+              code
+            )
+          `)
+          .eq('class_id', gradeFilter);
+
+        if (error) {
+          console.error("Error fetching subjects for grade:", error);
+          throw error;
+        }
+
+        // Get unique subjects for this grade
+        const uniqueSubjects = Array.from(
+          new Set(subjectClasses.map(s => s.subject_id))
+        ).map(subjectId => 
+          subjectClasses.find(s => s.subject_id === subjectId)?.subjects
+        ).filter(Boolean);
+
+        console.log("Fetched subjects for grade:", uniqueSubjects);
+        return uniqueSubjects;
       }
 
-      // Get unique subjects
-      const uniqueSubjects = Array.from(
-        new Set(data.map(s => s.subject_id))
-      ).map(subjectId => 
-        data.find(s => s.subject_id === subjectId)?.subjects
-      ).filter(Boolean);
-
-      console.log("Fetched subjects:", uniqueSubjects);
-      return uniqueSubjects;
+      return [];
     },
-    enabled: sectionFilter !== 'all-sections'
+    enabled: gradeFilter !== 'all-grades' || sectionFilter !== 'all-sections'
   });
 
+  // Fetch students
   const { data: studentsData = [], isLoading } = useQuery({
+    // ... keep existing code (student data query implementation)
     queryKey: ['students-with-details', gradeFilter, sectionFilter],
     queryFn: async () => {
       console.log("Fetching students for attendance page");
@@ -152,21 +191,26 @@ const StudentAttendancePage = () => {
     enabled: true
   });
 
+  // Fetch attendance records
   const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter],
+    queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter, gradeFilter],
     queryFn: async () => {
+      // Base query
       let query = supabase
         .from('student_attendance')
         .select('*')
         .eq('date', formattedDate);
 
+      // Apply subject filter if not "all"
       if (selectedSubject !== 'all') {
         query = query.eq('subject_id', selectedSubject);
       }
       
+      // Apply section filter if a specific section is selected
       if (sectionFilter !== 'all-sections') {
         query = query.eq('section_id', sectionFilter);
       }
+      // If all sections but specific grade is selected, we'll filter client-side
         
       const { data, error } = await query;
         
@@ -181,12 +225,14 @@ const StudentAttendancePage = () => {
     enabled: true
   });
 
-  // Reset selected subject when section changes
+  // Reset selected subject when grade or section changes
   useEffect(() => {
     setSelectedSubject('all');
-  }, [sectionFilter]);
+  }, [gradeFilter, sectionFilter]);
 
+  // Map students with their attendance
   const students = studentsData.map(student => {
+    // ... keep existing code (student mapping with attendance records)
     const section = student.student_sections?.[0]?.sections;
     let attendanceRecord;
 
@@ -214,7 +260,9 @@ const StudentAttendancePage = () => {
     };
   });
 
+  // Filter students based on search, grade, section, and status
   const filteredStudents = students.filter((student) => {
+    // ... keep existing code (student filtering logic)
     const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
     const matchesSearch = searchTerm === "" || 
                           fullName.includes(searchTerm.toLowerCase()) || 
@@ -233,7 +281,9 @@ const StudentAttendancePage = () => {
     return matchesSearch && matchesGrade && matchesSection && matchesStatus;
   });
 
+  // Mark attendance mutation
   const markAttendanceMutation = useMutation({
+    // ... keep existing code (attendance marking mutation)
     mutationFn: async ({ 
       studentId, 
       status, 
@@ -315,6 +365,7 @@ const StudentAttendancePage = () => {
   });
 
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'leave') => {
+    // ... keep existing code (attendance marking handler)
     const student = students.find(s => s.id === studentId);
     if (!student || !student.sectionId) {
       toast({
@@ -334,6 +385,7 @@ const StudentAttendancePage = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    // ... keep existing code (status badge implementation)
     switch(status) {
       case 'present':
         return <Badge variant="outline" className="bg-green-50 text-green-600">Present</Badge>;
@@ -353,6 +405,9 @@ const StudentAttendancePage = () => {
   if (isLoadingCombined) {
     return <div className="text-center py-8">Loading students...</div>;
   }
+
+  // Determine if subject filter should be shown (when either grade or section is selected)
+  const showSubjectFilter = (gradeFilter !== 'all-grades' || sectionFilter !== 'all-sections') && subjects.length > 0;
 
   return (
     <div className="space-y-6">
@@ -419,11 +474,12 @@ const StudentAttendancePage = () => {
               </SelectContent>
             </Select>
 
-            {sectionFilter !== 'all-sections' && subjects.length > 0 && (
+            {showSubjectFilter && (
               <SubjectFilter 
                 subjects={subjects} 
                 selectedSubject={selectedSubject} 
-                onSubjectChange={setSelectedSubject} 
+                onSubjectChange={setSelectedSubject}
+                isLoading={isLoadingSubjects}
               />
             )}
 

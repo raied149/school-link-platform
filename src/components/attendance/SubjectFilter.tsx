@@ -9,14 +9,20 @@ interface SubjectFilterProps {
   }>;
   selectedSubject: string;
   onSubjectChange: (subjectId: string) => void;
+  isLoading?: boolean;
 }
 
-export function SubjectFilter({ subjects, selectedSubject, onSubjectChange }: SubjectFilterProps) {
+export function SubjectFilter({ 
+  subjects, 
+  selectedSubject, 
+  onSubjectChange,
+  isLoading = false 
+}: SubjectFilterProps) {
   return (
     <div className="subject-filter">
-      <Select value={selectedSubject} onValueChange={onSubjectChange}>
+      <Select value={selectedSubject} onValueChange={onSubjectChange} disabled={isLoading}>
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Select Subject" />
+          <SelectValue placeholder={isLoading ? "Loading..." : "Select Subject"} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Subjects</SelectItem>
