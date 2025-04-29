@@ -238,13 +238,22 @@ const StudentAttendancePage = () => {
         throw new Error("Student is not assigned to a section");
       }
 
+      // Query parameters for finding existing records
+      const queryParams: any = {
+        student_id: studentId,
+        date: formattedDate,
+        section_id: sectionId
+      };
+      
+      // Only include subject_id in query if it's provided
+      if (subjectId && subjectId !== 'all') {
+        queryParams.subject_id = subjectId;
+      }
+
       const { data: existingRecord } = await supabase
         .from('student_attendance')
         .select('id')
-        .eq('student_id', studentId)
-        .eq('date', formattedDate)
-        .eq('section_id', sectionId)
-        .eq(subjectId ? 'subject_id' : 'id', subjectId || '')
+        .match(queryParams)
         .maybeSingle();
         
       if (existingRecord) {
@@ -264,7 +273,7 @@ const StudentAttendancePage = () => {
           status
         };
 
-        if (subjectId) {
+        if (subjectId && subjectId !== 'all') {
           record.subject_id = subjectId;
         }
 
