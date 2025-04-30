@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -78,7 +79,7 @@ const StudentAttendancePage = () => {
     queryKey: ['subjects', gradeFilter, sectionFilter],
     queryFn: async () => {
       // If both grade and section are set to "all", don't fetch subjects
-      if (gradeFilter === 'all-grades' && sectionFilter === 'all-sections') {
+      if (gradeFilter === 'all-grades') {
         return [];
       }
 
@@ -113,7 +114,7 @@ const StudentAttendancePage = () => {
         return uniqueSubjects;
       } 
       // If only a grade is selected, fetch subjects for the grade
-      else if (gradeFilter !== 'all-grades') {
+      else {
         const { data: subjectClasses, error } = await supabase
           .from('subject_classes')
           .select(`
@@ -141,10 +142,8 @@ const StudentAttendancePage = () => {
         console.log("Fetched subjects for grade:", uniqueSubjects);
         return uniqueSubjects;
       }
-
-      return [];
     },
-    enabled: gradeFilter !== 'all-grades' || sectionFilter !== 'all-sections'
+    enabled: gradeFilter !== 'all-grades'
   });
 
   // Fetch students
@@ -195,6 +194,8 @@ const StudentAttendancePage = () => {
   const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
     queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter, gradeFilter],
     queryFn: async () => {
+      console.log("Fetching attendance records with subject:", selectedSubject);
+      
       // Base query
       let query = supabase
         .from('student_attendance')
@@ -283,7 +284,6 @@ const StudentAttendancePage = () => {
 
   // Mark attendance mutation
   const markAttendanceMutation = useMutation({
-    // ... keep existing code (attendance marking mutation)
     mutationFn: async ({ 
       studentId, 
       status, 
@@ -407,7 +407,7 @@ const StudentAttendancePage = () => {
   }
 
   // Determine if subject filter should be shown (when either grade or section is selected)
-  const showSubjectFilter = (gradeFilter !== 'all-grades' || sectionFilter !== 'all-sections') && subjects.length > 0;
+  const showSubjectFilter = gradeFilter !== 'all-grades' && subjects.length > 0;
 
   return (
     <div className="space-y-6">

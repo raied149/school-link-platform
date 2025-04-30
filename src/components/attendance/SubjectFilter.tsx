@@ -1,5 +1,6 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 interface SubjectFilterProps {
   subjects: Array<{
@@ -22,7 +23,14 @@ export function SubjectFilter({
     <div className="subject-filter">
       <Select value={selectedSubject} onValueChange={onSubjectChange} disabled={isLoading}>
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder={isLoading ? "Loading..." : "Select Subject"} />
+          {isLoading ? (
+            <div className="flex items-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Loading...</span>
+            </div>
+          ) : (
+            <SelectValue placeholder="Select Subject" />
+          )}
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Subjects</SelectItem>

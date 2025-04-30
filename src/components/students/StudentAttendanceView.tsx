@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import {
@@ -115,28 +116,6 @@ export function StudentAttendanceView({
     },
     enabled: !!sectionId
   });
-  
-  // Fetch today's attendance records
-  // const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-  //   queryKey: ['attendance-records', sectionId, formattedDate],
-  //   queryFn: async () => {
-  //     if (!sectionId) return [];
-      
-  //     const { data, error } = await supabase
-  //       .from('student_attendance')
-  //       .select('*')
-  //       .eq('section_id', sectionId)
-  //       .eq('date', formattedDate);
-        
-  //     if (error) {
-  //       console.error("Error fetching attendance records:", error);
-  //       throw error;
-  //     }
-      
-  //     return data || [];
-  //   },
-  //   enabled: !!sectionId
-  // });
 
   // Fetch historical attendance data for percentage calculation
   const { data: attendanceStats = [], isLoading: isLoadingStats } = useQuery({
@@ -176,65 +155,6 @@ export function StudentAttendanceView({
     enabled: !!sectionId
   });
 
-  // Mark attendance mutation
-  // const markAttendanceMutation = useMutation({
-  //   mutationFn: async ({ studentId, status }: { studentId: string, status: string }) => {
-  //     setLoading(prev => ({ ...prev, [studentId]: true }));
-      
-  //     // Check if attendance record already exists for this student on this date
-  //     const { data: existingRecord, error: checkError } = await supabase
-  //       .from('student_attendance')
-  //       .select('id')
-  //       .eq('student_id', studentId)
-  //       .eq('section_id', sectionId!)
-  //       .eq('date', formattedDate)
-  //       .maybeSingle();
-        
-  //     if (checkError) {
-  //       throw checkError;
-  //     }
-      
-  //     if (existingRecord) {
-  //       // Update existing record
-  //       const { error } = await supabase
-  //         .from('student_attendance')
-  //         .update({ status })
-  //         .eq('id', existingRecord.id);
-          
-  //       if (error) throw error;
-        
-  //       return { id: existingRecord.id, status };
-  //     } else {
-  //       // Create new record
-  //       const { data, error } = await supabase
-  //         .from('student_attendance')
-  //         .insert({
-  //           student_id: studentId,
-  //           section_id: sectionId!,
-  //           date: formattedDate,
-  //           status
-  //         })
-  //         .select()
-  //         .single();
-          
-  //       if (error) throw error;
-        
-  //       return data;
-  //     }
-  //   },
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ 
-  //       queryKey: ['attendance-records', sectionId, formattedDate] 
-  //     });
-  //     queryClient.invalidateQueries({
-  //       queryKey: ['attendance-stats', sectionId]
-  //     });
-  //   },
-  //   onSettled: (_, __, variables) => {
-  //     setLoading(prev => ({ ...prev, [variables.studentId]: false }));
-  //   }
-  // });
-
   // Filter attendance records by subject
   const filteredAttendanceRecords = attendanceRecords.filter(record => 
     selectedSubject === "all" || record.subject_id === selectedSubject
@@ -252,45 +172,6 @@ export function StudentAttendanceView({
       }
     );
   };
-
-  // Combine student data with attendance records
-  // const processedData: AttendanceRecord[] = students.map(student => {
-  //   // Find today's attendance record for this student
-  //   const attendanceRecord = attendanceRecords.find(
-  //     record => record.student_id === student.id
-  //   );
-    
-  //   // Get attendance statistics for this student
-  //   const stats = attendanceStats[student.id] || { present: 0, absent: 0, total: 0 };
-  //   const percentage = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-    
-  //   return {
-  //     studentId: student.id,
-  //     studentName: `${student.first_name} ${student.last_name}`,
-  //     admissionNumber: student.student_details?.admission_number || student.id.substring(0, 8),
-  //     attendanceRecord: attendanceRecord ? {
-  //       id: attendanceRecord.id,
-  //       date: attendanceRecord.date,
-  //       status: attendanceRecord.status
-  //     } : undefined,
-  //     attendance: {
-  //       present: stats.present,
-  //       absent: stats.absent,
-  //       total: stats.total,
-  //       percentage: parseFloat(percentage.toFixed(2))
-  //     }
-  //   };
-  // });
-
-  // Handler for marking attendance
-  // const handleMarkAttendance = (studentId: string, status: string) => {
-  //   markAttendanceMutation.mutate({ studentId, status });
-    
-  //   toast({
-  //     title: "Attendance marked",
-  //     description: `Student marked as ${status}`
-  //   });
-  // };
 
   const isLoadingCombined = isLoadingStudents || isLoading || isLoadingStats;
 
