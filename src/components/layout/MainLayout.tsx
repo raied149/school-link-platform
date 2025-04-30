@@ -39,6 +39,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: Clock, label: 'Timetables', path: '/timetables' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
+    { icon: FileText, label: 'Notes', path: '/notes' },
     { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
   ];
 

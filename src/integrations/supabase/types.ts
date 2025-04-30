@@ -377,6 +377,107 @@ export type Database = {
           },
         ]
       }
+      note_classes: {
+        Row: {
+          class_id: string
+          note_id: string
+        }
+        Insert: {
+          class_id: string
+          note_id: string
+        }
+        Update: {
+          class_id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_classes_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_sections: {
+        Row: {
+          note_id: string
+          section_id: string
+        }
+        Insert: {
+          note_id: string
+          section_id: string
+        }
+        Update: {
+          note_id?: string
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_sections_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_sections_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          google_drive_link: string
+          id: string
+          share_with_all_grades: boolean | null
+          share_with_all_sections_in_grades: boolean | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          google_drive_link: string
+          id?: string
+          share_with_all_grades?: boolean | null
+          share_with_all_sections_in_grades?: boolean | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          google_drive_link?: string
+          id?: string
+          share_with_all_grades?: boolean | null
+          share_with_all_sections_in_grades?: boolean | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
