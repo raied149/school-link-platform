@@ -37,3 +37,22 @@ export const mapWeekDayToNumber = (day: WeekDay): number => {
   const days: WeekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   return days.indexOf(day);
 };
+
+/**
+ * Maps a day name to the day number used in the timetable table
+ * The timetable table uses 1-7 for Monday-Sunday (ISO weekday numbers)
+ * @param day WeekDay string
+ * @returns Day number (1-7)
+ */
+export const mapDayToTimetableNumber = (day: WeekDay): number => {
+  const dayMap: Record<WeekDay, number> = {
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6,
+    'Sunday': 0
+  };
+  return dayMap[day];
+};

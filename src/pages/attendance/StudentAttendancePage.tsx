@@ -19,7 +19,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { SubjectFilter } from "@/components/attendance/SubjectFilter";
+import { ScheduledSubjectSelector } from "@/components/attendance/ScheduledSubjectSelector";
 
 const StudentAttendancePage = () => {
   const queryClient = useQueryClient();
@@ -28,7 +28,7 @@ const StudentAttendancePage = () => {
   const [gradeFilter, setGradeFilter] = useState("all-grades");
   const [sectionFilter, setSectionFilter] = useState("all-sections");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedSubject, setSelectedSubject] = useState("all");
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -74,83 +74,19 @@ const StudentAttendancePage = () => {
     enabled: !!classes.length
   });
 
-  // Fetch subjects based on grade or section filter
-  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
-    queryKey: ['subjects', gradeFilter, sectionFilter],
-    queryFn: async () => {
-      // If both grade and section are set to "all", don't fetch subjects
-      if (gradeFilter === 'all-grades') {
-        return [];
-      }
-
-      // If a specific section is selected, fetch subjects for that section
-      if (sectionFilter !== 'all-sections') {
-        const { data, error } = await supabase
-          .from('timetable')
-          .select(`
-            subject_id,
-            subjects (
-              id,
-              name,
-              code
-            )
-          `)
-          .eq('section_id', sectionFilter)
-          .not('subject_id', 'is', null);
-
-        if (error) {
-          console.error("Error fetching subjects for section:", error);
-          throw error;
-        }
-
-        // Get unique subjects for this section
-        const uniqueSubjects = Array.from(
-          new Set(data.map(s => s.subject_id))
-        ).map(subjectId => 
-          data.find(s => s.subject_id === subjectId)?.subjects
-        ).filter(Boolean);
-
-        console.log("Fetched subjects for section:", uniqueSubjects);
-        return uniqueSubjects;
-      } 
-      // If only a grade is selected, fetch subjects for the grade
-      else {
-        const { data: subjectClasses, error } = await supabase
-          .from('subject_classes')
-          .select(`
-            subject_id,
-            subjects (
-              id,
-              name,
-              code
-            )
-          `)
-          .eq('class_id', gradeFilter);
-
-        if (error) {
-          console.error("Error fetching subjects for grade:", error);
-          throw error;
-        }
-
-        // Get unique subjects for this grade
-        const uniqueSubjects = Array.from(
-          new Set(subjectClasses.map(s => s.subject_id))
-        ).map(subjectId => 
-          subjectClasses.find(s => s.subject_id === subjectId)?.subjects
-        ).filter(Boolean);
-
-        console.log("Fetched subjects for grade:", uniqueSubjects);
-        return uniqueSubjects;
-      }
-    },
-    enabled: gradeFilter !== 'all-grades'
-  });
+  // Reset selected subject when grade or section changes
+  useEffect(() => {
+    setSelectedSubject(null);
+  }, [gradeFilter, sectionFilter, selectedDate]);
 
   // Fetch students
   const { data: studentsData = [], isLoading } = useQuery({
-    // ... keep existing code (student data query implementation)
-    queryKey: ['students-with-details', gradeFilter, sectionFilter],
+    queryKey: ['students-with-details', sectionFilter],
     queryFn: async () => {
+      if (sectionFilter === 'all-sections') {
+        return [];
+      }
+      
       console.log("Fetching students for attendance page");
       
       let query = supabase.from('profiles')
@@ -169,14 +105,8 @@ const StudentAttendancePage = () => {
             )
           )
         `)
-        .eq('role', 'student');
-        
-      if (sectionFilter !== 'all-sections') {
-        query = query.eq('student_sections.section_id', sectionFilter);
-      } else if (gradeFilter !== 'all-grades') {
-        // This is more complex and would require a subquery in SQL
-        // For now, we'll filter in the client side
-      }
+        .eq('role', 'student')
+        .eq('student_sections.section_id', sectionFilter);
       
       const { data: students, error } = await query;
         
@@ -187,31 +117,26 @@ const StudentAttendancePage = () => {
       
       return students || [];
     },
-    enabled: true
+    enabled: sectionFilter !== 'all-sections'
   });
 
   // Fetch attendance records
   const { data: attendanceRecords = [], isLoading: isLoadingAttendance } = useQuery({
-    queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter, gradeFilter],
+    queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter],
     queryFn: async () => {
+      if (sectionFilter === 'all-sections' || !selectedSubject) {
+        return [];
+      }
+      
       console.log("Fetching attendance records with subject:", selectedSubject);
       
       // Base query
-      let query = supabase
+      const query = supabase
         .from('student_attendance')
         .select('*')
-        .eq('date', formattedDate);
-
-      // Apply subject filter if not "all"
-      if (selectedSubject !== 'all') {
-        query = query.eq('subject_id', selectedSubject);
-      }
-      
-      // Apply section filter if a specific section is selected
-      if (sectionFilter !== 'all-sections') {
-        query = query.eq('section_id', sectionFilter);
-      }
-      // If all sections but specific grade is selected, we'll filter client-side
+        .eq('date', formattedDate)
+        .eq('section_id', sectionFilter)
+        .eq('subject_id', selectedSubject);
         
       const { data, error } = await query;
         
@@ -223,33 +148,19 @@ const StudentAttendancePage = () => {
       console.log("Fetched attendance records:", data);
       return data || [];
     },
-    enabled: true
+    enabled: sectionFilter !== 'all-sections' && !!selectedSubject
   });
-
-  // Reset selected subject when grade or section changes
-  useEffect(() => {
-    setSelectedSubject('all');
-  }, [gradeFilter, sectionFilter]);
 
   // Map students with their attendance
   const students = studentsData.map(student => {
-    // ... keep existing code (student mapping with attendance records)
     const section = student.student_sections?.[0]?.sections;
-    let attendanceRecord;
-
-    if (selectedSubject === 'all') {
-      // If no subject filter is applied, just find any attendance record for that day
-      attendanceRecord = attendanceRecords.find(
-        record => record.student_id === student.id && record.date === formattedDate
-      );
-    } else {
-      // If subject filter is applied, find attendance record for that subject
-      attendanceRecord = attendanceRecords.find(
-        record => record.student_id === student.id && 
-                  record.date === formattedDate && 
-                  record.subject_id === selectedSubject
-      );
-    }
+    
+    // Find attendance record for the selected subject
+    const attendanceRecord = attendanceRecords.find(
+      record => record.student_id === student.id && 
+                record.date === formattedDate && 
+                record.subject_id === selectedSubject
+    );
 
     return {
       ...student,
@@ -261,17 +172,12 @@ const StudentAttendancePage = () => {
     };
   });
 
-  // Filter students based on search, grade, section, and status
+  // Filter students based on search and status
   const filteredStudents = students.filter((student) => {
-    // ... keep existing code (student filtering logic)
     const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
     const matchesSearch = searchTerm === "" || 
                           fullName.includes(searchTerm.toLowerCase()) || 
                           student.id.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesGrade = gradeFilter === "all-grades" || student.classId === gradeFilter;
-    
-    const matchesSection = sectionFilter === "all-sections" || student.sectionId === sectionFilter;
     
     const matchesStatus = statusFilter === "all" || 
                           (statusFilter === "present" && student.attendance === "present") ||
@@ -279,7 +185,7 @@ const StudentAttendancePage = () => {
                           (statusFilter === "late" && student.attendance === "late") ||
                           (statusFilter === "leave" && student.attendance === "leave");
     
-    return matchesSearch && matchesGrade && matchesSection && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   // Mark attendance mutation
@@ -293,23 +199,19 @@ const StudentAttendancePage = () => {
       studentId: string; 
       status: 'present' | 'absent' | 'late' | 'leave';
       sectionId: string;
-      subjectId?: string;
+      subjectId: string;
     }) => {
-      if (!sectionId) {
-        throw new Error("Student is not assigned to a section");
+      if (!sectionId || !subjectId) {
+        throw new Error("Missing required information");
       }
 
       // Query parameters for finding existing records
-      const queryParams: any = {
+      const queryParams = {
         student_id: studentId,
         date: formattedDate,
-        section_id: sectionId
+        section_id: sectionId,
+        subject_id: subjectId
       };
-      
-      // Only include subject_id in query if it's provided
-      if (subjectId && subjectId !== 'all') {
-        queryParams.subject_id = subjectId;
-      }
 
       const { data: existingRecord } = await supabase
         .from('student_attendance')
@@ -327,16 +229,13 @@ const StudentAttendancePage = () => {
         if (error) throw error;
         return data;
       } else {
-        const record: any = {
+        const record = {
           student_id: studentId,
           section_id: sectionId,
           date: formattedDate,
-          status
+          status,
+          subject_id: subjectId
         };
-
-        if (subjectId && subjectId !== 'all') {
-          record.subject_id = subjectId;
-        }
 
         const { data, error } = await supabase
           .from('student_attendance')
@@ -348,7 +247,7 @@ const StudentAttendancePage = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-attendance', formattedDate, selectedSubject] });
+      queryClient.invalidateQueries({ queryKey: ['student-attendance', formattedDate, selectedSubject, sectionFilter] });
       toast({
         title: "Attendance recorded",
         description: "The attendance has been saved successfully."
@@ -365,12 +264,11 @@ const StudentAttendancePage = () => {
   });
 
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'leave') => {
-    // ... keep existing code (attendance marking handler)
     const student = students.find(s => s.id === studentId);
-    if (!student || !student.sectionId) {
+    if (!student || !student.sectionId || !selectedSubject) {
       toast({
         title: "Error",
-        description: "This student is not assigned to any section",
+        description: "Missing required information to mark attendance",
         variant: "destructive"
       });
       return;
@@ -380,12 +278,15 @@ const StudentAttendancePage = () => {
       studentId, 
       status, 
       sectionId: student.sectionId,
-      subjectId: selectedSubject === 'all' ? undefined : selectedSubject
+      subjectId: selectedSubject
     });
   };
 
+  const handleSubjectSelect = (subjectId: string) => {
+    setSelectedSubject(subjectId);
+  };
+
   const getStatusBadge = (status: string) => {
-    // ... keep existing code (status badge implementation)
     switch(status) {
       case 'present':
         return <Badge variant="outline" className="bg-green-50 text-green-600">Present</Badge>;
@@ -400,14 +301,7 @@ const StudentAttendancePage = () => {
     }
   };
 
-  const isLoadingCombined = isLoading || isLoadingAttendance || isLoadingSubjects;
-
-  if (isLoadingCombined) {
-    return <div className="text-center py-8">Loading students...</div>;
-  }
-
-  // Determine if subject filter should be shown (when either grade or section is selected)
-  const showSubjectFilter = gradeFilter !== 'all-grades' && subjects.length > 0;
+  const isLoadingCombined = isLoading || isLoadingAttendance;
 
   return (
     <div className="space-y-6">
@@ -421,7 +315,7 @@ const StudentAttendancePage = () => {
       </div>
 
       <Card className="p-6">
-        <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-4 items-center">
             <Popover>
               <PopoverTrigger asChild>
@@ -460,7 +354,11 @@ const StudentAttendancePage = () => {
               </SelectContent>
             </Select>
 
-            <Select value={sectionFilter} onValueChange={setSectionFilter}>
+            <Select 
+              value={sectionFilter} 
+              onValueChange={setSectionFilter} 
+              disabled={gradeFilter === 'all-grades'}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select Section" />
               </SelectTrigger>
@@ -473,15 +371,6 @@ const StudentAttendancePage = () => {
                 ))}
               </SelectContent>
             </Select>
-
-            {showSubjectFilter && (
-              <SubjectFilter 
-                subjects={subjects} 
-                selectedSubject={selectedSubject} 
-                onSubjectChange={setSelectedSubject}
-                isLoading={isLoadingSubjects}
-              />
-            )}
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
@@ -504,81 +393,108 @@ const StudentAttendancePage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export to Excel
-          </Button>
+
+          {/* Only show scheduled subjects once a section is selected */}
+          {sectionFilter !== 'all-sections' && (
+            <div className="mt-4">
+              <ScheduledSubjectSelector
+                sectionId={sectionFilter}
+                date={selectedDate}
+                selectedSubjectId={selectedSubject}
+                onSelectSubject={handleSubjectSelect}
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+          </div>
         </div>
 
-        <div className="rounded-md border">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="h-10 px-4 text-left align-middle font-medium">Student ID</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Name</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Grade</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Section</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
-                <th className="h-10 px-4 text-left align-middle font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.length > 0 ? filteredStudents.map((student) => (
-                <tr key={student.id} className="border-b">
-                  <td className="p-4">{student.id.substring(0, 8)}</td>
-                  <td className="p-4">{`${student.first_name} ${student.last_name}`}</td>
-                  <td className="p-4">{student.grade}</td>
-                  <td className="p-4">{student.section}</td>
-                  <td className="p-4">
-                    {getStatusBadge(student.attendance)}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
-                        onClick={() => handleMarkAttendance(student.id, 'present')}
-                      >
-                        Present
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
-                        onClick={() => handleMarkAttendance(student.id, 'absent')}
-                      >
-                        Absent
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700"
-                        onClick={() => handleMarkAttendance(student.id, 'late')}
-                      >
-                        Late
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
-                        onClick={() => handleMarkAttendance(student.id, 'leave')}
-                      >
-                        Leave
-                      </Button>
-                    </div>
-                  </td>
+        {sectionFilter === 'all-sections' ? (
+          <div className="text-center py-10 text-muted-foreground">
+            Please select a section to view students
+          </div>
+        ) : selectedSubject === null ? (
+          <div className="text-center py-10 text-muted-foreground">
+            Please select a scheduled subject to view and mark attendance
+          </div>
+        ) : isLoadingCombined ? (
+          <div className="text-center py-8">Loading students...</div>
+        ) : (
+          <div className="mt-6 rounded-md border">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="h-10 px-4 text-left align-middle font-medium">Student ID</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium">Name</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium">Grade</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium">Section</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium">Status</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium">Actions</th>
                 </tr>
-              )) : (
-                <tr>
-                  <td colSpan={6} className="p-4 text-center">
-                    No students found matching your search criteria
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredStudents.length > 0 ? filteredStudents.map((student) => (
+                  <tr key={student.id} className="border-b">
+                    <td className="p-4">{student.id.substring(0, 8)}</td>
+                    <td className="p-4">{`${student.first_name} ${student.last_name}`}</td>
+                    <td className="p-4">{student.grade}</td>
+                    <td className="p-4">{student.section}</td>
+                    <td className="p-4">
+                      {getStatusBadge(student.attendance)}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
+                          onClick={() => handleMarkAttendance(student.id, 'present')}
+                        >
+                          Present
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                          onClick={() => handleMarkAttendance(student.id, 'absent')}
+                        >
+                          Absent
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700"
+                          onClick={() => handleMarkAttendance(student.id, 'late')}
+                        >
+                          Late
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                          onClick={() => handleMarkAttendance(student.id, 'leave')}
+                        >
+                          Leave
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="p-4 text-center">
+                      No students found matching your search criteria
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );
