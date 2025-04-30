@@ -1,12 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { classService } from "@/services/classService";
@@ -15,6 +14,8 @@ import { subjectService } from "@/services/subjectService";
 import { toast } from "sonner";
 import { CreateNoteInput, noteService } from "@/services/noteService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { Filter } from "lucide-react";
 
 interface NoteFormDialogProps {
   open: boolean;
@@ -26,7 +27,9 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   const [shareWithAllSections, setShareWithAllSections] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("none");
+  const [classDropdownOpen, setClassDropdownOpen] = useState(false);
+  const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<{
     title: string;
@@ -37,30 +40,37 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   // Fetch classes
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
-    queryFn: async () => {
-      return classService.getClasses();
-    }
+    queryFn: classService.getClasses
   });
 
-  // Fetch sections
-  const { data: sections = [] } = useQuery({
+  // Fetch sections based on selected classes
+  const { data: allSections = [] } = useQuery({
     queryKey: ["sections"],
-    queryFn: async () => {
-      // Only get sections for selected classes
-      if (selectedClasses.length === 0) {
-        return [];
-      }
-      
-      return sectionService.getSections();
-    },
+    queryFn: sectionService.getSections,
     enabled: selectedClasses.length > 0
   });
+
+  // Filter sections based on selected classes
+  const availableSections = allSections.filter(section => 
+    selectedClasses.includes(section.classId)
+  );
 
   // Fetch subjects
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects"],
     queryFn: subjectService.getSubjects
   });
+
+  // Reset selections when dialog opens or closes
+  useEffect(() => {
+    if (!open) {
+      reset();
+      setShareWithAllSections(false);
+      setSelectedClasses([]);
+      setSelectedSections([]);
+      setSelectedSubject("none");
+    }
+  }, [open, reset]);
 
   const createNoteMutation = useMutation({
     mutationFn: noteService.createNote,
@@ -70,7 +80,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
       setShareWithAllSections(false);
       setSelectedClasses([]);
       setSelectedSections([]);
-      setSelectedSubject("");
+      setSelectedSubject("none");
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       onOpenChange(false);
     },
@@ -83,11 +93,21 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
       return;
     }
 
+    if (selectedClasses.length === 0) {
+      toast.error("Please select at least one grade");
+      return;
+    }
+
+    if (!shareWithAllSections && selectedSections.length === 0) {
+      toast.error("Please select at least one section or enable 'Share with all sections'");
+      return;
+    }
+
     const noteData: CreateNoteInput = {
       title: data.title,
       description: data.description,
       googleDriveLink: data.googleDriveLink,
-      subjectId: selectedSubject || undefined,
+      subjectId: selectedSubject,
       shareWithAllSections,
       selectedClassIds: selectedClasses,
       selectedSectionIds: shareWithAllSections ? [] : selectedSections,
@@ -96,22 +116,40 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
     createNoteMutation.mutate(noteData);
   });
 
-  const handleClassChange = (classId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedClasses([...selectedClasses, classId]);
-    } else {
-      setSelectedClasses(selectedClasses.filter(id => id !== classId));
-      // Remove any sections that belong to this class
-      const classSections = sections.filter(section => section.classId === classId).map(s => s.id);
-      setSelectedSections(selectedSections.filter(id => !classSections.includes(id)));
-    }
+  // Toggle class selection
+  const toggleClass = (classId: string) => {
+    setSelectedClasses(current => {
+      if (current.includes(classId)) {
+        const newSelectedClasses = current.filter(id => id !== classId);
+        // Remove any sections that belong to this class
+        setSelectedSections(prev => prev.filter(sectionId => {
+          const section = allSections.find(s => s.id === sectionId);
+          return section && newSelectedClasses.includes(section.classId);
+        }));
+        return newSelectedClasses;
+      } else {
+        return [...current, classId];
+      }
+    });
   };
 
-  const handleSectionChange = (sectionId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSections([...selectedSections, sectionId]);
+  // Toggle section selection
+  const toggleSection = (sectionId: string) => {
+    setSelectedSections(current => {
+      if (current.includes(sectionId)) {
+        return current.filter(id => id !== sectionId);
+      } else {
+        return [...current, sectionId];
+      }
+    });
+  };
+
+  // Select all available sections
+  const selectAllSections = () => {
+    if (selectedSections.length === availableSections.length) {
+      setSelectedSections([]);
     } else {
-      setSelectedSections(selectedSections.filter(id => id !== sectionId));
+      setSelectedSections(availableSections.map(section => section.id));
     }
   };
 
@@ -176,27 +214,36 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
               </Select>
             </div>
             
+            {/* Grades Dropdown */}
             <div className="space-y-2">
               <Label>Select Grades</Label>
-              <div className="border rounded-md p-4 max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
-                {classes.map((cls) => (
-                  <div key={cls.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`class-${cls.id}`}
+              <DropdownMenu open={classDropdownOpen} onOpenChange={setClassDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {selectedClasses.length > 0 
+                      ? `${selectedClasses.length} grade(s) selected` 
+                      : "Select grades"}
+                    <Filter className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                  {classes.map((cls) => (
+                    <DropdownMenuCheckboxItem
+                      key={cls.id}
                       checked={selectedClasses.includes(cls.id)}
-                      onCheckedChange={(checked) => handleClassChange(cls.id, checked === true)}
-                    />
-                    <Label htmlFor={`class-${cls.id}`} className="cursor-pointer">
+                      onCheckedChange={() => toggleClass(cls.id)}
+                    >
                       {cls.name}
-                    </Label>
-                  </div>
-                ))}
-                {classes.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-2">No grades available</p>
-                )}
-              </div>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {selectedClasses.length === 0 && (
+                <p className="text-xs text-muted-foreground">Please select at least one grade</p>
+              )}
             </div>
             
+            {/* Share with all sections toggle */}
             {selectedClasses.length > 0 && (
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shareWithAllSections" className="flex-grow">
@@ -205,38 +252,57 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                 <Switch
                   id="shareWithAllSections"
                   checked={shareWithAllSections}
-                  onCheckedChange={(checked) => {
-                    setShareWithAllSections(checked);
-                    if (checked) {
-                      setSelectedSections([]);
-                    }
-                  }}
+                  onCheckedChange={setShareWithAllSections}
                 />
               </div>
             )}
             
+            {/* Sections Dropdown */}
             {!shareWithAllSections && selectedClasses.length > 0 && (
               <div className="space-y-2">
-                <Label>Select Sections</Label>
-                <div className="border rounded-md p-4 max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
-                  {sections
-                    .filter(section => selectedClasses.includes(section.classId))
-                    .map((section) => (
-                      <div key={section.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`section-${section.id}`}
-                          checked={selectedSections.includes(section.id)}
-                          onCheckedChange={(checked) => handleSectionChange(section.id, checked === true)}
-                        />
-                        <Label htmlFor={`section-${section.id}`} className="cursor-pointer">
-                          {section.name}
-                        </Label>
-                      </div>
-                    ))}
-                  {sections.filter(section => selectedClasses.includes(section.classId)).length === 0 && (
-                    <p className="text-sm text-muted-foreground col-span-2">No sections available</p>
-                  )}
+                <div className="flex items-center justify-between">
+                  <Label>Select Sections</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={selectAllSections}
+                    disabled={availableSections.length === 0}
+                  >
+                    {selectedSections.length === availableSections.length && availableSections.length > 0
+                      ? "Deselect All"
+                      : "Select All"}
+                  </Button>
                 </div>
+                <DropdownMenu open={sectionDropdownOpen} onOpenChange={setSectionDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      {selectedSections.length > 0 
+                        ? `${selectedSections.length} section(s) selected` 
+                        : "Select sections"}
+                      <Filter className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                    {availableSections.map((section) => (
+                      <DropdownMenuCheckboxItem
+                        key={section.id}
+                        checked={selectedSections.includes(section.id)}
+                        onCheckedChange={() => toggleSection(section.id)}
+                      >
+                        {section.name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                    {availableSections.length === 0 && (
+                      <div className="px-2 py-1 text-sm text-muted-foreground">
+                        No sections available
+                      </div>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {!shareWithAllSections && selectedClasses.length > 0 && selectedSections.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Please select at least one section</p>
+                )}
               </div>
             )}
           </div>
