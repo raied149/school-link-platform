@@ -40,6 +40,8 @@ import { subjectService } from '@/services/subjectService';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { academicYearService } from '@/services/academicYearService';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const formSchema = z.object({
   class_id: z.string().min(1, "Class is required"),
@@ -84,26 +86,107 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
     queryFn: () => academicYearService.getAcademicYears(),
   });
 
-  const activeYearId = academicYears.find(year => year.isActive)?.id || "default";
+  const activeYearId = academicYears.find(year => year.isActive)?.id || "";
 
-  // Query for fetching classes for the active academic year
+  // Fetch real classes from Supabase for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({
-    queryKey: ['classes', activeYearId],
-    queryFn: () => academicYearService ? classService.getClassesByYear(activeYearId) : classService.getClasses(),
+    queryKey: ["real-classes", activeYearId],
+    queryFn: async () => {
+      console.log("Fetching real classes for yearId:", activeYearId);
+      if (!activeYearId) return [];
+      
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('year_id', activeYearId)
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching classes:", error);
+        toast.error("Failed to load classes");
+        return [];
+      }
+      
+      console.log("Fetched real classes:", data);
+      return data || [];
+    },
+    enabled: !!activeYearId
   });
 
-  // Query for fetching sections based on selected class
+  // Fetch real sections based on selected class from Supabase
   const { data: sections = [], isLoading: sectionsLoading } = useQuery({
-    queryKey: ['sections', selectedClassId, activeYearId],
-    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, activeYearId) : [],
-    enabled: !!selectedClassId,
+    queryKey: ["real-sections", selectedClassId, activeYearId],
+    queryFn: async () => {
+      console.log("Fetching real sections for classId:", selectedClassId);
+      if (!selectedClassId) return [];
+      
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('class_id', selectedClassId)
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching sections:", error);
+        toast.error("Failed to load sections");
+        return [];
+      }
+      
+      console.log("Fetched real sections:", data);
+      return data || [];
+    },
+    enabled: !!selectedClassId
   });
 
-  // Query for fetching subjects specific to the selected class
+  // Fetch real subjects for the selected class from Supabase
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
-    queryKey: ['subjects', selectedClassId],
-    queryFn: () => selectedClassId ? subjectService.getSubjectsByClass(selectedClassId) : subjectService.getSubjects(),
-    enabled: !!selectedClassId,
+    queryKey: ["real-subjects", selectedClassId],
+    queryFn: async () => {
+      if (!selectedClassId) return [];
+      
+      // First get subject IDs associated with the class
+      const { data: subjectClasses, error: subjectClassesError } = await supabase
+        .from('subject_classes')
+        .select('subject_id')
+        .eq('class_id', selectedClassId);
+      
+      if (subjectClassesError) {
+        console.error("Error fetching subject classes:", subjectClassesError);
+        return [];
+      }
+      
+      if (!subjectClasses || subjectClasses.length === 0) {
+        // If no subjects are specifically assigned to this class, get all subjects
+        const { data: allSubjects, error: allSubjectsError } = await supabase
+          .from('subjects')
+          .select('*')
+          .order('name');
+        
+        if (allSubjectsError) {
+          console.error("Error fetching all subjects:", allSubjectsError);
+          return [];
+        }
+        
+        return allSubjects || [];
+      }
+      
+      const subjectIds = subjectClasses.map(sc => sc.subject_id);
+      
+      // Get the actual subjects
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('*')
+        .in('id', subjectIds)
+        .order('name');
+      
+      if (subjectsError) {
+        console.error("Error fetching subjects:", subjectsError);
+        return [];
+      }
+      
+      return subjectsData || [];
+    },
+    enabled: !!selectedClassId
   });
 
   // Mutation for creating an online class
@@ -153,7 +236,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] overflow-y-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Video className="h-5 w-5" />
@@ -252,7 +335,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                         ) : subjectsLoading ? (
                           <SelectItem value="loading" disabled>Loading subjects...</SelectItem>
                         ) : subjects.length === 0 ? (
-                          <SelectItem value="no-subjects" disabled>No subjects found</SelectItem>
+                          <SelectItem value="no-subjects" disabled>No subjects available</SelectItem>
                         ) : (
                           subjects.map((subject) => (
                             <SelectItem key={subject.id} value={subject.id}>

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -35,7 +36,7 @@ export const noteService = {
         .select(`
           *,
           profiles:created_by (first_name, last_name),
-          subjects:subject_id (name)
+          subjects (name)
         `)
         .order('created_at', { ascending: false });
         
@@ -59,6 +60,21 @@ export const noteService = {
             
           const sectionNames = sectionData?.map(s => s.sections.name) || [];
           
+          // Get subject name if available
+          let subjectName = undefined;
+          let subjectId = undefined;
+          
+          if (note.subject_id) {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('name')
+              .eq('id', note.subject_id)
+              .single();
+              
+            subjectName = subject?.name;
+            subjectId = note.subject_id;
+          }
+          
           return {
             id: note.id,
             title: note.title,
@@ -67,8 +83,8 @@ export const noteService = {
             createdAt: note.created_at,
             createdBy: note.created_by,
             creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
-            subjectId: note.subject_id,
-            subjectName: note.subjects?.name,
+            subjectId,
+            subjectName,
             classNames,
             sectionNames
           };
@@ -112,7 +128,7 @@ export const noteService = {
         .select(`
           *,
           profiles:created_by (first_name, last_name),
-          subjects:subject_id (name)
+          subjects (name)
         `)
         .order('created_at', { ascending: false });
         
@@ -160,6 +176,21 @@ export const noteService = {
             
           const sectionNames = sectionData?.map(s => s.sections.name) || [];
           
+          // Get subject name if available
+          let subjectName = undefined;
+          let subjectId = undefined;
+          
+          if (note.subject_id) {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('name')
+              .eq('id', note.subject_id)
+              .single();
+              
+            subjectName = subject?.name;
+            subjectId = note.subject_id;
+          }
+          
           return {
             id: note.id,
             title: note.title,
@@ -168,8 +199,8 @@ export const noteService = {
             createdAt: note.created_at,
             createdBy: note.created_by,
             creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
-            subjectId: note.subject_id,
-            subjectName: note.subjects?.name,
+            subjectId,
+            subjectName,
             classNames,
             sectionNames
           };
@@ -236,7 +267,7 @@ export const noteService = {
         googleDriveLink: note.google_drive_link,
         createdAt: note.created_at,
         createdBy: note.created_by,
-        subjectId: note.subject_id,
+        subjectId: input.subjectId,
         classNames: [],  // These will be populated by the frontend when needed
         sectionNames: []
       };
