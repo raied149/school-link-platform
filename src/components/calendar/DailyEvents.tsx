@@ -1,177 +1,173 @@
 
 import { useState } from "react";
-import { SchoolEvent } from "@/types";
 import { format } from "date-fns";
-import { CalendarClock, Users, Bell, Trash2, Edit, ArrowRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { EventForm } from "./EventForm";
+import { Pencil, Trash2, BookOpen } from "lucide-react";
+import { SchoolEvent } from "@/types";
+import { EventDescription } from "./EventDescription";
+import { EventFormHeader } from "./EventFormHeader";
+import { Task } from "@/services/taskService";
 
 interface DailyEventsProps {
   date: Date;
   events: SchoolEvent[];
   isLoading: boolean;
-  onDelete: (eventId: string) => Promise<void>;
-  onUpdate: (eventId: string, event: Partial<SchoolEvent>) => Promise<void>;
+  onDelete: (eventId: string) => void;
+  onUpdate: (eventId: string, eventData: Partial<SchoolEvent>) => void;
+  tasks?: Task[];
+  onTaskStatusChange?: (taskId: string, status: Task['status']) => void;
+  onTaskEdit?: (task: Task) => void;
+  onTaskDelete?: (taskId: string) => void;
 }
 
-export function DailyEvents({ date, events, isLoading, onDelete, onUpdate }: DailyEventsProps) {
-  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
-  const [eventToEdit, setEventToEdit] = useState<SchoolEvent | null>(null);
-  
-  // Find events that have reminders set for this date
-  const formattedCurrentDate = format(date, 'yyyy-MM-dd');
-  const remindersForToday = events.filter(event => 
-    event.reminderSet && 
-    event.reminderTimes && 
-    event.reminderTimes.includes(formattedCurrentDate) &&
-    event.date !== formattedCurrentDate // Only include reminders for events on other dates
-  );
+export function DailyEvents({ 
+  date, 
+  events, 
+  isLoading, 
+  onDelete, 
+  onUpdate, 
+  tasks = [],
+  onTaskStatusChange,
+  onTaskEdit,
+  onTaskDelete
+}: DailyEventsProps) {
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
-  if (isLoading) {
-    return <div className="text-center p-4">Loading events...</div>;
-  }
-
-  // Filter for events that actually occur on this date
-  const eventsForToday = events.filter(event => event.date === formattedCurrentDate);
+  const formattedDate = format(date, "MMMM d, yyyy");
+  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">
-        Events for {format(date, "MMMM d, yyyy")}
-      </h3>
-      
-      {/* Display events for today */}
-      {eventsForToday.length === 0 && remindersForToday.length === 0 ? (
-        <p className="text-muted-foreground">No events scheduled for this day</p>
-      ) : (
-        <div className="space-y-3">
-          {eventsForToday.map((event) => (
-            <Card key={event.id} className="p-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium">{event.name}</h4>
-                    <span className="text-xs bg-secondary px-2 py-1 rounded-full">
-                      {event.type}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEventToEdit(event)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEventToDelete(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                {(event.startTime || event.endTime) && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CalendarClock className="mr-2 h-4 w-4" />
-                    <span>
-                      {event.startTime} - {event.endTime}
-                    </span>
-                  </div>
-                )}
-                {event.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {event.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {event.teacherIds && event.teacherIds.length > 0 && (
-                    <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>{event.teacherIds.length} teachers assigned</span>
+    <div>
+      <EventFormHeader date={date} formattedDate={formattedDate} isToday={isToday} />
+
+      <div className="mt-4 space-y-4">
+        {isLoading ? (
+          <p>Loading events...</p>
+        ) : events.length === 0 && tasks.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            No events scheduled for {formattedDate}.
+          </div>
+        ) : (
+          <>
+            {/* Regular calendar events */}
+            {events.map(event => (
+              <div key={event.id} className="border rounded-md p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{event.name}</h3>
+                      <Badge>{event.type}</Badge>
                     </div>
-                  )}
-                  {event.reminderSet && event.reminderTimes && (
-                    <div className="flex items-center">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>
-                        {event.reminderTimes.length > 1 
-                          ? `${event.reminderTimes.length} reminders set` 
-                          : `Reminder set for ${format(new Date(event.reminderTimes[0]), "MMM d")}`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {event.createdAt && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Added {format(new Date(event.createdAt), "MMM d, yyyy")}
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-          
-          {/* Display reminders for events on other days */}
-          {remindersForToday.length > 0 && (
-            <>
-              <h4 className="text-md font-medium mt-4">Reminders</h4>
-              {remindersForToday.map((event) => (
-                <Card key={`reminder-${event.id}`} className="p-4 border-l-4 border-l-amber-400">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Bell className="mr-2 h-4 w-4 text-amber-500" />
-                        <h4 className="font-medium">Reminder: {event.name}</h4>
-                      </div>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <CalendarClock className="mr-2 h-4 w-4" />
-                      <span>Upcoming event on {format(new Date(event.date), "MMMM d")}</span>
-                      <ArrowRight className="mx-1 h-3 w-3" />
-                      <span>{event.startTime}</span>
-                    </div>
-                    {event.description && (
+                    {(event.startTime || event.endTime) && (
                       <p className="text-sm text-muted-foreground">
-                        {event.description}
+                        {event.startTime && event.endTime 
+                          ? `${event.startTime} - ${event.endTime}`
+                          : event.startTime 
+                            ? `Starts at ${event.startTime}`
+                            : `Ends at ${event.endTime}`}
                       </p>
                     )}
                   </div>
-                </Card>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => onUpdate(event.id, {})}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => onDelete(event.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
 
-      <ConfirmationDialog
-        open={!!eventToDelete}
-        onOpenChange={() => setEventToDelete(null)}
-        title="Delete Event"
-        description="Are you sure you want to delete this event? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={async () => {
-          if (eventToDelete) {
-            await onDelete(eventToDelete);
-            setEventToDelete(null);
-          }
-        }}
-      />
-
-      {eventToEdit && (
-        <EventForm
-          date={date}
-          teachers={[]}
-          event={eventToEdit}
-          onSubmit={async (eventData) => {
-            await onUpdate(eventToEdit.id, eventData);
-            setEventToEdit(null);
-          }}
-        />
-      )}
+                {event.description && (
+                  <EventDescription
+                    description={event.description}
+                    isExpanded={expandedEvent === event.id}
+                    onToggle={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
+                  />
+                )}
+              </div>
+            ))}
+            
+            {/* Tasks due on this date */}
+            {tasks.map(task => (
+              <div key={task.id} className={`border rounded-md p-4 ${task.status === 'completed' ? 'bg-green-50' : ''}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{task.title}</h3>
+                      <Badge variant="outline" className="bg-blue-100">
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        {task.type}
+                      </Badge>
+                      <Badge variant="outline">{task.status}</Badge>
+                    </div>
+                    {task.due_time && (
+                      <p className="text-sm text-muted-foreground">
+                        Due at {task.due_time}
+                      </p>
+                    )}
+                    {task.description && (
+                      <p className="text-sm mt-1">{task.description}</p>
+                    )}
+                  </div>
+                  
+                  {onTaskEdit && onTaskDelete && (
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => onTaskEdit(task)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => onTaskDelete(task.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {onTaskStatusChange && (
+                  <div className="mt-2 flex gap-2">
+                    {task.status !== 'completed' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-green-700"
+                        onClick={() => onTaskStatusChange(task.id, 'completed')}
+                      >
+                        Mark as completed
+                      </Button>
+                    )}
+                    {task.status === 'completed' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => onTaskStatusChange(task.id, 'pending')}
+                      >
+                        Mark as pending
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

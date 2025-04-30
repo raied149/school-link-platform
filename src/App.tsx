@@ -1,105 +1,75 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
-import NotFound from "./pages/NotFound";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import UsersPage from "./pages/users/UsersPage";
-import ClassYearsPage from "./pages/classes/ClassYearsPage";
-import ClassDetailsPage from "./pages/classes/ClassDetailsPage";
-import SectionsPage from "./pages/classes/SectionsPage";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ClassYearsPage from './pages/classes/ClassYearsPage';
+import ClassesPage from './pages/classes/ClassesPage';
 import LoginPage from "./pages/auth/LoginPage";
-import StudentAttendancePage from "./pages/attendance/StudentAttendancePage";
-import TeacherAttendancePage from "./pages/attendance/TeacherAttendancePage";
-import TeacherDetailsPage from "./pages/teachers/TeacherDetailsPage";
-import CalendarPage from "./pages/CalendarPage";
-import ExamsPage from "./pages/exams/ExamsPage";
-import ExamDetailPage from "./pages/exams/ExamDetailPage";
-import IncidentsPage from "./pages/incidents/IncidentsPage";
-import IncidentDetailPage from "./pages/incidents/IncidentDetailPage";
-import TimetablePage from "./pages/timetable/TimetablePage";
-import SubjectsPage from "./pages/subjects/SubjectsPage";
-import NotesPage from "./pages/notes/NotesPage";
-import OnlineClassesPage from "./pages/online-classes/OnlineClassesPage";
+import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
+import { Toaster } from "./components/ui/toaster";
+import { ToastContainer } from "./components/ui/sonner";
+import { AuthProvider } from './contexts/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import SectionsPage from './pages/classes/SectionsPage';
+import ClassDetailsPage from './pages/classes/ClassDetailsPage';
+import UsersPage from './pages/users/UsersPage';
+import SubjectsPage from './pages/subjects/SubjectsPage';
+import TeacherDetailsPage from './pages/teachers/TeacherDetailsPage';
+import TeacherAttendancePage from './pages/attendance/TeacherAttendancePage';
+import StudentAttendancePage from './pages/attendance/StudentAttendancePage';
+import TimetablePage from './pages/timetable/TimetablePage';
+import ExamsPage from './pages/exams/ExamsPage';
+import ExamDetailPage from './pages/exams/ExamDetailPage';
+import OnlineClassesPage from './pages/online-classes/OnlineClassesPage';
+import AcademicYearsPage from './pages/academic/AcademicYearsPage';
+import NotesPage from './pages/notes/NotesPage';
+import CalendarPage from './pages/CalendarPage';
+import IncidentDetailPage from './pages/incidents/IncidentDetailPage';
+import IncidentsPage from './pages/incidents/IncidentsPage';
+import TasksPage from './pages/TasksPage';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
+const queryClient = new QueryClient();
 
-const AuthRoutes = () => (
-  <Routes>
-    <Route path="/login" element={<LoginPage />} />
-    <Route 
-      path="/*" 
-      element={
-        <ProtectedRoute>
-          <MainLayout>
-            <Outlet />
-          </MainLayout>
-        </ProtectedRoute>
-      }
-    >
-      <Route index element={<Navigate to="/dashboard" replace />} />
-      <Route path="dashboard" element={<Dashboard />} />
-      <Route path="students" element={<UsersPage />} />
-      <Route path="teachers" element={<TeacherDetailsPage />} />
-      <Route path="student-attendance" element={<StudentAttendancePage />} />
-      <Route path="teacher-attendance" element={<TeacherAttendancePage />} />
-      
-      {/* Updated classes routes */}
-      <Route path="classes" element={<ClassYearsPage />} />
-      <Route path="classes/:yearId" element={<ClassYearsPage />} />
-      <Route path="classes/:yearId/:classId" element={<SectionsPage />} />
-      <Route path="classes/:yearId/:classId/:sectionId" element={<ClassDetailsPage />} />
-      
-      <Route path="subjects" element={<SubjectsPage />} />
-      <Route path="timetables" element={<TimetablePage />} />
-      <Route path="calendar" element={<CalendarPage />} />
-      <Route path="notes" element={<NotesPage />} />
-      <Route path="online-classes" element={<OnlineClassesPage />} />
-      <Route path="exams" element={<ExamsPage />} />
-      <Route path="exams/:examId" element={<ExamDetailPage />} />
-      <Route path="incidents" element={<IncidentsPage />} />
-      <Route path="incidents/:incidentId" element={<IncidentDetailPage />} />
-      <Route path="*" element={<NotFound />} />
-    </Route>
-  </Routes>
-);
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1
-    },
-  },
-});
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <SidebarProvider>
-            <Toaster />
-            <Sonner />
-            <AuthRoutes />
-          </SidebarProvider>
-        </TooltipProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<MainLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/academic-years" element={<AcademicYearsPage />} />
+              <Route path="/class-years" element={<ClassYearsPage />} />
+              <Route path="/classes/:yearId" element={<ClassesPage />} />
+              <Route path="/class/:classId" element={<ClassDetailsPage />} />
+              <Route path="/sections/:classId" element={<SectionsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/subjects" element={<SubjectsPage />} />
+              <Route path="/teachers/:teacherId" element={<TeacherDetailsPage />} />
+              <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
+              <Route path="/student-attendance" element={<StudentAttendancePage />} />
+              <Route path="/timetable" element={<TimetablePage />} />
+              <Route path="/exams" element={<ExamsPage />} />
+              <Route path="/exams/:examId" element={<ExamDetailPage />} />
+              <Route path="/online-classes" element={<OnlineClassesPage />} />
+              <Route path="/notes" element={<NotesPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/incidents" element={<IncidentsPage />} />
+              <Route path="/incidents/:incidentId" element={<IncidentDetailPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+        <Toaster />
+        <ToastContainer />
       </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;

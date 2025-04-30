@@ -917,6 +917,89 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          assigned_to_class_id: string | null
+          assigned_to_section_id: string | null
+          assigned_to_user_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          google_drive_link: string | null
+          id: string
+          status: Database["public"]["Enums"]["task_status"]
+          subject_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["task_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_class_id?: string | null
+          assigned_to_section_id?: string | null
+          assigned_to_user_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          google_drive_link?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          subject_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_class_id?: string | null
+          assigned_to_section_id?: string | null
+          assigned_to_user_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          google_drive_link?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          subject_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["task_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_class_id_fkey"
+            columns: ["assigned_to_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_to_section_id_fkey"
+            columns: ["assigned_to_section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_attendance: {
         Row: {
           check_in: string | null
@@ -1129,6 +1212,8 @@ export type Database = {
       }
     }
     Enums: {
+      task_status: "pending" | "in_progress" | "completed" | "cancelled"
+      task_type: "personal" | "assignment" | "admin_task"
       user_role: "admin" | "teacher" | "student" | "parent"
     }
     CompositeTypes: {
@@ -1245,6 +1330,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      task_status: ["pending", "in_progress", "completed", "cancelled"],
+      task_type: ["personal", "assignment", "admin_task"],
       user_role: ["admin", "teacher", "student", "parent"],
     },
   },
