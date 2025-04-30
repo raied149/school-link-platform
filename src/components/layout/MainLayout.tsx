@@ -14,7 +14,8 @@ import {
   FileText,
   AlertTriangle,
   Clock,
-  BookOpen
+  BookOpen,
+  Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +38,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: GraduationCap, label: 'Classes', path: '/classes' },
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: Clock, label: 'Timetables', path: '/timetables' },
+    { icon: Video, label: 'Online Classes', path: '/online-classes' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
     { icon: FileText, label: 'Notes', path: '/notes' },

@@ -25,6 +25,7 @@ import IncidentDetailPage from "./pages/incidents/IncidentDetailPage";
 import TimetablePage from "./pages/timetable/TimetablePage";
 import SubjectsPage from "./pages/subjects/SubjectsPage";
 import NotesPage from "./pages/notes/NotesPage";
+import OnlineClassesPage from "./pages/online-classes/OnlineClassesPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -66,6 +67,7 @@ const AuthRoutes = () => (
       <Route path="timetables" element={<TimetablePage />} />
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="notes" element={<NotesPage />} />
+      <Route path="online-classes" element={<OnlineClassesPage />} />
       <Route path="exams" element={<ExamsPage />} />
       <Route path="exams/:examId" element={<ExamDetailPage />} />
       <Route path="incidents" element={<IncidentsPage />} />

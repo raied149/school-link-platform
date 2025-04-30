@@ -478,6 +478,77 @@ export type Database = {
           },
         ]
       }
+      online_classes: {
+        Row: {
+          class_id: string
+          created_at: string
+          created_by: string
+          date: string
+          end_time: string | null
+          google_meet_link: string
+          id: string
+          section_id: string
+          start_time: string
+          subject_id: string
+          title: string | null
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          created_by: string
+          date: string
+          end_time?: string | null
+          google_meet_link: string
+          id?: string
+          section_id: string
+          start_time: string
+          subject_id: string
+          title?: string | null
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          end_time?: string | null
+          google_meet_link?: string
+          id?: string
+          section_id?: string
+          start_time?: string
+          subject_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_classes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_classes_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_classes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
