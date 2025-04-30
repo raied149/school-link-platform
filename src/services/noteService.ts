@@ -19,9 +19,14 @@ export type CreateNoteInput = {
 export const noteService = {
   async createNote(data: CreateNoteInput) {
     try {
-      const user = (await supabase.auth.getSession()).data.session?.user;
-      if (!user) throw new Error("User not authenticated");
-
+      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session.session) {
+        throw new Error("User not authenticated");
+      }
+      
+      const userId = session.session.user.id;
+      
       // Insert the note
       const { data: note, error } = await supabase
         .from("notes")
@@ -29,7 +34,7 @@ export const noteService = {
           title: data.title,
           description: data.description,
           google_drive_link: data.googleDriveLink,
-          created_by: user.id,
+          created_by: userId,
           subject_id: data.subjectId === "none" ? null : data.subjectId,
           share_with_all_sections: data.shareWithAllSections,
         })
@@ -63,8 +68,8 @@ export const noteService = {
 
       return note;
     } catch (error: any) {
-      toast.error("Failed to create note: " + error.message);
-      throw error;
+      console.error("Failed to create note:", error);
+      throw new Error(error.message || "Failed to create note");
     }
   },
 

@@ -11,6 +11,7 @@ import { OnlineClassList } from "@/components/online-classes/OnlineClassList";
 import { onlineClassService } from "@/services/onlineClassService";
 import { useAuth } from "@/contexts/AuthContext";
 import { DateSelector } from "@/components/attendance/DateSelector";
+import { toast } from "sonner";
 
 const OnlineClassesPage = () => {
   const { user } = useAuth();
@@ -20,9 +21,15 @@ const OnlineClassesPage = () => {
   const queryClient = useQueryClient();
 
   // Query for fetching online classes
-  const { data: classes, isLoading } = useQuery({
+  const { data: classes = [], isLoading } = useQuery({
     queryKey: ["online-classes", user?.id, user?.role],
-    queryFn: () => onlineClassService.getOnlineClassesForUser(user?.id || "", user?.role || "student"),
+    queryFn: () => {
+      if (!user) {
+        toast.error("Please login to view online classes");
+        return [];
+      }
+      return onlineClassService.getOnlineClassesForUser(user.id, user.role);
+    },
     enabled: !!user,
   });
 
@@ -36,8 +43,8 @@ const OnlineClassesPage = () => {
 
   // Filter classes based on selected date if not showing all
   const filteredClasses = showAll
-    ? classes || []
-    : (classes || []).filter((cls) => 
+    ? classes
+    : classes.filter((cls) => 
         cls.date === format(startOfDay(selectedDate), "yyyy-MM-dd")
       );
 
