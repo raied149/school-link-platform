@@ -34,9 +34,6 @@ import {
 } from '@/components/ui/select';
 import { DateSelector } from '@/components/attendance/DateSelector';
 import { onlineClassService } from '@/services/onlineClassService';
-import { classService } from '@/services/classService';
-import { sectionService } from '@/services/sectionService';
-import { subjectService } from '@/services/subjectService';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { academicYearService } from '@/services/academicYearService';
@@ -86,7 +83,8 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
     queryFn: () => academicYearService.getAcademicYears(),
   });
 
-  const activeYearId = academicYears.find(year => year.isActive)?.id || "";
+  const activeYear = academicYears.find(year => year.isActive);
+  const activeYearId = activeYear?.id || "";
 
   // Fetch real classes from Supabase for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({

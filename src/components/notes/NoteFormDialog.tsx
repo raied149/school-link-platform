@@ -8,9 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { classService } from "@/services/classService";
-import { sectionService } from "@/services/sectionService";
-import { subjectService } from "@/services/subjectService";
 import { toast } from "sonner";
 import { CreateNoteInput, noteService } from "@/services/noteService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,7 +40,8 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
     queryFn: () => academicYearService.getAcademicYears(),
   });
 
-  const activeYearId = academicYears.find(year => year.isActive)?.id || "";
+  const activeYear = academicYears.find(year => year.isActive);
+  const activeYearId = activeYear?.id || "";
 
   // Fetch real classes from Supabase for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({
@@ -363,7 +361,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={createNoteMutation.isPending}
+              disabled={createMutation.isPending}
             >
               {createNoteMutation.isPending ? "Creating..." : "Create Note"}
             </Button>

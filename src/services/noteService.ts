@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -34,8 +35,7 @@ export const noteService = {
         .from('notes')
         .select(`
           *,
-          profiles:created_by (first_name, last_name),
-          subjects (name, id)
+          profiles:created_by (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
         
@@ -63,9 +63,17 @@ export const noteService = {
           let subjectName = undefined;
           let subjectId = undefined;
           
-          if (note.subjects) {
-            subjectName = note.subjects.name;
-            subjectId = note.subjects.id;
+          if (note.subject_id) {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('name, id')
+              .eq('id', note.subject_id)
+              .single();
+              
+            if (subject) {
+              subjectName = subject.name;
+              subjectId = subject.id;
+            }
           }
           
           return {
@@ -120,8 +128,7 @@ export const noteService = {
         .from('notes')
         .select(`
           *,
-          profiles:created_by (first_name, last_name),
-          subjects (name, id)
+          profiles:created_by (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
         
@@ -173,9 +180,17 @@ export const noteService = {
           let subjectName = undefined;
           let subjectId = undefined;
           
-          if (note.subjects) {
-            subjectName = note.subjects.name;
-            subjectId = note.subjects.id;
+          if (note.subject_id) {
+            const { data: subject } = await supabase
+              .from('subjects')
+              .select('name, id')
+              .eq('id', note.subject_id)
+              .single();
+              
+            if (subject) {
+              subjectName = subject.name;
+              subjectId = subject.id;
+            }
           }
           
           return {
