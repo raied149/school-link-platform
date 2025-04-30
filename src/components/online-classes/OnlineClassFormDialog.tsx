@@ -40,6 +40,7 @@ import { subjectService } from '@/services/subjectService';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { academicYearService } from '@/services/academicYearService';
 
 const formSchema = z.object({
   class_id: z.string().min(1, "Class is required"),
@@ -78,23 +79,32 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
     },
   });
 
-  // Query for fetching classes
+  // Get the current active academic year
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: () => academicYearService.getAcademicYears(),
+  });
+
+  const activeYearId = academicYears.find(year => year.isActive)?.id || "default";
+
+  // Query for fetching classes for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classService.getClasses(),
+    queryKey: ['classes', activeYearId],
+    queryFn: () => academicYearService ? classService.getClassesByYear(activeYearId) : classService.getClasses(),
   });
 
   // Query for fetching sections based on selected class
   const { data: sections = [], isLoading: sectionsLoading } = useQuery({
-    queryKey: ['sections', selectedClassId],
-    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, "default") : [],
+    queryKey: ['sections', selectedClassId, activeYearId],
+    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, activeYearId) : [],
     enabled: !!selectedClassId,
   });
 
-  // Query for fetching subjects
+  // Query for fetching subjects specific to the selected class
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
-    queryKey: ['subjects'],
-    queryFn: () => subjectService.getSubjects(),
+    queryKey: ['subjects', selectedClassId],
+    queryFn: () => selectedClassId ? subjectService.getSubjectsByClass(selectedClassId) : subjectService.getSubjects(),
+    enabled: !!selectedClassId,
   });
 
   // Mutation for creating an online class
@@ -114,6 +124,8 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       setSelectedClassId(classId);
       // Reset section selection when class changes
       form.setValue("section_id", "");
+      // Reset subject selection when class changes
+      form.setValue("subject_id", "");
     }
   }, [form.watch("class_id")]);
 
@@ -122,7 +134,6 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
     const formattedDate = format(values.date, "yyyy-MM-dd");
     
-    // FIX: Ensure all required properties are passed correctly
     createMutation.mutate({
       class_id: values.class_id,
       section_id: values.section_id,
@@ -154,9 +165,9 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4 h-[60vh]">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-6">
               <div className="grid grid-cols-1 gap-4">
                 {/* Class Selection */}
                 <FormField
@@ -174,8 +185,10 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                         <SelectContent className="max-h-[200px]">
                           {classesLoading ? (
                             <SelectItem value="loading" disabled>Loading classes...</SelectItem>
+                          ) : classes.length === 0 ? (
+                            <SelectItem value="no-classes" disabled>No classes found</SelectItem>
                           ) : (
-                            classes?.map((classItem) => (
+                            classes.map((classItem) => (
                               <SelectItem key={classItem.id} value={classItem.id}>
                                 {classItem.name}
                               </SelectItem>
@@ -206,10 +219,10 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                             <SelectItem value="select-class" disabled>Select a class first</SelectItem>
                           ) : sectionsLoading ? (
                             <SelectItem value="loading" disabled>Loading sections...</SelectItem>
-                          ) : sections?.length === 0 ? (
+                          ) : sections.length === 0 ? (
                             <SelectItem value="no-sections" disabled>No sections found</SelectItem>
                           ) : (
-                            sections?.map((section) => (
+                            sections.map((section) => (
                               <SelectItem key={section.id} value={section.id}>
                                 {section.name}
                               </SelectItem>
@@ -236,12 +249,14 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="max-h-[200px]">
-                          {subjectsLoading ? (
+                          {!selectedClassId ? (
+                            <SelectItem value="select-class" disabled>Select a class first</SelectItem>
+                          ) : subjectsLoading ? (
                             <SelectItem value="loading" disabled>Loading subjects...</SelectItem>
-                          ) : subjects?.length === 0 ? (
+                          ) : subjects.length === 0 ? (
                             <SelectItem value="no-subjects" disabled>No subjects found</SelectItem>
                           ) : (
-                            subjects?.map((subject) => (
+                            subjects.map((subject) => (
                               <SelectItem key={subject.id} value={subject.id}>
                                 {subject.name}
                               </SelectItem>
@@ -354,7 +369,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                 />
               </div>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter className="pt-4">
                 <Button 
                   type="button" 
                   variant="outline" 

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { CreateNoteInput, noteService } from "@/services/noteService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { academicYearService } from "@/services/academicYearService";
 
 interface NoteFormDialogProps {
   open: boolean;
@@ -34,23 +35,32 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
     googleDriveLink: string;
   }>();
 
-  // Fetch classes
+  // Get the current active academic year
+  const { data: academicYears = [] } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: () => academicYearService.getAcademicYears(),
+  });
+
+  const activeYearId = academicYears.find(year => year.isActive)?.id || "default";
+
+  // Fetch classes for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({
-    queryKey: ["classes"],
-    queryFn: classService.getClasses
+    queryKey: ["classes", activeYearId],
+    queryFn: () => academicYearService ? classService.getClassesByYear(activeYearId) : classService.getClasses()
   });
 
   // Fetch sections based on selected class
   const { data: sections = [], isLoading: sectionsLoading } = useQuery({
-    queryKey: ["sections", selectedClassId],
-    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, "default") : [],
+    queryKey: ["sections", selectedClassId, activeYearId],
+    queryFn: () => selectedClassId ? sectionService.getSectionsByClassAndYear(selectedClassId, activeYearId) : [],
     enabled: !!selectedClassId
   });
 
-  // Fetch subjects
+  // Fetch subjects for the selected class
   const { data: subjects = [] } = useQuery({
-    queryKey: ["subjects"],
-    queryFn: subjectService.getSubjects
+    queryKey: ["subjects", selectedClassId],
+    queryFn: () => selectedClassId ? subjectService.getSubjectsByClass(selectedClassId) : subjectService.getSubjects(),
+    enabled: !!selectedClassId
   });
 
   // Reset selections when dialog opens or closes
@@ -104,8 +114,8 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
       googleDriveLink: data.googleDriveLink,
       subjectId: selectedSubject === "none" ? undefined : selectedSubject,
       shareWithAllSections,
-      selectedClassIds: [selectedClassId], // Now only allowing a single class ID
-      selectedSectionIds: shareWithAllSections ? [] : [selectedSectionId], // Now only allowing a single section ID
+      selectedClassIds: [selectedClassId], 
+      selectedSectionIds: shareWithAllSections ? [] : [selectedSectionId],
     };
 
     createNoteMutation.mutate(noteData);
@@ -121,8 +131,8 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4">
-          <form onSubmit={onSubmit} className="space-y-4">
+        <ScrollArea className="flex-1 pr-4 h-[60vh]">
+          <form onSubmit={onSubmit} className="space-y-4 pb-6">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
@@ -165,11 +175,17 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
                     <SelectItem value="none">No subject</SelectItem>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </SelectItem>
-                    ))}
+                    {!selectedClassId ? (
+                      <SelectItem value="select-class" disabled>Select a grade first</SelectItem>
+                    ) : subjects.length === 0 ? (
+                      <SelectItem value="no-subjects" disabled>No subjects available</SelectItem>
+                    ) : (
+                      subjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -188,6 +204,8 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                   <SelectContent className="max-h-[200px]">
                     {classesLoading ? (
                       <SelectItem value="loading" disabled>Loading grades...</SelectItem>
+                    ) : classes.length === 0 ? (
+                      <SelectItem value="no-classes" disabled>No grades available</SelectItem>
                     ) : (
                       classes.map((cls) => (
                         <SelectItem key={cls.id} value={cls.id}>
@@ -243,7 +261,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
               )}
             </div>
             
-            <DialogFooter className="pt-2">
+            <DialogFooter className="pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
