@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { classService } from "@/services/classService";
 import { sectionService } from "@/services/sectionService";
+import { subjectService } from "@/services/subjectService";
 import { toast } from "sonner";
 import { CreateNoteInput, noteService } from "@/services/noteService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,10 +23,10 @@ interface NoteFormDialogProps {
 
 export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   const queryClient = useQueryClient();
-  const [shareWithAllGrades, setShareWithAllGrades] = useState(false);
   const [shareWithAllSections, setShareWithAllSections] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<{
     title: string;
@@ -35,14 +38,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   const { data: classes = [] } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
-      const academicYears = await classService.getAcademicYears();
-      if (academicYears.length === 0) return [];
-      
-      // Get classes from the latest academic year
-      const latestYear = academicYears.reduce((latest, year) => 
-        new Date(year.start_date) > new Date(latest.start_date) ? year : latest, academicYears[0]);
-        
-      return classService.getClassesByYearId(latestYear.id);
+      return classService.getClasses();
     }
   });
 
@@ -50,20 +46,20 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   const { data: sections = [] } = useQuery({
     queryKey: ["sections"],
     queryFn: async () => {
-      // If we're sharing with all classes, no need to filter sections
-      // Otherwise, only get sections for selected classes
+      // Only get sections for selected classes
       if (selectedClasses.length === 0) {
         return [];
       }
       
-      const allSections = [];
-      for (const classId of selectedClasses) {
-        const classSections = await sectionService.getSectionsByClassId(classId);
-        allSections.push(...classSections);
-      }
-      return allSections;
+      return sectionService.getSections();
     },
-    enabled: selectedClasses.length > 0 && !shareWithAllSections
+    enabled: selectedClasses.length > 0
+  });
+
+  // Fetch subjects
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: subjectService.getSubjects
   });
 
   const createNoteMutation = useMutation({
@@ -71,10 +67,10 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
     onSuccess: () => {
       toast.success("Note created successfully");
       reset();
-      setShareWithAllGrades(false);
       setShareWithAllSections(false);
       setSelectedClasses([]);
       setSelectedSections([]);
+      setSelectedSubject("");
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       onOpenChange(false);
     },
@@ -91,9 +87,9 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
       title: data.title,
       description: data.description,
       googleDriveLink: data.googleDriveLink,
-      shareWithAllGrades,
-      shareWithAllSectionsInGrades: shareWithAllSections,
-      selectedClassIds: shareWithAllGrades ? [] : selectedClasses,
+      subjectId: selectedSubject || undefined,
+      shareWithAllSections,
+      selectedClassIds: selectedClasses,
       selectedSectionIds: shareWithAllSections ? [] : selectedSections,
     };
 
@@ -106,7 +102,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
     } else {
       setSelectedClasses(selectedClasses.filter(id => id !== classId));
       // Remove any sections that belong to this class
-      const classSections = sections.filter(section => section.class_id === classId).map(s => s.id);
+      const classSections = sections.filter(section => section.classId === classId).map(s => s.id);
       setSelectedSections(selectedSections.filter(id => !classSections.includes(id)));
     }
   };
@@ -162,45 +158,46 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                 <p className="text-sm text-red-500">{errors.googleDriveLink.message}</p>
               )}
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="shareWithAllGrades" className="flex-grow">Share with all grades</Label>
-              <Switch
-                id="shareWithAllGrades"
-                checked={shareWithAllGrades}
-                onCheckedChange={(checked) => {
-                  setShareWithAllGrades(checked);
-                  if (checked) {
-                    setSelectedClasses([]);
-                  }
-                }}
-              />
+
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject (Optional)</Label>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger id="subject">
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No subject</SelectItem>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
-            {!shareWithAllGrades && (
-              <div className="space-y-2">
-                <Label>Select Grades</Label>
-                <div className="border rounded-md p-4 max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
-                  {classes.map((cls) => (
-                    <div key={cls.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`class-${cls.id}`}
-                        checked={selectedClasses.includes(cls.id)}
-                        onCheckedChange={(checked) => handleClassChange(cls.id, checked === true)}
-                      />
-                      <Label htmlFor={`class-${cls.id}`} className="cursor-pointer">
-                        {cls.name}
-                      </Label>
-                    </div>
-                  ))}
-                  {classes.length === 0 && (
-                    <p className="text-sm text-muted-foreground col-span-2">No grades available</p>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label>Select Grades</Label>
+              <div className="border rounded-md p-4 max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
+                {classes.map((cls) => (
+                  <div key={cls.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`class-${cls.id}`}
+                      checked={selectedClasses.includes(cls.id)}
+                      onCheckedChange={(checked) => handleClassChange(cls.id, checked === true)}
+                    />
+                    <Label htmlFor={`class-${cls.id}`} className="cursor-pointer">
+                      {cls.name}
+                    </Label>
+                  </div>
+                ))}
+                {classes.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2">No grades available</p>
+                )}
               </div>
-            )}
+            </div>
             
-            {!shareWithAllGrades && selectedClasses.length > 0 && (
+            {selectedClasses.length > 0 && (
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shareWithAllSections" className="flex-grow">
                   Share with all sections in selected grades
@@ -218,12 +215,12 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
               </div>
             )}
             
-            {!shareWithAllGrades && !shareWithAllSections && selectedClasses.length > 0 && (
+            {!shareWithAllSections && selectedClasses.length > 0 && (
               <div className="space-y-2">
                 <Label>Select Sections</Label>
                 <div className="border rounded-md p-4 max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
                   {sections
-                    .filter(section => selectedClasses.includes(section.class_id || ''))
+                    .filter(section => selectedClasses.includes(section.classId))
                     .map((section) => (
                       <div key={section.id} className="flex items-center space-x-2">
                         <Checkbox
@@ -236,7 +233,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                         </Label>
                       </div>
                     ))}
-                  {sections.filter(section => selectedClasses.includes(section.class_id || '')).length === 0 && (
+                  {sections.filter(section => selectedClasses.includes(section.classId)).length === 0 && (
                     <p className="text-sm text-muted-foreground col-span-2">No sections available</p>
                   )}
                 </div>

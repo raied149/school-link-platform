@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { NoteWithUser } from "@/services/noteService";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface NoteCardProps {
-  note: NoteWithUser;
+  note: NoteWithUser & { subject_name?: string };
   className?: string;
 }
 
@@ -16,7 +17,12 @@ export function NoteCard({ note, className }: NoteCardProps) {
   return (
     <Card className={cn("flex flex-col", className)}>
       <CardHeader>
-        <CardTitle className="line-clamp-2">{note.title}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="line-clamp-2">{note.title}</CardTitle>
+          {note.subject_name && (
+            <Badge variant="outline" className="ml-2">{note.subject_name}</Badge>
+          )}
+        </div>
         <CardDescription className="flex flex-col gap-1">
           <span>By {note.creator.first_name} {note.creator.last_name}</span>
           <span>Shared {formattedDate}</span>

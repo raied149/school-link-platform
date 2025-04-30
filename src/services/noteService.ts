@@ -10,8 +10,8 @@ export type CreateNoteInput = {
   title: string;
   description?: string;
   googleDriveLink: string;
-  shareWithAllGrades: boolean;
-  shareWithAllSectionsInGrades: boolean;
+  subjectId?: string;
+  shareWithAllSections: boolean;
   selectedClassIds: string[];
   selectedSectionIds: string[];
 };
@@ -30,8 +30,8 @@ export const noteService = {
           description: data.description,
           google_drive_link: data.googleDriveLink,
           created_by: user.id,
-          share_with_all_grades: data.shareWithAllGrades,
-          share_with_all_sections_in_grades: data.shareWithAllSectionsInGrades,
+          subject_id: data.subjectId,
+          share_with_all_sections: data.shareWithAllSections,
         })
         .select("*")
         .single();
@@ -39,8 +39,8 @@ export const noteService = {
       if (error) throw error;
       if (!note) throw new Error("Failed to create note");
 
-      // Insert class associations if not sharing with all grades
-      if (!data.shareWithAllGrades && data.selectedClassIds.length > 0) {
+      // Insert class associations
+      if (data.selectedClassIds.length > 0) {
         const classAssociations = data.selectedClassIds.map((classId) => ({
           note_id: note.id,
           class_id: classId,
@@ -50,8 +50,8 @@ export const noteService = {
         if (classError) throw classError;
       }
 
-      // Insert section associations if not sharing with all sections in grades
-      if (!data.shareWithAllSectionsInGrades && data.selectedSectionIds.length > 0) {
+      // Insert section associations if not sharing with all sections
+      if (!data.shareWithAllSections && data.selectedSectionIds.length > 0) {
         const sectionAssociations = data.selectedSectionIds.map((sectionId) => ({
           note_id: note.id,
           section_id: sectionId,
@@ -99,19 +99,16 @@ export const noteService = {
       if (!student) throw new Error("Student details not found");
 
       // Get notes that are either:
-      // 1. Shared with all grades
-      // 2. Shared with the student's specific class
-      // 3. Shared with the student's specific section
-      // 4. Or if the note is shared with the student's class and all sections in that class
+      // 1. Shared with the student's specific class
+      // 2. Shared with the student's specific section
+      // 3. Or if the note is shared with all sections
       const { data: notes, error } = await supabase
         .from("notes")
         .select(`
           *,
-          creator:profiles(first_name, last_name),
-          note_classes!inner(class_id),
-          note_sections!inner(section_id)
+          creator:profiles(first_name, last_name)
         `)
-        .or(`share_with_all_grades.eq.true, note_classes.class_id.eq.${student.current_class_id}, note_sections.section_id.eq.${student.current_section_id}`)
+        .or(`share_with_all_sections.eq.true, note_classes.class_id.eq.${student.current_class_id}, note_sections.section_id.eq.${student.current_section_id}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
