@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -36,7 +35,7 @@ export const noteService = {
         .select(`
           *,
           profiles:created_by (first_name, last_name),
-          subjects (name)
+          subjects (name, id)
         `)
         .order('created_at', { ascending: false });
         
@@ -60,19 +59,13 @@ export const noteService = {
             
           const sectionNames = sectionData?.map(s => s.sections.name) || [];
           
-          // Get subject name if available
+          // Get subject name and ID if available
           let subjectName = undefined;
           let subjectId = undefined;
           
-          if (note.subject_id) {
-            const { data: subject } = await supabase
-              .from('subjects')
-              .select('name')
-              .eq('id', note.subject_id)
-              .single();
-              
-            subjectName = subject?.name;
-            subjectId = note.subject_id;
+          if (note.subjects) {
+            subjectName = note.subjects.name;
+            subjectId = note.subjects.id;
           }
           
           return {
@@ -128,7 +121,7 @@ export const noteService = {
         .select(`
           *,
           profiles:created_by (first_name, last_name),
-          subjects (name)
+          subjects (name, id)
         `)
         .order('created_at', { ascending: false });
         
@@ -176,19 +169,13 @@ export const noteService = {
             
           const sectionNames = sectionData?.map(s => s.sections.name) || [];
           
-          // Get subject name if available
+          // Get subject name and ID if available
           let subjectName = undefined;
           let subjectId = undefined;
           
-          if (note.subject_id) {
-            const { data: subject } = await supabase
-              .from('subjects')
-              .select('name')
-              .eq('id', note.subject_id)
-              .single();
-              
-            subjectName = subject?.name;
-            subjectId = note.subject_id;
+          if (note.subjects) {
+            subjectName = note.subjects.name;
+            subjectId = note.subjects.id;
           }
           
           return {
