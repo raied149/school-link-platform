@@ -5,7 +5,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { SubjectFilter } from "@/components/attendance/SubjectFilter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface StudentAttendanceHeaderProps {
   selectedDate: Date;
@@ -35,17 +41,28 @@ export function StudentAttendanceHeader({
         </p>
       </div>
       <div className="flex gap-4">
-        <SubjectFilter
-          subjects={sectionSubjects}
-          selectedSubject={selectedSubject}
-          onSubjectChange={setSelectedSubject}
-        />
+        <Select 
+          value={selectedSubject} 
+          onValueChange={setSelectedSubject}
+        >
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder="Select a subject" />
+          </SelectTrigger>
+          <SelectContent>
+            {sectionSubjects.map((subject) => (
+              <SelectItem key={subject.id} value={subject.id}>
+                {subject.name} ({subject.code})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "w-[280px] justify-start text-left font-normal",
+                "w-[180px] justify-start text-left font-normal",
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -58,7 +75,6 @@ export function StudentAttendanceHeader({
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
               initialFocus
-              className="p-3 pointer-events-auto"
             />
           </PopoverContent>
         </Popover>

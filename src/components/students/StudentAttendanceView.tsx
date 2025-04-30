@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { useStudentAttendanceView } from "./attendance/useStudentAttendanceView";
 import { StudentAttendanceHeader } from "./attendance/StudentAttendanceHeader";
-import { AttendanceTable } from "./attendance/AttendanceTable";
+import { SectionAttendanceTable } from "./attendance/SectionAttendanceTable";
 
 interface StudentAttendanceViewProps {
   classId?: string;
@@ -52,13 +52,12 @@ export function StudentAttendanceView({
         />
       </div>
 
-      <AttendanceTable
+      <SectionAttendanceTable
         students={students}
-        sectionSubjects={sectionSubjects}
+        selectedSubject={selectedSubject}
         filteredAttendanceRecords={filteredAttendanceRecords}
         loading={loading}
         handleMarkAttendance={handleMarkAttendance}
-        selectedSubject={selectedSubject}
       />
     </Card>
   );

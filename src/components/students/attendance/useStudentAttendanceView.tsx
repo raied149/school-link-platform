@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubjectAttendance } from "@/hooks/useSubjectAttendance";
+import { format } from "date-fns";
 
 export function useStudentAttendanceView(
   classId?: string,
@@ -10,8 +11,10 @@ export function useStudentAttendanceView(
   studentId?: string
 ) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedSubject, setSelectedSubject] = useState("all");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   const {
     sectionSubjects,
@@ -19,6 +22,11 @@ export function useStudentAttendanceView(
     isLoading,
     markAttendance
   } = useSubjectAttendance(sectionId, selectedDate);
+
+  // Set default selected subject when subjects are loaded
+  if (selectedSubject === "" && sectionSubjects.length > 0) {
+    setSelectedSubject(sectionSubjects[0].id);
+  }
 
   // Fetch students for this section
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
@@ -68,50 +76,14 @@ export function useStudentAttendanceView(
     enabled: !!sectionId
   });
 
-  // Fetch historical attendance data for percentage calculation
-  const { data: attendanceStats = [], isLoading: isLoadingStats } = useQuery({
-    queryKey: ['attendance-stats', sectionId],
-    queryFn: async () => {
-      if (!sectionId) return [];
-      
-      const { data, error } = await supabase
-        .from('student_attendance')
-        .select('student_id, status')
-        .eq('section_id', sectionId);
-        
-      if (error) {
-        console.error("Error fetching attendance stats:", error);
-        throw error;
-      }
-      
-      // Calculate attendance statistics
-      const stats: Record<string, {present: number, absent: number, total: number}> = {};
-      
-      (data || []).forEach(record => {
-        if (!stats[record.student_id]) {
-          stats[record.student_id] = { present: 0, absent: 0, total: 0 };
-        }
-        
-        stats[record.student_id].total += 1;
-        
-        if (record.status === 'present') {
-          stats[record.student_id].present += 1;
-        } else if (record.status === 'absent') {
-          stats[record.student_id].absent += 1;
-        }
-      });
-      
-      return stats;
-    },
-    enabled: !!sectionId
-  });
-
-  // Filter attendance records by subject
+  // Filter attendance records by the selected subject (if any)
   const filteredAttendanceRecords = attendanceRecords.filter(record => 
-    selectedSubject === "all" || record.subject_id === selectedSubject
+    !selectedSubject || record.subject_id === selectedSubject
   );
 
   const handleMarkAttendance = (studentId: string, status: string, subjectId: string) => {
+    if (!subjectId) return;
+    
     setLoading(prev => ({ ...prev, [`${studentId}-${subjectId}`]: true }));
     
     markAttendance(
@@ -124,7 +96,7 @@ export function useStudentAttendanceView(
     );
   };
 
-  const isLoadingCombined = isLoadingStudents || isLoading || isLoadingStats;
+  const isLoadingCombined = isLoadingStudents || isLoading || !selectedSubject;
 
   return {
     selectedDate,
