@@ -30,7 +30,7 @@ export const noteService = {
           description: data.description,
           google_drive_link: data.googleDriveLink,
           created_by: user.id,
-          subject_id: data.subjectId,
+          subject_id: data.subjectId === "none" ? null : data.subjectId,
           share_with_all_sections: data.shareWithAllSections,
         })
         .select("*")

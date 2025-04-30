@@ -166,7 +166,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                   <SelectValue placeholder="Select a subject" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No subject</SelectItem>
+                  <SelectItem value="none">No subject</SelectItem>
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name}
