@@ -13,8 +13,20 @@ export const useSubjectAttendance = (sectionId?: string, date?: Date) => {
     queryFn: async () => {
       if (!sectionId) return [];
       
-      const { data: sections, error } = await supabase
-        .from('timetable')
+      // Get class_id for this section
+      const { data: sectionData, error: sectionError } = await supabase
+        .from('sections')
+        .select('class_id')
+        .eq('id', sectionId)
+        .single();
+      
+      if (sectionError) throw sectionError;
+      
+      if (!sectionData?.class_id) return [];
+      
+      // Get subjects for this class
+      const { data: subjectClasses, error: subjectsError } = await supabase
+        .from('subject_classes')
         .select(`
           subject_id,
           subjects (
@@ -23,18 +35,17 @@ export const useSubjectAttendance = (sectionId?: string, date?: Date) => {
             code
           )
         `)
-        .eq('section_id', sectionId)
-        .not('subject_id', 'is', null);
-
-      if (error) throw error;
+        .eq('class_id', sectionData.class_id);
       
-      // Get unique subjects
+      if (subjectsError) throw subjectsError;
+      
+      // Extract unique subjects
       const uniqueSubjects = Array.from(
-        new Set(sections.map(s => s.subject_id))
-      ).map(subjectId => 
-        sections.find(s => s.subject_id === subjectId)?.subjects
-      ).filter(Boolean);
-
+        new Map(subjectClasses.map(item => 
+          [item.subject_id, item.subjects]
+        )).values()
+      );
+      
       return uniqueSubjects;
     },
     enabled: !!sectionId

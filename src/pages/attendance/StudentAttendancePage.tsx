@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -394,7 +393,7 @@ const StudentAttendancePage = () => {
             />
           </div>
 
-          {/* Only show scheduled subjects once a section is selected */}
+          {/* Only show section subjects once a section is selected */}
           {sectionFilter !== 'all-sections' && (
             <div className="mt-4">
               <ScheduledSubjectSelector
