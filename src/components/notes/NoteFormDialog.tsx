@@ -14,8 +14,8 @@ import { subjectService } from "@/services/subjectService";
 import { toast } from "sonner";
 import { CreateNoteInput, noteService } from "@/services/noteService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { academicYearService } from "@/services/academicYearService";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NoteFormDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ interface NoteFormDialogProps {
 
 export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [shareWithAllSections, setShareWithAllSections] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedSectionId, setSelectedSectionId] = useState<string>("");
@@ -92,6 +93,12 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   });
 
   const onSubmit = handleSubmit((data) => {
+    // Check if user is authenticated
+    if (!user) {
+      toast.error("You must be logged in to create a note");
+      return;
+    }
+
     // Validate URL format
     if (!isValidURL(data.googleDriveLink)) {
       toast.error("Please enter a valid URL for the Google Drive link");
@@ -123,7 +130,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[650px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Share a New Note</DialogTitle>
           <DialogDescription>
@@ -131,153 +138,153 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4 h-[60vh]">
-          <form onSubmit={onSubmit} className="space-y-4 pb-6">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
-                <Input
-                  id="title"
-                  placeholder="Enter note title"
-                  {...register("title", { required: "Title is required" })}
-                />
-                {errors.title && (
-                  <p className="text-sm text-red-500">{errors.title.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter description (optional)"
-                  {...register("description")}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="googleDriveLink">Google Drive Link <span className="text-red-500">*</span></Label>
-                <Input
-                  id="googleDriveLink"
-                  placeholder="https://drive.google.com/..."
-                  {...register("googleDriveLink", { required: "Google Drive link is required" })}
-                />
-                {errors.googleDriveLink && (
-                  <p className="text-sm text-red-500">{errors.googleDriveLink.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="subject">Subject (Optional)</Label>
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger id="subject">
-                    <SelectValue placeholder="Select a subject" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    <SelectItem value="none">No subject</SelectItem>
-                    {!selectedClassId ? (
-                      <SelectItem value="select-class" disabled>Select a grade first</SelectItem>
-                    ) : subjects.length === 0 ? (
-                      <SelectItem value="no-subjects" disabled>No subjects available</SelectItem>
-                    ) : (
-                      subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Single Grade Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="class">Select Grade <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={selectedClassId} 
-                  onValueChange={setSelectedClassId}
-                  disabled={classesLoading}
-                >
-                  <SelectTrigger id="class">
-                    <SelectValue placeholder="Select a grade" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    {classesLoading ? (
-                      <SelectItem value="loading" disabled>Loading grades...</SelectItem>
-                    ) : classes.length === 0 ? (
-                      <SelectItem value="no-classes" disabled>No grades available</SelectItem>
-                    ) : (
-                      classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Share with all sections toggle */}
-              {selectedClassId && (
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="shareWithAllSections" className="flex-grow">
-                    Share with all sections in selected grade
-                  </Label>
-                  <Switch
-                    id="shareWithAllSections"
-                    checked={shareWithAllSections}
-                    onCheckedChange={setShareWithAllSections}
-                  />
-                </div>
-              )}
-              
-              {/* Single Section Selection */}
-              {!shareWithAllSections && selectedClassId && (
-                <div className="space-y-2">
-                  <Label htmlFor="section">Select Section <span className="text-red-500">*</span></Label>
-                  <Select 
-                    value={selectedSectionId} 
-                    onValueChange={setSelectedSectionId}
-                    disabled={sectionsLoading}
-                  >
-                    <SelectTrigger id="section">
-                      <SelectValue placeholder="Select a section" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {sectionsLoading ? (
-                        <SelectItem value="loading" disabled>Loading sections...</SelectItem>
-                      ) : sections.length === 0 ? (
-                        <SelectItem value="no-sections" disabled>No sections available</SelectItem>
-                      ) : (
-                        sections.map((section) => (
-                          <SelectItem key={section.id} value={section.id}>
-                            {section.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
+              <Input
+                id="title"
+                placeholder="Enter note title"
+                {...register("title", { required: "Title is required" })}
+              />
+              {errors.title && (
+                <p className="text-sm text-red-500">{errors.title.message}</p>
               )}
             </div>
             
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
+            <div className="space-y-2">
+              <Label htmlFor="googleDriveLink">Google Drive Link <span className="text-red-500">*</span></Label>
+              <Input
+                id="googleDriveLink"
+                placeholder="https://drive.google.com/..."
+                {...register("googleDriveLink", { required: "Google Drive link is required" })}
+              />
+              {errors.googleDriveLink && (
+                <p className="text-sm text-red-500">{errors.googleDriveLink.message}</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Enter description (optional)"
+              {...register("description")}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject (Optional)</Label>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger id="subject">
+                  <SelectValue placeholder="Select a subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No subject</SelectItem>
+                  {!selectedClassId ? (
+                    <SelectItem value="select-class" disabled>Select a grade first</SelectItem>
+                  ) : subjects.length === 0 ? (
+                    <SelectItem value="no-subjects" disabled>No subjects available</SelectItem>
+                  ) : (
+                    subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Single Grade Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="class">Select Grade <span className="text-red-500">*</span></Label>
+              <Select 
+                value={selectedClassId} 
+                onValueChange={setSelectedClassId}
+                disabled={classesLoading}
               >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createNoteMutation.isPending}
+                <SelectTrigger id="class">
+                  <SelectValue placeholder="Select a grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classesLoading ? (
+                    <SelectItem value="loading" disabled>Loading grades...</SelectItem>
+                  ) : classes.length === 0 ? (
+                    <SelectItem value="no-classes" disabled>No grades available</SelectItem>
+                  ) : (
+                    classes.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Share with all sections toggle */}
+          {selectedClassId && (
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="shareWithAllSections" className="flex-grow">
+                Share with all sections in selected grade
+              </Label>
+              <Switch
+                id="shareWithAllSections"
+                checked={shareWithAllSections}
+                onCheckedChange={setShareWithAllSections}
+              />
+            </div>
+          )}
+          
+          {/* Single Section Selection */}
+          {!shareWithAllSections && selectedClassId && (
+            <div className="space-y-2">
+              <Label htmlFor="section">Select Section <span className="text-red-500">*</span></Label>
+              <Select 
+                value={selectedSectionId} 
+                onValueChange={setSelectedSectionId}
+                disabled={sectionsLoading}
               >
-                {createNoteMutation.isPending ? "Creating..." : "Create Note"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </ScrollArea>
+                <SelectTrigger id="section">
+                  <SelectValue placeholder="Select a section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectionsLoading ? (
+                    <SelectItem value="loading" disabled>Loading sections...</SelectItem>
+                  ) : sections.length === 0 ? (
+                    <SelectItem value="no-sections" disabled>No sections available</SelectItem>
+                  ) : (
+                    sections.map((section) => (
+                      <SelectItem key={section.id} value={section.id}>
+                        {section.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          <DialogFooter className="pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? "Creating..." : "Create Note"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

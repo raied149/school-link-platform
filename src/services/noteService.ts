@@ -1,12 +1,21 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
-export type Note = Database["public"]["Tables"]["notes"]["Row"];
-export type NoteWithUser = Note & { creator: { first_name: string; last_name: string } };
+export interface Note {
+  id: string;
+  title: string;
+  description?: string;
+  googleDriveLink: string;
+  createdAt: string;
+  createdBy: string;
+  creatorName?: string;
+  subjectName?: string;
+  subjectId?: string;
+  classNames?: string[];
+  sectionNames?: string[];
+}
 
-export type CreateNoteInput = {
+export interface CreateNoteInput {
   title: string;
   description?: string;
   googleDriveLink: string;
@@ -14,116 +23,226 @@ export type CreateNoteInput = {
   shareWithAllSections: boolean;
   selectedClassIds: string[];
   selectedSectionIds: string[];
-};
+}
 
 export const noteService = {
-  async createNote(data: CreateNoteInput) {
+  getNotes: async (): Promise<Note[]> => {
     try {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
+      console.log("Fetching all notes");
       
-      if (sessionError || !session.session) {
+      const { data: notes, error } = await supabase
+        .from('notes')
+        .select(`
+          *,
+          profiles:created_by (first_name, last_name),
+          subjects:subject_id (name)
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      const notesWithClasses = await Promise.all(
+        (notes || []).map(async (note) => {
+          // Get classes for this note
+          const { data: classData } = await supabase
+            .from('note_classes')
+            .select('classes(name)')
+            .eq('note_id', note.id);
+            
+          const classNames = classData?.map(c => c.classes.name) || [];
+          
+          // Get sections for this note
+          const { data: sectionData } = await supabase
+            .from('note_sections')
+            .select('sections(name)')
+            .eq('note_id', note.id);
+            
+          const sectionNames = sectionData?.map(s => s.sections.name) || [];
+          
+          return {
+            id: note.id,
+            title: note.title,
+            description: note.description,
+            googleDriveLink: note.google_drive_link,
+            createdAt: note.created_at,
+            createdBy: note.created_by,
+            creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
+            subjectId: note.subject_id,
+            subjectName: note.subjects?.name,
+            classNames,
+            sectionNames
+          };
+        })
+      );
+      
+      return notesWithClasses;
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      throw error;
+    }
+  },
+
+  getNotesForStudent: async (studentId: string): Promise<Note[]> => {
+    try {
+      console.log("Fetching notes for student:", studentId);
+      
+      // First get the student's section
+      const { data: studentSections } = await supabase
+        .from('student_sections')
+        .select('section_id')
+        .eq('student_id', studentId);
+        
+      if (!studentSections?.length) return [];
+      
+      const studentSectionIds = studentSections.map(s => s.section_id);
+      
+      // Get the class IDs for these sections
+      const { data: sections } = await supabase
+        .from('sections')
+        .select('class_id')
+        .in('id', studentSectionIds);
+        
+      const classIds = [...new Set(sections?.map(s => s.class_id) || [])];
+      
+      // Get notes that are either:
+      // 1. Shared with all sections in classes the student belongs to
+      // 2. Specifically shared with the student's section
+      const { data: notes, error } = await supabase
+        .from('notes')
+        .select(`
+          *,
+          profiles:created_by (first_name, last_name),
+          subjects:subject_id (name)
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      // Filter notes based on class and section
+      const filteredNotes = await Promise.all(
+        (notes || []).filter(async (note) => {
+          // Check if note is shared with student's classes
+          const { data: noteClasses } = await supabase
+            .from('note_classes')
+            .select('class_id')
+            .eq('note_id', note.id);
+            
+          const noteClassIds = noteClasses?.map(nc => nc.class_id) || [];
+          const sharedWithStudentClass = noteClassIds.some(cId => classIds.includes(cId));
+          
+          if (!sharedWithStudentClass) return false;
+          
+          // If shared with all sections, include it
+          if (note.share_with_all_sections_in_grades) return true;
+          
+          // Otherwise check if shared with student's specific section
+          const { data: noteSections } = await supabase
+            .from('note_sections')
+            .select('section_id')
+            .eq('note_id', note.id);
+            
+          const noteSectionIds = noteSections?.map(ns => ns.section_id) || [];
+          return noteSectionIds.some(sId => studentSectionIds.includes(sId));
+        }).map(async (note) => {
+          // Get classes for this note
+          const { data: classData } = await supabase
+            .from('note_classes')
+            .select('classes(name)')
+            .eq('note_id', note.id);
+            
+          const classNames = classData?.map(c => c.classes.name) || [];
+          
+          // Get sections for this note
+          const { data: sectionData } = await supabase
+            .from('note_sections')
+            .select('sections(name)')
+            .eq('note_id', note.id);
+            
+          const sectionNames = sectionData?.map(s => s.sections.name) || [];
+          
+          return {
+            id: note.id,
+            title: note.title,
+            description: note.description,
+            googleDriveLink: note.google_drive_link,
+            createdAt: note.created_at,
+            createdBy: note.created_by,
+            creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
+            subjectId: note.subject_id,
+            subjectName: note.subjects?.name,
+            classNames,
+            sectionNames
+          };
+        })
+      );
+      
+      return filteredNotes;
+    } catch (error) {
+      console.error("Error fetching notes for student:", error);
+      throw error;
+    }
+  },
+
+  createNote: async (input: CreateNoteInput): Promise<Note> => {
+    try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         throw new Error("User not authenticated");
       }
       
-      const userId = session.session.user.id;
+      const userId = session.user.id;
       
-      // Insert the note
+      // Create the note
       const { data: note, error } = await supabase
-        .from("notes")
+        .from('notes')
         .insert({
-          title: data.title,
-          description: data.description,
-          google_drive_link: data.googleDriveLink,
+          title: input.title,
+          description: input.description,
+          google_drive_link: input.googleDriveLink,
           created_by: userId,
-          subject_id: data.subjectId === "none" ? null : data.subjectId,
-          share_with_all_sections: data.shareWithAllSections,
+          subject_id: input.subjectId,
+          share_with_all_sections_in_grades: input.shareWithAllSections
         })
-        .select("*")
+        .select()
         .single();
-
-      if (error) throw error;
-      if (!note) throw new Error("Failed to create note");
-
-      // Insert class associations
-      if (data.selectedClassIds.length > 0) {
-        const classAssociations = data.selectedClassIds.map((classId) => ({
-          note_id: note.id,
-          class_id: classId,
-        }));
-
-        const { error: classError } = await supabase.from("note_classes").insert(classAssociations);
-        if (classError) throw classError;
-      }
-
-      // Insert section associations if not sharing with all sections
-      if (!data.shareWithAllSections && data.selectedSectionIds.length > 0) {
-        const sectionAssociations = data.selectedSectionIds.map((sectionId) => ({
-          note_id: note.id,
-          section_id: sectionId,
-        }));
-
-        const { error: sectionError } = await supabase.from("note_sections").insert(sectionAssociations);
-        if (sectionError) throw sectionError;
-      }
-
-      return note;
-    } catch (error: any) {
-      console.error("Failed to create note:", error);
-      throw new Error(error.message || "Failed to create note");
-    }
-  },
-
-  async getNotes() {
-    try {
-      const { data: notes, error } = await supabase
-        .from("notes")
-        .select(`
-          *,
-          creator:profiles(first_name, last_name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return notes as NoteWithUser[];
-    } catch (error: any) {
-      toast.error("Failed to fetch notes: " + error.message);
-      throw error;
-    }
-  },
-
-  async getNotesForStudent(studentId: string) {
-    try {
-      // Get student's class and section
-      const { data: student, error: studentError } = await supabase
-        .from("student_details")
-        .select("current_class_id, current_section_id")
-        .eq("id", studentId)
-        .single();
-
-      if (studentError) throw studentError;
-      if (!student) throw new Error("Student details not found");
-
-      // Get notes that are either:
-      // 1. Shared with the student's specific class
-      // 2. Shared with the student's specific section
-      // 3. Or if the note is shared with all sections
-      const { data: notes, error } = await supabase
-        .from("notes")
-        .select(`
-          *,
-          creator:profiles(first_name, last_name)
-        `)
-        .or(`share_with_all_sections.eq.true, note_classes.class_id.eq.${student.current_class_id}, note_sections.section_id.eq.${student.current_section_id}`)
-        .order("created_at", { ascending: false });
-
+        
       if (error) throw error;
       
-      // Remove duplicate notes
-      const uniqueNotes = [...new Map(notes.map(note => [note.id, note])).values()];
-      return uniqueNotes as NoteWithUser[];
-    } catch (error: any) {
-      toast.error("Failed to fetch notes: " + error.message);
+      // Add class associations
+      const classPromises = input.selectedClassIds.map(classId =>
+        supabase
+          .from('note_classes')
+          .insert({ note_id: note.id, class_id: classId })
+      );
+      
+      await Promise.all(classPromises);
+      
+      // If not sharing with all sections, add specific section associations
+      if (!input.shareWithAllSections && input.selectedSectionIds.length > 0) {
+        const sectionPromises = input.selectedSectionIds.map(sectionId =>
+          supabase
+            .from('note_sections')
+            .insert({ note_id: note.id, section_id: sectionId })
+        );
+        
+        await Promise.all(sectionPromises);
+      }
+      
+      return {
+        id: note.id,
+        title: note.title,
+        description: note.description,
+        googleDriveLink: note.google_drive_link,
+        createdAt: note.created_at,
+        createdBy: note.created_by,
+        subjectId: note.subject_id,
+        classNames: [],  // These will be populated by the frontend when needed
+        sectionNames: []
+      };
+    } catch (error) {
+      console.error("Error creating note:", error);
       throw error;
     }
-  },
+  }
 };

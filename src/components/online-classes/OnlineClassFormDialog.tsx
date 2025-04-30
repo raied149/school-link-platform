@@ -39,7 +39,6 @@ import { sectionService } from '@/services/sectionService';
 import { subjectService } from '@/services/subjectService';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { academicYearService } from '@/services/academicYearService';
 
 const formSchema = z.object({
@@ -154,7 +153,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[650px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Video className="h-5 w-5" />
@@ -165,230 +164,226 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4 h-[60vh]">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-6">
-              <div className="grid grid-cols-1 gap-4">
-                {/* Class Selection */}
-                <FormField
-                  control={form.control}
-                  name="class_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Class/Grade</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a class" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-[200px]">
-                          {classesLoading ? (
-                            <SelectItem value="loading" disabled>Loading classes...</SelectItem>
-                          ) : classes.length === 0 ? (
-                            <SelectItem value="no-classes" disabled>No classes found</SelectItem>
-                          ) : (
-                            classes.map((classItem) => (
-                              <SelectItem key={classItem.id} value={classItem.id}>
-                                {classItem.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Section Selection */}
-                <FormField
-                  control={form.control}
-                  name="section_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Section</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a section" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-[200px]">
-                          {!selectedClassId ? (
-                            <SelectItem value="select-class" disabled>Select a class first</SelectItem>
-                          ) : sectionsLoading ? (
-                            <SelectItem value="loading" disabled>Loading sections...</SelectItem>
-                          ) : sections.length === 0 ? (
-                            <SelectItem value="no-sections" disabled>No sections found</SelectItem>
-                          ) : (
-                            sections.map((section) => (
-                              <SelectItem key={section.id} value={section.id}>
-                                {section.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Subject Selection */}
-                <FormField
-                  control={form.control}
-                  name="subject_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subject</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a subject" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-[200px]">
-                          {!selectedClassId ? (
-                            <SelectItem value="select-class" disabled>Select a class first</SelectItem>
-                          ) : subjectsLoading ? (
-                            <SelectItem value="loading" disabled>Loading subjects...</SelectItem>
-                          ) : subjects.length === 0 ? (
-                            <SelectItem value="no-subjects" disabled>No subjects found</SelectItem>
-                          ) : (
-                            subjects.map((subject) => (
-                              <SelectItem key={subject.id} value={subject.id}>
-                                {subject.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Optional Title */}
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title (Optional)</FormLabel>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Class Selection */}
+              <FormField
+                control={form.control}
+                name="class_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Class/Grade</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Input placeholder="Class title" {...field} />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a class" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormDescription>
-                        Leave blank to auto-generate from subject and section
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <SelectContent>
+                        {classesLoading ? (
+                          <SelectItem value="loading" disabled>Loading classes...</SelectItem>
+                        ) : classes.length === 0 ? (
+                          <SelectItem value="no-classes" disabled>No classes found</SelectItem>
+                        ) : (
+                          classes.map((classItem) => (
+                            <SelectItem key={classItem.id} value={classItem.id}>
+                              {classItem.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* Date Selection */}
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="mb-2">Date</FormLabel>
-                      <DateSelector 
-                        date={field.value} 
-                        onDateChange={field.onChange} 
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Section Selection */}
+              <FormField
+                control={form.control}
+                name="section_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Section</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a section" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {!selectedClassId ? (
+                          <SelectItem value="select-class" disabled>Select a class first</SelectItem>
+                        ) : sectionsLoading ? (
+                          <SelectItem value="loading" disabled>Loading sections...</SelectItem>
+                        ) : sections.length === 0 ? (
+                          <SelectItem value="no-sections" disabled>No sections found</SelectItem>
+                        ) : (
+                          sections.map((section) => (
+                            <SelectItem key={section.id} value={section.id}>
+                              {section.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Start Time */}
-                  <FormField
-                    control={form.control}
-                    name="start_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              {/* Subject Selection */}
+              <FormField
+                control={form.control}
+                name="subject_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a subject" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {!selectedClassId ? (
+                          <SelectItem value="select-class" disabled>Select a class first</SelectItem>
+                        ) : subjectsLoading ? (
+                          <SelectItem value="loading" disabled>Loading subjects...</SelectItem>
+                        ) : subjects.length === 0 ? (
+                          <SelectItem value="no-subjects" disabled>No subjects found</SelectItem>
+                        ) : (
+                          subjects.map((subject) => (
+                            <SelectItem key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  {/* End Time (Optional) */}
-                  <FormField
-                    control={form.control}
-                    name="end_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time (Optional)</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              {/* Optional Title */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Class title" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Leave blank to auto-generate from subject and section
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* Google Meet Link */}
-                <FormField
-                  control={form.control}
-                  name="google_meet_link"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Google Meet Link</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <div className="flex flex-1 items-center">
-                            <Link className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="https://meet.google.com/..." {...field} />
-                          </div>
-                        </FormControl>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={generateMeetLink}
-                        >
-                          Generate
-                        </Button>
+              {/* Date Selection */}
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-2">Date</FormLabel>
+                    <DateSelector 
+                      date={field.value} 
+                      onDateChange={field.onChange} 
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Start Time */}
+              <FormField
+                control={form.control}
+                name="start_time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <Input type="time" {...field} />
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <DialogFooter className="pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => onOpenChange(false)}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createMutation.isPending}
-                >
-                  <Video className="mr-2 h-4 w-4" />
-                  {createMutation.isPending ? "Scheduling..." : "Schedule Class"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </ScrollArea>
+              {/* End Time (Optional) */}
+              <FormField
+                control={form.control}
+                name="end_time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Time (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <Input type="time" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Google Meet Link */}
+            <FormField
+              control={form.control}
+              name="google_meet_link"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Google Meet Link</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <div className="flex flex-1 items-center">
+                        <Link className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="https://meet.google.com/..." {...field} />
+                      </div>
+                    </FormControl>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={generateMeetLink}
+                    >
+                      Generate
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter className="pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createMutation.isPending}
+              >
+                <Video className="mr-2 h-4 w-4" />
+                {createMutation.isPending ? "Scheduling..." : "Schedule Class"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
