@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -31,7 +30,8 @@ export const noteService = {
     try {
       console.log("Fetching all notes");
       
-      const { data: notes, error } = await supabase
+      // Try to select with subject_id
+      let notesQuery = supabase
         .from('notes')
         .select(`
           id,
@@ -46,62 +46,40 @@ export const noteService = {
         `)
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      const { data: notes, error } = await notesQuery;
+      
+      if (error) {
+        console.error("Error fetching notes:", error);
+        
+        // If there's an error related to subject_id, try again without it
+        if (error.message && error.message.includes("subject_id")) {
+          const { data: fallbackNotes, error: fallbackError } = await supabase
+            .from('notes')
+            .select(`
+              id,
+              title, 
+              description, 
+              google_drive_link,
+              created_at,
+              created_by,
+              share_with_all_sections_in_grades,
+              profiles:created_by (first_name, last_name)
+            `)
+            .order('created_at', { ascending: false });
+            
+          if (fallbackError) throw fallbackError;
+          if (!fallbackNotes) return [];
+          
+          // Process notes without subject_id
+          return processFetchedNotes(fallbackNotes);
+        }
+        
+        throw error;
+      }
       
       if (!notes) return [];
       
-      const notesWithClasses = await Promise.all(
-        notes.map(async (note) => {
-          // Get classes for this note
-          const { data: classData } = await supabase
-            .from('note_classes')
-            .select('classes(name)')
-            .eq('note_id', note.id);
-            
-          const classNames = classData?.map(c => c.classes.name) || [];
-          
-          // Get sections for this note
-          const { data: sectionData } = await supabase
-            .from('note_sections')
-            .select('sections(name)')
-            .eq('note_id', note.id);
-            
-          const sectionNames = sectionData?.map(s => s.sections.name) || [];
-          
-          // Get subject name and ID if available
-          let subjectName = undefined;
-          let subjectId = undefined;
-          
-          if (note.subject_id) {
-            const { data: subject } = await supabase
-              .from('subjects')
-              .select('name, id')
-              .eq('id', note.subject_id)
-              .single();
-              
-            if (subject) {
-              subjectName = subject.name;
-              subjectId = subject.id;
-            }
-          }
-          
-          return {
-            id: note.id,
-            title: note.title,
-            description: note.description,
-            googleDriveLink: note.google_drive_link,
-            createdAt: note.created_at,
-            createdBy: note.created_by,
-            creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
-            subjectId,
-            subjectName,
-            classNames,
-            sectionNames
-          };
-        })
-      );
-      
-      return notesWithClasses;
+      return processFetchedNotes(notes);
     } catch (error) {
       console.error("Error fetching notes:", error);
       throw error;
@@ -130,10 +108,8 @@ export const noteService = {
         
       const classIds = [...new Set(sections?.map(s => s.class_id) || [])];
       
-      // Get notes that are either:
-      // 1. Shared with all sections in classes the student belongs to
-      // 2. Specifically shared with the student's section
-      const { data: notes, error } = await supabase
+      // Try to select with subject_id
+      let notesQuery = supabase
         .from('notes')
         .select(`
           id,
@@ -148,86 +124,40 @@ export const noteService = {
         `)
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      const { data: notes, error } = await notesQuery;
+      
+      if (error) {
+        console.error("Error fetching notes:", error);
+        
+        // If there's an error related to subject_id, try again without it
+        if (error.message && error.message.includes("subject_id")) {
+          const { data: fallbackNotes, error: fallbackError } = await supabase
+            .from('notes')
+            .select(`
+              id,
+              title,
+              description,
+              google_drive_link,
+              created_at,
+              created_by,
+              share_with_all_sections_in_grades,
+              profiles:created_by (first_name, last_name)
+            `)
+            .order('created_at', { ascending: false });
+            
+          if (fallbackError) throw fallbackError;
+          if (!fallbackNotes) return [];
+          
+          // Process and filter notes without subject_id
+          return await filterNotesForStudent(fallbackNotes, studentSectionIds, classIds);
+        }
+        
+        throw error;
+      }
       
       if (!notes) return [];
       
-      // Filter notes based on class and section
-      const filteredNotes = await Promise.all(
-        notes.filter(async (note) => {
-          // Check if note is shared with student's classes
-          const { data: noteClasses } = await supabase
-            .from('note_classes')
-            .select('class_id')
-            .eq('note_id', note.id);
-            
-          const noteClassIds = noteClasses?.map(nc => nc.class_id) || [];
-          const sharedWithStudentClass = noteClassIds.some(cId => classIds.includes(cId));
-          
-          if (!sharedWithStudentClass) return false;
-          
-          // If shared with all sections, include it
-          if (note.share_with_all_sections_in_grades) return true;
-          
-          // Otherwise check if shared with student's specific section
-          const { data: noteSections } = await supabase
-            .from('note_sections')
-            .select('section_id')
-            .eq('note_id', note.id);
-            
-          const noteSectionIds = noteSections?.map(ns => ns.section_id) || [];
-          return noteSectionIds.some(sId => studentSectionIds.includes(sId));
-        }).map(async (note) => {
-          // Get classes for this note
-          const { data: classData } = await supabase
-            .from('note_classes')
-            .select('classes(name)')
-            .eq('note_id', note.id);
-            
-          const classNames = classData?.map(c => c.classes.name) || [];
-          
-          // Get sections for this note
-          const { data: sectionData } = await supabase
-            .from('note_sections')
-            .select('sections(name)')
-            .eq('note_id', note.id);
-            
-          const sectionNames = sectionData?.map(s => s.sections.name) || [];
-          
-          // Get subject name and ID if available
-          let subjectName = undefined;
-          let subjectId = undefined;
-          
-          if (note.subject_id) {
-            const { data: subject } = await supabase
-              .from('subjects')
-              .select('name, id')
-              .eq('id', note.subject_id)
-              .single();
-              
-            if (subject) {
-              subjectName = subject.name;
-              subjectId = subject.id;
-            }
-          }
-          
-          return {
-            id: note.id,
-            title: note.title,
-            description: note.description,
-            googleDriveLink: note.google_drive_link,
-            createdAt: note.created_at,
-            createdBy: note.created_by,
-            creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
-            subjectId,
-            subjectName,
-            classNames,
-            sectionNames
-          };
-        })
-      );
-      
-      return filteredNotes;
+      return await filterNotesForStudent(notes, studentSectionIds, classIds);
     } catch (error) {
       console.error("Error fetching notes for student:", error);
       throw error;
@@ -297,3 +227,89 @@ export const noteService = {
     }
   }
 };
+
+// Helper function to process notes data consistently
+async function processFetchedNotes(notes: any[]): Promise<Note[]> {
+  return Promise.all(
+    notes.map(async (note) => {
+      // Get classes for this note
+      const { data: classData } = await supabase
+        .from('note_classes')
+        .select('classes(name)')
+        .eq('note_id', note.id);
+        
+      const classNames = classData?.map(c => c.classes.name) || [];
+      
+      // Get sections for this note
+      const { data: sectionData } = await supabase
+        .from('note_sections')
+        .select('sections(name)')
+        .eq('note_id', note.id);
+        
+      const sectionNames = sectionData?.map(s => s.sections.name) || [];
+      
+      // Get subject name and ID if available
+      let subjectName = undefined;
+      let subjectId = undefined;
+      
+      if (note.subject_id) {
+        const { data: subject } = await supabase
+          .from('subjects')
+          .select('name, id')
+          .eq('id', note.subject_id)
+          .single();
+          
+        if (subject) {
+          subjectName = subject.name;
+          subjectId = subject.id;
+        }
+      }
+      
+      return {
+        id: note.id,
+        title: note.title,
+        description: note.description,
+        googleDriveLink: note.google_drive_link,
+        createdAt: note.created_at,
+        createdBy: note.created_by,
+        creatorName: `${note.profiles?.first_name || ''} ${note.profiles?.last_name || ''}`.trim(),
+        subjectId,
+        subjectName,
+        classNames,
+        sectionNames
+      };
+    })
+  );
+}
+
+// Helper function to filter notes for a student
+async function filterNotesForStudent(notes: any[], studentSectionIds: string[], classIds: string[]): Promise<Note[]> {
+  const validNotes = await Promise.all(
+    notes.filter(async (note) => {
+      // Check if note is shared with student's classes
+      const { data: noteClasses } = await supabase
+        .from('note_classes')
+        .select('class_id')
+        .eq('note_id', note.id);
+        
+      const noteClassIds = noteClasses?.map(nc => nc.class_id) || [];
+      const sharedWithStudentClass = noteClassIds.some(cId => classIds.includes(cId));
+      
+      if (!sharedWithStudentClass) return false;
+      
+      // If shared with all sections, include it
+      if (note.share_with_all_sections_in_grades) return true;
+      
+      // Otherwise check if shared with student's specific section
+      const { data: noteSections } = await supabase
+        .from('note_sections')
+        .select('section_id')
+        .eq('note_id', note.id);
+        
+      const noteSectionIds = noteSections?.map(ns => ns.section_id) || [];
+      return noteSectionIds.some(sId => studentSectionIds.includes(sId));
+    })
+  );
+
+  return processFetchedNotes(validNotes);
+}
