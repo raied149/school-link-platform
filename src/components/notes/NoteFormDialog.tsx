@@ -361,7 +361,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={createMutation.isPending}
+              disabled={createNoteMutation.isPending}
             >
               {createNoteMutation.isPending ? "Creating..." : "Create Note"}
             </Button>

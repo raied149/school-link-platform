@@ -34,7 +34,14 @@ export const noteService = {
       const { data: notes, error } = await supabase
         .from('notes')
         .select(`
-          *,
+          id,
+          title, 
+          description, 
+          google_drive_link,
+          created_at,
+          created_by,
+          subject_id,
+          share_with_all_sections_in_grades,
           profiles:created_by (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
@@ -127,7 +134,14 @@ export const noteService = {
       const { data: notes, error } = await supabase
         .from('notes')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          google_drive_link,
+          created_at,
+          created_by,
+          subject_id,
+          share_with_all_sections_in_grades,
           profiles:created_by (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
