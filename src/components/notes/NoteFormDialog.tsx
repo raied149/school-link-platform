@@ -41,6 +41,7 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   });
 
   const activeYear = academicYears.find(year => year.isActive);
+  
   // Ensure activeYearId is a valid UUID or null
   const activeYearId = activeYear?.id || null;
 
