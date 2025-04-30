@@ -76,5 +76,111 @@ export const academicYearService = {
       console.error('Error fetching active academic year:', error);
       return null;
     }
+  },
+
+  // Add the missing functions that are used in AcademicYearsPage.tsx
+  createAcademicYear: async (yearData: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>): Promise<AcademicYear | null> => {
+    try {
+      // If this year will be active, first deactivate all other years
+      if (yearData.isActive) {
+        await supabase
+          .from('academic_years')
+          .update({ is_active: false })
+          .neq('id', 'temp'); // Update all rows
+      }
+
+      const { data, error } = await supabase
+        .from('academic_years')
+        .insert({
+          name: yearData.name,
+          start_date: yearData.startDate,
+          end_date: yearData.endDate,
+          is_active: yearData.isActive
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        name: data.name,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        isActive: data.is_active,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at || data.created_at
+      };
+    } catch (error: any) {
+      console.error('Error creating academic year:', error);
+      return null;
+    }
+  },
+
+  updateAcademicYear: async (id: string, data: Partial<AcademicYear>): Promise<AcademicYear | null> => {
+    try {
+      // If this year will be active, first deactivate all other years
+      if (data.isActive) {
+        await supabase
+          .from('academic_years')
+          .update({ is_active: false })
+          .neq('id', id);
+      }
+
+      const { data: updatedData, error } = await supabase
+        .from('academic_years')
+        .update({
+          name: data.name,
+          start_date: data.startDate,
+          end_date: data.endDate,
+          is_active: data.isActive,
+        })
+        .eq('id', id)
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      return {
+        id: updatedData.id,
+        name: updatedData.name,
+        startDate: updatedData.start_date,
+        endDate: updatedData.end_date,
+        isActive: updatedData.is_active,
+        createdAt: updatedData.created_at,
+        updatedAt: updatedData.updated_at || updatedData.created_at
+      };
+    } catch (error: any) {
+      console.error('Error updating academic year:', error);
+      return null;
+    }
+  },
+
+  deleteAcademicYear: async (id: string): Promise<boolean> => {
+    try {
+      // Check if this is the active year
+      const { data: yearData } = await supabase
+        .from('academic_years')
+        .select('is_active')
+        .eq('id', id)
+        .single();
+        
+      // Don't allow deleting the active year
+      if (yearData?.is_active) {
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('academic_years')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting academic year:', error);
+      return false;
+    }
   }
 };

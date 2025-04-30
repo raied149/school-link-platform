@@ -34,12 +34,19 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
   }>();
 
   // Get the current active academic year
-  const { data: academicYears = [] } = useQuery({
-    queryKey: ['academic-years'],
-    queryFn: () => academicYearService.getAcademicYears(),
+  const { data: activeYear, isLoading: activeYearLoading } = useQuery({
+    queryKey: ['active-academic-year'],
+    queryFn: () => academicYearService.getActiveAcademicYear(),
   });
 
-  const activeYear = academicYears.find(year => year.isActive);
+  // Log active year for debugging
+  useEffect(() => {
+    if (activeYear) {
+      console.log("Active academic year:", activeYear);
+    } else if (!activeYearLoading) {
+      console.log("No active academic year found");
+    }
+  }, [activeYear, activeYearLoading]);
   
   // Ensure activeYearId is a valid UUID or null
   const activeYearId = activeYear?.id || null;
@@ -51,7 +58,6 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
       console.log("Fetching real classes for yearId:", activeYearId);
       if (!activeYearId) {
         console.log("No active year ID found");
-        toast.error("No active academic year found");
         return [];
       }
       
@@ -299,6 +305,10 @@ export function NoteFormDialog({ open, onOpenChange }: NoteFormDialogProps) {
                 <SelectContent>
                   {classesLoading ? (
                     <SelectItem value="loading" disabled>Loading grades...</SelectItem>
+                  ) : activeYearLoading ? (
+                    <SelectItem value="loading" disabled>Loading academic year...</SelectItem>
+                  ) : !activeYear ? (
+                    <SelectItem value="no-year" disabled>No active academic year available</SelectItem>
                   ) : classes.length === 0 ? (
                     <SelectItem value="no-classes" disabled>No grades available</SelectItem>
                   ) : (
