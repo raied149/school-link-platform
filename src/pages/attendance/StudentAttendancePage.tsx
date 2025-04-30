@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -187,7 +188,7 @@ const StudentAttendancePage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Mark attendance mutation
+  // Mark attendance mutation - UPDATED to properly handle subject-specific attendance
   const markAttendanceMutation = useMutation({
     mutationFn: async ({ 
       studentId, 
@@ -204,7 +205,7 @@ const StudentAttendancePage = () => {
         throw new Error("Missing required information");
       }
 
-      // Query parameters for finding existing records
+      // Query parameters for finding existing records - now includes subject_id
       const queryParams = {
         student_id: studentId,
         date: formattedDate,
@@ -212,22 +213,33 @@ const StudentAttendancePage = () => {
         subject_id: subjectId
       };
 
-      const { data: existingRecord } = await supabase
+      // First check if a record exists for this specific student, date, section AND subject
+      const { data: existingRecord, error: checkError } = await supabase
         .from('student_attendance')
         .select('id')
         .match(queryParams)
         .maybeSingle();
         
+      if (checkError) {
+        console.error("Error checking existing attendance record:", checkError);
+        throw checkError;
+      }
+        
       if (existingRecord) {
+        // Update existing record
         const { data, error } = await supabase
           .from('student_attendance')
           .update({ status })
           .eq('id', existingRecord.id)
           .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating attendance:", error);
+          throw error;
+        }
         return data;
       } else {
+        // Create new record with the subject_id included
         const record = {
           student_id: studentId,
           section_id: sectionId,
@@ -241,7 +253,10 @@ const StudentAttendancePage = () => {
           .insert(record)
           .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error creating attendance record:", error);
+          throw error;
+        }
         return data;
       }
     },
