@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -84,14 +83,20 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
   });
 
   const activeYear = academicYears.find(year => year.isActive);
-  const activeYearId = activeYear?.id || "";
+  
+  // Ensure activeYearId is a valid UUID or null
+  const activeYearId = activeYear?.id || null;
 
   // Fetch real classes from Supabase for the active academic year
   const { data: classes = [], isLoading: classesLoading } = useQuery({
     queryKey: ["real-classes", activeYearId],
     queryFn: async () => {
       console.log("Fetching real classes for yearId:", activeYearId);
-      if (!activeYearId) return [];
+      if (!activeYearId) {
+        console.log("No active year ID found");
+        toast.error("No active academic year found");
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('classes')

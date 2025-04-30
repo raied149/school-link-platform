@@ -48,8 +48,10 @@ export const noteService = {
         
       if (error) throw error;
       
+      if (!notes) return [];
+      
       const notesWithClasses = await Promise.all(
-        (notes || []).map(async (note) => {
+        notes.map(async (note) => {
           // Get classes for this note
           const { data: classData } = await supabase
             .from('note_classes')
@@ -148,9 +150,11 @@ export const noteService = {
         
       if (error) throw error;
       
+      if (!notes) return [];
+      
       // Filter notes based on class and section
       const filteredNotes = await Promise.all(
-        (notes || []).filter(async (note) => {
+        notes.filter(async (note) => {
           // Check if note is shared with student's classes
           const { data: noteClasses } = await supabase
             .from('note_classes')
