@@ -9,7 +9,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import { Toaster } from "./components/ui/toaster";
-import { ToastContainer } from "./components/ui/sonner";
+import { Toaster as SonnerToaster } from "sonner";
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SectionsPage from './pages/classes/SectionsPage';
@@ -66,7 +66,7 @@ function App() {
           </Routes>
         </Router>
         <Toaster />
-        <ToastContainer />
+        <SonnerToaster />
       </AuthProvider>
     </QueryClientProvider>
   );

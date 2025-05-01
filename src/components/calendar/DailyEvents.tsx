@@ -1,173 +1,161 @@
 
-import { useState } from "react";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, BookOpen } from "lucide-react";
-import { SchoolEvent } from "@/types";
-import { EventDescription } from "./EventDescription";
-import { EventFormHeader } from "./EventFormHeader";
-import { Task } from "@/services/taskService";
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Clock, Edit, Trash2, CheckCircle, ListTodo, Calendar as CalendarIcon } from 'lucide-react';
+import { EventFormHeader } from './EventFormHeader';
+import { EventDescription } from './EventDescription';
+import { SchoolEvent } from '@/types';
+import { Task } from '@/services/taskService';
+import { TaskItem } from '../tasks/TaskItem';
 
 interface DailyEventsProps {
   date: Date;
   events: SchoolEvent[];
-  isLoading: boolean;
-  onDelete: (eventId: string) => void;
-  onUpdate: (eventId: string, eventData: Partial<SchoolEvent>) => void;
   tasks?: Task[];
-  onTaskStatusChange?: (taskId: string, status: Task['status']) => void;
-  onTaskEdit?: (task: Task) => void;
+  isLoading: boolean;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, eventData: Partial<SchoolEvent>) => void;
+  onTaskStatusChange?: (taskId: string, newStatus: Task['status']) => void;
   onTaskDelete?: (taskId: string) => void;
+  onTaskEdit?: (task: Task) => void;
 }
 
 export function DailyEvents({ 
   date, 
   events, 
-  isLoading, 
+  tasks = [], 
+  isLoading,
   onDelete, 
-  onUpdate, 
-  tasks = [],
+  onUpdate,
   onTaskStatusChange,
-  onTaskEdit,
-  onTaskDelete
+  onTaskDelete,
+  onTaskEdit
 }: DailyEventsProps) {
-  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
+  const formattedDate = format(date, 'yyyy-MM-dd');
+  const isToday = formattedDate === format(new Date(), 'yyyy-MM-dd');
+  const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
+  
+  const toggleEventDescription = (id: string) => {
+    setExpandedEvents(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
-  const formattedDate = format(date, "MMMM d, yyyy");
-  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  // Custom function to format event types for display
+  const formatEventType = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
+  };
+
+  const eventTypeColors: Record<string, string> = {
+    school_event: 'bg-blue-100 text-blue-800',
+    holiday: 'bg-green-100 text-green-800',
+    exam: 'bg-red-100 text-red-800',
+    meeting: 'bg-purple-100 text-purple-800',
+    reminder: 'bg-yellow-100 text-yellow-800'
+  };
 
   return (
-    <div>
-      <EventFormHeader date={date} formattedDate={formattedDate} isToday={isToday} />
-
-      <div className="mt-4 space-y-4">
-        {isLoading ? (
-          <p>Loading events...</p>
-        ) : events.length === 0 && tasks.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            No events scheduled for {formattedDate}.
-          </div>
-        ) : (
-          <>
-            {/* Regular calendar events */}
-            {events.map(event => (
-              <div key={event.id} className="border rounded-md p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{event.name}</h3>
-                      <Badge>{event.type}</Badge>
-                    </div>
-                    {(event.startTime || event.endTime) && (
-                      <p className="text-sm text-muted-foreground">
-                        {event.startTime && event.endTime 
-                          ? `${event.startTime} - ${event.endTime}`
-                          : event.startTime 
-                            ? `Starts at ${event.startTime}`
-                            : `Ends at ${event.endTime}`}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => onUpdate(event.id, {})}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => onDelete(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {event.description && (
-                  <EventDescription
-                    description={event.description}
-                    isExpanded={expandedEvent === event.id}
-                    onToggle={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
-                  />
-                )}
-              </div>
-            ))}
-            
-            {/* Tasks due on this date */}
-            {tasks.map(task => (
-              <div key={task.id} className={`border rounded-md p-4 ${task.status === 'completed' ? 'bg-green-50' : ''}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{task.title}</h3>
-                      <Badge variant="outline" className="bg-blue-100">
-                        <BookOpen className="h-3 w-3 mr-1" />
-                        {task.type}
-                      </Badge>
-                      <Badge variant="outline">{task.status}</Badge>
-                    </div>
-                    {task.due_time && (
-                      <p className="text-sm text-muted-foreground">
-                        Due at {task.due_time}
-                      </p>
-                    )}
-                    {task.description && (
-                      <p className="text-sm mt-1">{task.description}</p>
-                    )}
-                  </div>
-                  
-                  {onTaskEdit && onTaskDelete && (
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => onTaskEdit(task)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => onTaskDelete(task.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
-                {onTaskStatusChange && (
-                  <div className="mt-2 flex gap-2">
-                    {task.status !== 'completed' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-green-700"
-                        onClick={() => onTaskStatusChange(task.id, 'completed')}
-                      >
-                        Mark as completed
-                      </Button>
-                    )}
-                    {task.status === 'completed' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => onTaskStatusChange(task.id, 'pending')}
-                      >
-                        Mark as pending
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </>
-        )}
+    <div className="h-full flex flex-col">
+      <div className="mb-4">
+        <EventFormHeader 
+          date={date}
+          formattedDate={format(date, 'MMMM d, yyyy')}
+          isToday={isToday}
+        />
       </div>
+      
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading events...</p>
+        </div>
+      ) : events.length === 0 && tasks.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">No events or tasks scheduled for this day</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto space-y-4">
+          {events.length > 0 && (
+            <div>
+              <h3 className="font-medium mb-2 flex items-center">
+                <CalendarIcon className="h-4 w-4 mr-1" /> Events
+              </h3>
+              <div className="space-y-3">
+                {events.map(event => (
+                  <Card key={event.id} className="overflow-hidden">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-sm">{event.name}</h4>
+                            <Badge variant="outline" className={eventTypeColors[event.type] || 'bg-gray-100'}>
+                              {formatEventType(event.type)}
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
+                            {event.startTime && (
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {event.startTime}
+                                {event.endTime && ` - ${event.endTime}`}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {event.description && (
+                            <EventDescription 
+                              description={event.description}
+                              isExpanded={!!expandedEvents[event.id]}
+                              onToggle={() => toggleEventDescription(event.id)}
+                            />
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => onDelete(event.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {tasks.length > 0 && (
+            <div>
+              <Separator className="my-4" />
+              <h3 className="font-medium mb-2 flex items-center">
+                <ListTodo className="h-4 w-4 mr-1" /> Tasks
+              </h3>
+              <div className="space-y-3">
+                {tasks.map(task => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onDelete={onTaskDelete || (() => {})}
+                    onEdit={onTaskEdit || (() => {})}
+                    onStatusChange={onTaskStatusChange || (() => {})}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
