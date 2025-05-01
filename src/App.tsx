@@ -35,7 +35,7 @@ import GalleryEventDetailPage from './pages/gallery/GalleryEventDetailPage';
 // Redirect component for handling class-years with yearId to classes with yearId
 const ClassYearsRedirect = () => {
   const { yearId } = useParams();
-  return <Navigate to={`/classes/${yearId || ''}`} replace />;
+  return <Navigate to={`/classes/${yearId ?? ''}`} replace />;
 };
 
 const queryClient = new QueryClient();
