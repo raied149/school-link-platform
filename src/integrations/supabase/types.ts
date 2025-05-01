@@ -222,6 +222,52 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_assignments: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          exam_id: string
+          id: string
+          section_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          exam_id: string
+          id?: string
+          section_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          exam_id?: string
+          id?: string
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_assignments_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_assignments_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_assignments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_results: {
         Row: {
           created_at: string
@@ -895,6 +941,61 @@ export type Database = {
             foreignKeyName: "student_details_id_fkey"
             columns: ["id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_exam_results: {
+        Row: {
+          created_at: string
+          exam_id: string
+          feedback: string | null
+          id: string
+          marks_obtained: number
+          student_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          feedback?: string | null
+          id?: string
+          marks_obtained: number
+          student_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          feedback?: string | null
+          id?: string
+          marks_obtained?: number
+          student_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_exam_results_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_exam_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_exam_results_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

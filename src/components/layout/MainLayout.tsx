@@ -28,11 +28,11 @@ const MainLayout = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Users, label: 'Student Details', path: '/users' }, // Updated to match actual route
-    { icon: Users, label: 'Teacher Details', path: '/teachers/all' }, // Created consistent path for teachers
+    { icon: Users, label: 'Student Details', path: '/users' }, 
+    { icon: Users, label: 'Teacher Details', path: '/teachers/all' }, 
     { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
     { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
-    { icon: GraduationCap, label: 'Class Years', path: '/class-years' }, // Updated to match actual route
+    { icon: GraduationCap, label: 'Class Years', path: '/class-years' }, 
     { icon: BookOpen, label: 'Subjects', path: '/subjects' },
     { icon: Clock, label: 'Timetable', path: '/timetable' },
     { icon: Video, label: 'Online Classes', path: '/online-classes' },

@@ -21,3 +21,38 @@ export interface StudentTestResult {
   feedback?: string;
   updatedAt: string;
 }
+
+export interface ExamAssignment {
+  id: string;
+  examId: string;
+  sectionId: string;
+  academicYearId: string;
+}
+
+export interface StudentExamResult {
+  id: string;
+  examId: string;
+  studentId: string;
+  marksObtained: number;
+  feedback?: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface ExamWithSubject {
+  id: string;
+  name: string;
+  date: string;
+  max_score: number;
+  subject_id: string;
+  subjects?: {
+    name: string;
+    code: string;
+  };
+}
+
+export interface ExamResult {
+  score: number;
+  exams?: ExamWithSubject;
+}

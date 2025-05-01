@@ -1,71 +1,52 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, FileText, Calendar, Filter } from "lucide-react";
+import { PlusCircle, FileText, Filter } from "lucide-react";
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Mock data
-const mockExams = [
-  {
-    id: "e1",
-    name: "Mid-term Examination",
-    type: "exam",
-    classes: ["class1", "class2"],
-    sections: ["sec1", "sec2"],
-    subjects: ["sub1", "sub2"],
-    maxMarks: 100,
-    date: new Date("2025-06-15").toISOString(),
-    status: "upcoming",
-    createdAt: new Date("2025-04-01").toISOString(),
-    updatedAt: new Date("2025-04-01").toISOString(),
-  },
-  {
-    id: "t1",
-    name: "Unit Test 1",
-    type: "test",
-    classes: ["class1"],
-    sections: ["sec1"],
-    subjects: ["sub1"],
-    maxMarks: 50,
-    date: new Date("2025-05-05").toISOString(),
-    status: "upcoming",
-    createdAt: new Date("2025-04-01").toISOString(),
-    updatedAt: new Date("2025-04-01").toISOString(),
-  },
-  {
-    id: "t2",
-    name: "Unit Test 2",
-    type: "test",
-    classes: ["class3"],
-    sections: ["sec3"],
-    subjects: ["sub3"],
-    maxMarks: 30,
-    date: new Date("2025-04-20").toISOString(),
-    status: "completed",
-    createdAt: new Date("2025-03-15").toISOString(),
-    updatedAt: new Date("2025-04-20").toISOString(),
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getAllExams } from "@/services/examService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ExamsPage = () => {
+  const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   
-  // Filter exams based on tab and status
-  const filteredExams = mockExams.filter(exam => {
-    const matchesTab = activeTab === "all" || exam.type === activeTab;
-    const matchesStatus = statusFilter === "all" || exam.status === statusFilter;
+  const { data: exams = [], isLoading } = useQuery({
+    queryKey: ['exams'],
+    queryFn: getAllExams
+  });
+  
+  // Helper function to determine exam status based on date
+  const getExamStatus = (date: string) => {
+    const today = new Date();
+    const examDate = new Date(date);
+    
+    if (examDate > today) return 'upcoming';
+    if (examDate < today) return 'completed';
+    return 'ongoing';
+  };
+  
+  // Apply filters to exams
+  const filteredExams = exams.filter(exam => {
+    const examType = exam.name?.toLowerCase().includes('test') ? 'test' : 'exam';
+    const examStatus = getExamStatus(exam.date);
+    
+    const matchesTab = activeTab === "all" || examType === activeTab;
+    const matchesStatus = statusFilter === "all" || examStatus === statusFilter;
+    
     return matchesTab && matchesStatus;
   });
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (date: string) => {
+    const status = getExamStatus(date);
     switch(status) {
       case 'upcoming':
         return <Badge className="bg-blue-500">Upcoming</Badge>;
@@ -116,127 +97,143 @@ const ExamsPage = () => {
           </div>
 
           <TabsContent value="all" className="m-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Max Marks</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExams.length > 0 ? (
-                  filteredExams.map(exam => (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredExams.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Max Marks</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExams.map(exam => (
                     <TableRow key={exam.id}>
                       <TableCell>{exam.name}</TableCell>
-                      <TableCell className="capitalize">{exam.type}</TableCell>
+                      <TableCell>{exam.subjects?.name || 'No Subject'}</TableCell>
                       <TableCell>{format(new Date(exam.date), "PPP")}</TableCell>
-                      <TableCell>{exam.maxMarks}</TableCell>
-                      <TableCell>{renderStatusBadge(exam.status)}</TableCell>
+                      <TableCell>{exam.max_score}</TableCell>
+                      <TableCell>{renderStatusBadge(exam.date)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/exams/${exam.id}`}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Details
-                          </a>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Details
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      No {activeTab === "all" ? "tests or exams" : activeTab === "test" ? "tests" : "exams"} found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  No {activeTab === "all" ? "tests or exams" : activeTab === "test" ? "tests" : "exams"} found
+                </p>
+                <Button onClick={() => setIsFormOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add {activeTab === "all" || activeTab === "test" ? "Test" : "Exam"}
+                </Button>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="test" className="m-0">
-            {/* Same table structure as "all" but filtered for tests */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Max Marks</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExams.length > 0 ? (
-                  filteredExams.map(test => (
-                    <TableRow key={test.id}>
-                      <TableCell>{test.name}</TableCell>
-                      <TableCell>{format(new Date(test.date), "PPP")}</TableCell>
-                      <TableCell>{test.maxMarks}</TableCell>
-                      <TableCell>{renderStatusBadge(test.status)}</TableCell>
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredExams.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Max Marks</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExams.filter(exam => exam.name?.toLowerCase().includes('test')).map(exam => (
+                    <TableRow key={exam.id}>
+                      <TableCell>{exam.name}</TableCell>
+                      <TableCell>{exam.subjects?.name || 'No Subject'}</TableCell>
+                      <TableCell>{format(new Date(exam.date), "PPP")}</TableCell>
+                      <TableCell>{exam.max_score}</TableCell>
+                      <TableCell>{renderStatusBadge(exam.date)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/exams/${test.id}`}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Details
-                          </a>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Details
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                      No tests found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No tests found</p>
+                <Button onClick={() => setIsFormOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Test
+                </Button>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="exam" className="m-0">
-            {/* Same table structure as "all" but filtered for exams */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Max Marks</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExams.length > 0 ? (
-                  filteredExams.map(exam => (
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredExams.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Max Marks</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExams.filter(exam => !exam.name?.toLowerCase().includes('test')).map(exam => (
                     <TableRow key={exam.id}>
                       <TableCell>{exam.name}</TableCell>
+                      <TableCell>{exam.subjects?.name || 'No Subject'}</TableCell>
                       <TableCell>{format(new Date(exam.date), "PPP")}</TableCell>
-                      <TableCell>{exam.maxMarks}</TableCell>
-                      <TableCell>{renderStatusBadge(exam.status)}</TableCell>
+                      <TableCell>{exam.max_score}</TableCell>
+                      <TableCell>{renderStatusBadge(exam.date)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/exams/${exam.id}`}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Details
-                          </a>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/exams/${exam.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Details
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                      No exams found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No exams found</p>
+                <Button onClick={() => setIsFormOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Exam
+                </Button>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </Card>
