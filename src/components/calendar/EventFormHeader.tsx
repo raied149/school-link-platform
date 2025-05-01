@@ -1,54 +1,25 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
-import { formSchema } from "./schema";
+import { CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface EventFormHeaderProps {
-  form: UseFormReturn<z.infer<typeof formSchema>>;
+  date: Date;
+  formattedDate: string;
+  isToday: boolean;
 }
 
-export function EventFormHeader({ form }: EventFormHeaderProps) {
+export function EventFormHeader({ date, formattedDate, isToday }: EventFormHeaderProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <FormField
-        control={form.control}
-        name="name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Event Name</FormLabel>
-            <FormControl>
-              <Input placeholder="Enter event name" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      
-      <FormField
-        control={form.control}
-        name="type"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Event Type</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="meeting">Meeting</SelectItem>
-                <SelectItem value="function">Function</SelectItem>
-                <SelectItem value="holiday">Holiday</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <CalendarIcon className="h-5 w-5 text-muted-foreground mr-2" />
+        <h3 className="font-medium text-lg">{formattedDate}</h3>
+      </div>
+      {isToday && (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+          Today
+        </Badge>
+      )}
     </div>
   );
 }

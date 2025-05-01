@@ -1,32 +1,37 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
-import { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
-import { formSchema } from "./schema";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface EventDescriptionProps {
-  form: UseFormReturn<z.infer<typeof formSchema>>;
+  description: string;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
-export function EventDescription({ form }: EventDescriptionProps) {
+export function EventDescription({ description, isExpanded, onToggle }: EventDescriptionProps) {
   return (
-    <FormField
-      control={form.control}
-      name="description"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Description</FormLabel>
-          <FormControl>
-            <Textarea 
-              placeholder="Enter event description"
-              className="min-h-[80px]"
-              {...field}
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <div className="mt-2">
+      <div className={`text-sm text-gray-600 ${isExpanded ? '' : 'line-clamp-2'}`}>
+        {description}
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-xs text-muted-foreground"
+        onClick={onToggle}
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp className="h-3 w-3 mr-1" />
+            <span>Show Less</span>
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-3 w-3 mr-1" />
+            <span>Show More</span>
+          </>
+        )}
+      </Button>
+    </div>
   );
 }

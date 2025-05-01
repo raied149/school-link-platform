@@ -98,7 +98,7 @@ export const taskService = {
         `);
 
       const { data, error } = await query
-        .order('due_date', { ascending: true, nullsLast: true })
+        .order('due_date', { ascending: true, nullsFirst: true })
         .order('created_at', { ascending: false });
 
       if (error) {
