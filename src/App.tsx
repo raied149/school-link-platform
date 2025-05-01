@@ -29,6 +29,8 @@ import CalendarPage from './pages/CalendarPage';
 import IncidentDetailPage from './pages/incidents/IncidentDetailPage';
 import IncidentsPage from './pages/incidents/IncidentsPage';
 import TasksPage from './pages/TasksPage';
+import GalleryPage from './pages/gallery/GalleryPage';
+import GalleryEventDetailPage from './pages/gallery/GalleryEventDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,8 @@ function App() {
               <Route path="/incidents" element={<IncidentsPage />} />
               <Route path="/incidents/:incidentId" element={<IncidentDetailPage />} />
               <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/gallery/:eventId" element={<GalleryEventDetailPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

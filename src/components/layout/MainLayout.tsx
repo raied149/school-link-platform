@@ -15,7 +15,8 @@ import {
   Clock,
   BookOpen,
   Video,
-  ListTodo
+  ListTodo,
+  Image
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +37,7 @@ const MainLayout = () => {
     { icon: Clock, label: 'Timetable', path: '/timetable' },
     { icon: Video, label: 'Online Classes', path: '/online-classes' },
     { icon: Calendar, label: 'Calendar', path: '/calendar' },
+    { icon: Image, label: 'Gallery', path: '/gallery' },
     { icon: FileText, label: 'Tests & Exams', path: '/exams' },
     { icon: FileText, label: 'Notes', path: '/notes' },
     { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
