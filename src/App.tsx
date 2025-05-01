@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
@@ -49,7 +49,8 @@ function App() {
               <Route path="/classes/:yearId" element={<ClassYearsPage />} />
               <Route path="/class/:classId" element={<ClassDetailsPage />} />
               <Route path="/sections/:classId" element={<SectionsPage />} />
-              {/* Add route for section details */}
+              {/* Redirect for class-years to classes */}
+              <Route path="/class-years" element={<Navigate to="/classes" replace />} />
               <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/subjects" element={<SubjectsPage />} />
