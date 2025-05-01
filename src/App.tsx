@@ -45,13 +45,15 @@ function App() {
             <Route path="/" element={<MainLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/academic-years" element={<AcademicYearsPage />} />
-              <Route path="/class-years" element={<ClassYearsPage />} />
-              <Route path="/classes/:yearId" element={<ClassesPage />} />
+              <Route path="/classes" element={<ClassYearsPage />} />
+              <Route path="/classes/:yearId" element={<ClassYearsPage />} />
               <Route path="/class/:classId" element={<ClassDetailsPage />} />
               <Route path="/sections/:classId" element={<SectionsPage />} />
+              {/* Add route for section details */}
+              <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/subjects" element={<SubjectsPage />} />
-              <Route path="/teachers/all" element={<TeacherDetailsPage />} /> {/* Added route for teacher listing */}
+              <Route path="/teachers/all" element={<TeacherDetailsPage />} /> 
               <Route path="/teachers/:teacherId" element={<TeacherDetailsPage />} />
               <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
               <Route path="/student-attendance" element={<StudentAttendancePage />} />

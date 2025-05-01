@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -387,8 +386,9 @@ const SectionsPage = () => {
     setIsDeleteDialogOpen(true);
   };
   
+  // Fix the navigation function
   const navigateToSectionDetails = (section: Section) => {
-    navigate(`/classes/${yearId}/${classId}/${section.id}`);
+    navigate(`/class/${classId}/section/${section.id}`);
   };
   
   // Redirect if params are missing
