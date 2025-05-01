@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -187,7 +187,7 @@ export default function ExamDetailPage() {
                     <SelectValue placeholder="Select Class" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Classes</SelectItem>
+                    <SelectItem value="all-classes">All Classes</SelectItem>
                     {availableClasses.map(cls => (
                       <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                     ))}
@@ -202,7 +202,7 @@ export default function ExamDetailPage() {
                     <SelectValue placeholder="Select Section" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Sections</SelectItem>
+                    <SelectItem value="all-sections">All Sections</SelectItem>
                     {availableSections.map(section => (
                       <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
                     ))}
@@ -237,7 +237,7 @@ export default function ExamDetailPage() {
                         <SelectValue placeholder="Select Class" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Classes</SelectItem>
+                        <SelectItem value="all-classes">All Classes</SelectItem>
                         {availableClasses.map(cls => (
                           <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                         ))}
@@ -251,7 +251,7 @@ export default function ExamDetailPage() {
                         <SelectValue placeholder="Select Section" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Sections</SelectItem>
+                        <SelectItem value="all-sections">All Sections</SelectItem>
                         {availableSections.map(section => (
                           <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
                         ))}
