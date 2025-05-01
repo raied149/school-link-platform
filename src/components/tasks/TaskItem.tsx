@@ -13,9 +13,10 @@ interface TaskItemProps {
   onEdit: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: Task['status']) => void;
   currentUserId?: string;
+  compact?: boolean; // Added compact property
 }
 
-export function TaskItem({ task, onDelete, onEdit, onStatusChange, currentUserId }: TaskItemProps) {
+export function TaskItem({ task, onDelete, onEdit, onStatusChange, currentUserId, compact }: TaskItemProps) {
   const isCreator = task.created_by === currentUserId;
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
   
@@ -32,6 +33,52 @@ export function TaskItem({ task, onDelete, onEdit, onStatusChange, currentUserId
     'admin_task': <GraduationCap className="h-4 w-4 mr-1" />
   };
 
+  // If compact is true, use a more condensed layout
+  if (compact) {
+    return (
+      <Card className={`${isOverdue ? 'border-red-300' : ''}`}>
+        <CardContent className="p-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-medium text-base">{task.title}</h3>
+              <div className="flex flex-wrap gap-1 mt-1">
+                <Badge variant="outline" className={`${statusColors[task.status]} text-xs`}>
+                  {task.status.charAt(0).toUpperCase() + task.status.slice(1).replace('_', ' ')}
+                </Badge>
+                
+                {task.subject_name && (
+                  <Badge variant="secondary" className="text-xs">
+                    {task.subject_name}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            <Select 
+              value={task.status} 
+              onValueChange={(value: Task['status']) => onStatusChange(task.id, value)}
+            >
+              <SelectTrigger className="h-7 w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {task.description && (
+            <p className="text-xs text-gray-600 mt-1 line-clamp-1">{task.description}</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Original non-compact layout
   return (
     <Card className={`${isOverdue ? 'border-red-300' : ''}`}>
       <CardContent className="p-4">

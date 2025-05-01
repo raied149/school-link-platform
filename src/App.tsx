@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import './App.css';
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
@@ -32,6 +32,12 @@ import TasksPage from './pages/TasksPage';
 import GalleryPage from './pages/gallery/GalleryPage';
 import GalleryEventDetailPage from './pages/gallery/GalleryEventDetailPage';
 
+// Redirect component for handling class-years with yearId to classes with yearId
+const ClassYearsRedirect = () => {
+  const { yearId } = useParams();
+  return <Navigate to={`/classes${yearId ? `/${yearId}` : ''}`} replace />;
+};
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -51,11 +57,11 @@ function App() {
               <Route path="/sections/:classId" element={<SectionsPage />} />
               {/* Redirect for class-years to classes */}
               <Route path="/class-years" element={<Navigate to="/classes" replace />} />
-              <Route path="/class-years/:yearId" element={<Navigate to={`/classes/${(params: any) => params.yearId}`} replace />} />
+              <Route path="/class-years/:yearId" element={<ClassYearsRedirect />} />
               <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/subjects" element={<SubjectsPage />} />
-              <Route path="/teachers/all" element={<TeacherDetailsPage />} /> 
+              <Route path="/teachers/all" element={<TeacherDetailsPage />} />
               <Route path="/teachers/:teacherId" element={<TeacherDetailsPage />} />
               <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
               <Route path="/student-attendance" element={<StudentAttendancePage />} />

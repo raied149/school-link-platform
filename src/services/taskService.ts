@@ -60,18 +60,22 @@ export const taskService = {
         return null;
       }
 
+      const taskData = {
+        ...input,
+        created_by: input.type === 'personal' ? input.assigned_to_user_id : undefined
+      };
+
+      console.log("Creating task with data:", taskData);
+      
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
-          ...input,
-          created_by: input.type === 'personal' ? input.assigned_to_user_id : undefined
-        })
+        .insert(taskData)
         .select('*')
         .single();
 
       if (error) {
         console.error("Error creating task:", error);
-        toast.error("Failed to create task");
+        toast.error(`Failed to create task: ${error.message}`);
         return null;
       }
 
@@ -79,13 +83,15 @@ export const taskService = {
       return data as Task;
     } catch (error: any) {
       console.error("Exception creating task:", error);
-      toast.error("An unexpected error occurred");
+      toast.error(`An unexpected error occurred: ${error.message}`);
       return null;
     }
   },
 
   getTasksForUser: async (userId: string, userRole: UserRole): Promise<Task[]> => {
     try {
+      console.log("Fetching tasks for user:", userId, "with role:", userRole);
+      
       let query = supabase
         .from('tasks')
         .select(`
@@ -96,6 +102,16 @@ export const taskService = {
           class:classes(name),
           subject:subjects(name)
         `);
+        
+      // Apply different filters based on user role
+      if (userRole === 'student') {
+        // Students should only see tasks assigned to them
+        query = query.eq('assigned_to_user_id', userId);
+      } else if (userRole === 'teacher') {
+        // Teachers see tasks they created or tasks assigned to them
+        query = query.or(`created_by.eq.${userId},assigned_to_user_id.eq.${userId}`);
+      }
+      // Admins can see all tasks
 
       const { data, error } = await query
         .order('due_date', { ascending: true, nullsFirst: true })
@@ -103,10 +119,12 @@ export const taskService = {
 
       if (error) {
         console.error("Error fetching tasks:", error);
-        toast.error("Failed to load tasks");
+        toast.error(`Failed to load tasks: ${error.message}`);
         return [];
       }
 
+      console.log("Tasks fetched successfully:", data?.length || 0, "tasks found");
+      
       return (data as any[]).map(item => ({
         ...item,
         creator_name: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : '',
@@ -117,13 +135,15 @@ export const taskService = {
       }));
     } catch (error: any) {
       console.error("Exception fetching tasks:", error);
-      toast.error("An unexpected error occurred");
+      toast.error(`Failed to load tasks: ${error.message}`);
       return [];
     }
   },
 
   updateTask: async (taskId: string, updates: UpdateTaskInput): Promise<Task | null> => {
     try {
+      console.log("Updating task:", taskId, "with data:", updates);
+      
       const { data, error } = await supabase
         .from('tasks')
         .update(updates)
@@ -133,7 +153,7 @@ export const taskService = {
 
       if (error) {
         console.error("Error updating task:", error);
-        toast.error("Failed to update task");
+        toast.error(`Failed to update task: ${error.message}`);
         return null;
       }
 
@@ -141,13 +161,15 @@ export const taskService = {
       return data as Task;
     } catch (error: any) {
       console.error("Exception updating task:", error);
-      toast.error("An unexpected error occurred");
+      toast.error(`An unexpected error occurred: ${error.message}`);
       return null;
     }
   },
 
   deleteTask: async (taskId: string): Promise<boolean> => {
     try {
+      console.log("Deleting task:", taskId);
+      
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -155,7 +177,7 @@ export const taskService = {
 
       if (error) {
         console.error("Error deleting task:", error);
-        toast.error("Failed to delete task");
+        toast.error(`Failed to delete task: ${error.message}`);
         return false;
       }
 
@@ -163,7 +185,7 @@ export const taskService = {
       return true;
     } catch (error: any) {
       console.error("Exception deleting task:", error);
-      toast.error("An unexpected error occurred");
+      toast.error(`An unexpected error occurred: ${error.message}`);
       return false;
     }
   }
