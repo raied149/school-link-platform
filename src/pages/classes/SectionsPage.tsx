@@ -148,7 +148,7 @@ const SectionsPage = () => {
         id: section.id,
         name: section.name,
         classId: section.class_id,
-        academicYearId: yearId || "",  // Fixed: Added the missing academicYearId property
+        academicYearId: classDetails?.academicYearId || "",
         teacherId: section.teacher_id,
         createdAt: section.created_at,
         updatedAt: section.created_at
@@ -393,10 +393,10 @@ const SectionsPage = () => {
   
   // Redirect if params are missing
   useEffect(() => {
-    if (!yearId || !classId) {
+    if (!classId) {
       navigate('/classes', { replace: true });
     }
-  }, [yearId, classId, navigate]);
+  }, [classId, navigate]);
 
   return (
     <div className="space-y-6">

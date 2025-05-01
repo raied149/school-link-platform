@@ -99,42 +99,55 @@ export function ClassesList({
           ))}
         </div>
       ) : filteredClasses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredClasses.map((classItem) => (
-            <div
-              key={classItem.id}
-              className="border rounded-lg p-4 space-y-3 transition-shadow hover:shadow-md"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{classItem.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Level: {classItem.level || "Not set"}
-                  </p>
-                </div>
-                <div className="flex space-x-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleEditClass(classItem)}>
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(classItem)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete</span>
-                  </Button>
-                </div>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => handleViewSections(classItem)}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                View Sections
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-4">Class Name</th>
+                <th className="text-right py-3 px-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClasses.map((classItem) => (
+                <tr key={classItem.id} className="border-b hover:bg-muted/50">
+                  <td className="py-3 px-4 font-medium">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>{classItem.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewSections(classItem)}
+                      >
+                        View Sections
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleEditClass(classItem)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteClass(classItem)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="text-center py-10">
