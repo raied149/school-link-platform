@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { Sidebar } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
   GraduationCap, 
@@ -49,7 +48,7 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen flex w-full">
-      <Sidebar className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm">
+      <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm">
         <div className="border-b p-4">
           <h2 className="text-lg font-semibold">School ERP</h2>
           {user && (
@@ -79,7 +78,7 @@ const MainLayout = () => {
             Logout
           </Button>
         </div>
-      </Sidebar>
+      </div>
       <main className="flex-1 p-8 bg-background">
         <Outlet />
       </main>
