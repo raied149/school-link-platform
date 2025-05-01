@@ -49,6 +49,7 @@ function App() {
               <Route path="/sections/:classId" element={<SectionsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/subjects" element={<SubjectsPage />} />
+              <Route path="/teachers/all" element={<TeacherDetailsPage />} /> {/* Added route for teacher listing */}
               <Route path="/teachers/:teacherId" element={<TeacherDetailsPage />} />
               <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
               <Route path="/student-attendance" element={<StudentAttendancePage />} />
