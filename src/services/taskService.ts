@@ -130,61 +130,79 @@ export const taskService = {
       const classIds = tasksData.map(task => task.assigned_to_class_id).filter(Boolean);
       const subjectIds = tasksData.map(task => task.subject_id).filter(Boolean);
 
-      // Fetch creators
-      const { data: creators } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', creatorIds);
+      // Create empty results objects for safety
+      let creators = [];
+      let assignedUsers = [];
+      let sections = [];
+      let classes = [];
+      let subjects = [];
 
-      // Fetch assigned users
-      const { data: assignedUsers } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', userIds);
+      // Only fetch data if we have IDs to fetch
+      if (creatorIds.length > 0) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', creatorIds);
+        creators = data || [];
+      }
 
-      // Fetch sections
-      const { data: sections } = await supabase
-        .from('sections')
-        .select('id, name')
-        .in('id', sectionIds);
+      if (userIds.length > 0) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds);
+        assignedUsers = data || [];
+      }
 
-      // Fetch classes
-      const { data: classes } = await supabase
-        .from('classes')
-        .select('id, name')
-        .in('id', classIds);
+      if (sectionIds.length > 0) {
+        const { data } = await supabase
+          .from('sections')
+          .select('id, name')
+          .in('id', sectionIds);
+        sections = data || [];
+      }
 
-      // Fetch subjects
-      const { data: subjects } = await supabase
-        .from('subjects')
-        .select('id, name')
-        .in('id', subjectIds);
+      if (classIds.length > 0) {
+        const { data } = await supabase
+          .from('classes')
+          .select('id, name')
+          .in('id', classIds);
+        classes = data || [];
+      }
+
+      if (subjectIds.length > 0) {
+        const { data } = await supabase
+          .from('subjects')
+          .select('id, name')
+          .in('id', subjectIds);
+        subjects = data || [];
+      }
 
       // Create lookup maps
-      const creatorMap = creators ? creators.reduce((acc, creator) => {
+      const creatorMap = creators.reduce((acc, creator) => {
         acc[creator.id] = `${creator.first_name} ${creator.last_name}`;
         return acc;
-      }, {}) : {};
+      }, {});
       
-      const userMap = assignedUsers ? assignedUsers.reduce((acc, user) => {
+      const userMap = assignedUsers.reduce((acc, user) => {
         acc[user.id] = `${user.first_name} ${user.last_name}`;
         return acc;
-      }, {}) : {};
+      }, {});
       
-      const sectionMap = sections ? sections.reduce((acc, section) => {
+      const sectionMap = sections.reduce((acc, section) => {
         acc[section.id] = section.name;
         return acc;
-      }, {}) : {};
+      }, {});
       
-      const classMap = classes ? classes.reduce((acc, cls) => {
+      const classMap = classes.reduce((acc, cls) => {
         acc[cls.id] = cls.name;
         return acc;
-      }, {}) : {};
+      }, {});
       
-      const subjectMap = subjects ? subjects.reduce((acc, subject) => {
+      const subjectMap = subjects.reduce((acc, subject) => {
         acc[subject.id] = subject.name;
         return acc;
-      }, {}) : {};
+      }, {});
 
       // Combine all data
       const enrichedTasks = tasksData.map(task => ({

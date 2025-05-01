@@ -13,7 +13,7 @@ interface TaskItemProps {
   onEdit: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: Task['status']) => void;
   currentUserId?: string;
-  compact?: boolean; // Added compact property
+  compact?: boolean;
 }
 
 export function TaskItem({ task, onDelete, onEdit, onStatusChange, currentUserId, compact }: TaskItemProps) {

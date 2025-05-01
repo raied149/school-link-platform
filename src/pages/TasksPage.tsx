@@ -4,19 +4,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { taskService, Task } from "@/services/taskService";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Search, Filter, Calendar, Clock } from "lucide-react";
+import { Plus, Search, Filter, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
-import { TaskList } from "@/components/tasks/TaskList";
 import { TaskItem } from "@/components/tasks/TaskItem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarDatePicker } from "@/components/calendar/CalendarDatePicker";
+import { Calendar } from "@/components/ui/calendar";
 
 export default function TasksPage() {
   const { user } = useAuth();
@@ -28,7 +26,11 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTab, setCurrentTab] = useState('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
+  // Format selected date for filtering
+  const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
+
   // Fetch tasks for the logged-in user
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["tasks", user?.id, user?.role],
@@ -55,9 +57,6 @@ export default function TasksPage() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
-
-  // Format selected date for filtering
-  const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
 
   // Filter and search logic
   const filteredTasks = tasks.filter(task => {
@@ -104,6 +103,11 @@ export default function TasksPage() {
     return true;
   });
   
+  // Get tasks for the selected date (for the sidebar view)
+  const tasksForSelectedDate = tasks.filter(task => 
+    task.due_date === formattedSelectedDate
+  );
+  
   const handleDeleteTask = (taskId: string) => {
     deleteTaskMutation.mutate(taskId);
   };
@@ -129,10 +133,16 @@ export default function TasksPage() {
     }
   };
 
-  // Get tasks for the selected date (for the sidebar view)
-  const tasksForSelectedDate = tasks.filter(task => 
-    task.due_date === formattedSelectedDate
-  );
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setIsCalendarOpen(false);
+      // Switch to date view if not already there
+      if (currentTab !== 'by_date') {
+        setCurrentTab('by_date');
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -148,12 +158,12 @@ export default function TasksPage() {
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-6">
+      <div className="grid gap-4 md:grid-cols-7">
+        <Card className="p-4 md:col-span-4">
           <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
             <div className="flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="all">All Tasks</TabsTrigger>
+              <TabsList className="mb-2 h-9">
+                <TabsTrigger value="all">All</TabsTrigger>
                 {user?.role !== 'student' && <TabsTrigger value="assigned">Assigned By Me</TabsTrigger>}
                 <TabsTrigger value="received">Assigned To Me</TabsTrigger>
                 <TabsTrigger value="completed">Completed</TabsTrigger>
@@ -162,8 +172,8 @@ export default function TasksPage() {
               </TabsList>
             </div>
             
-            <div className="flex flex-col md:flex-row gap-2 md:items-center justify-between">
-              <div className="flex-1 relative">
+            <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
+              <div className="flex-1 relative w-full">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search tasks..."
@@ -173,48 +183,62 @@ export default function TasksPage() {
                 />
               </div>
               
-              <div className="flex flex-col md:flex-row gap-2">
-                <div className="w-full md:w-[150px]">
-                  <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+                  <SelectTrigger className="h-9 w-full sm:w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
                 
-                <div className="w-full md:w-[150px]">
-                  <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="personal">Personal</SelectItem>
-                      <SelectItem value="assignment">Assignment</SelectItem>
-                      <SelectItem value="admin_task">Administrative</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+                  <SelectTrigger className="h-9 w-full sm:w-[130px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="assignment">Assignment</SelectItem>
+                    <SelectItem value="admin_task">Administrative</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
             {currentTab === 'by_date' && (
               <div className="flex justify-center sm:justify-start pt-2">
-                <CalendarDatePicker 
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  selected={selectedDate}
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Selected date:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium">{format(selectedDate, 'MMMM d, yyyy')}</span>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDateSelect}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
               </div>
             )}
             
-            <TabsContent value="all" className="space-y-4">
+            <div className="mt-4">
               {isLoading ? (
                 <div className="text-center py-10">Loading tasks...</div>
               ) : filteredTasks.length === 0 ? (
@@ -222,182 +246,105 @@ export default function TasksPage() {
                   No tasks found. {user && "Create a new task to get started."}
                 </div>
               ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
-              )}
-            </TabsContent>
-            
-            <TabsContent value="assigned" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-10">Loading tasks...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  You haven't assigned any tasks yet.
+                <div className="space-y-4">
+                  {filteredTasks.map(task => (
+                    <TaskItem 
+                      key={task.id}
+                      task={task}
+                      onDelete={handleDeleteTask}
+                      onEdit={handleEditTask}
+                      onStatusChange={handleStatusChange}
+                      currentUserId={user?.id}
+                    />
+                  ))}
                 </div>
-              ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
               )}
-            </TabsContent>
-            
-            <TabsContent value="received" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-10">Loading tasks...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  No tasks have been assigned to you.
-                </div>
-              ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-10">Loading tasks...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  No completed tasks found.
-                </div>
-              ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
-              )}
-            </TabsContent>
-            
-            <TabsContent value="pending" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-10">Loading tasks...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  No pending tasks found.
-                </div>
-              ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
-              )}
-            </TabsContent>
-            
-            <TabsContent value="by_date" className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-10">Loading tasks...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  No tasks found for {format(selectedDate, 'MMMM d, yyyy')}.
-                </div>
-              ) : (
-                filteredTasks.map(task => (
-                  <TaskItem 
-                    key={task.id}
-                    task={task}
-                    onDelete={handleDeleteTask}
-                    onEdit={handleEditTask}
-                    onStatusChange={handleStatusChange}
-                    currentUserId={user?.id}
-                  />
-                ))
-              )}
-            </TabsContent>
+            </div>
           </Tabs>
         </Card>
         
-        <Card className="p-6">
+        <Card className="p-4 md:col-span-3">
           <div className="mb-4">
             <h2 className="text-xl font-semibold">Tasks for {format(selectedDate, 'MMMM d, yyyy')}</h2>
             <p className="text-muted-foreground">View and manage tasks due on this date</p>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             {isLoading ? (
-              <div className="text-center py-10">Loading tasks...</div>
+              <div className="text-center py-4">Loading tasks...</div>
             ) : tasksForSelectedDate.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
+              <div className="text-center py-6 text-muted-foreground">
                 No tasks due on {format(selectedDate, 'MMMM d, yyyy')}.
               </div>
             ) : (
-              tasksForSelectedDate.map(task => (
-                <TaskItem 
-                  key={task.id}
-                  task={task}
-                  onDelete={handleDeleteTask}
-                  onEdit={handleEditTask}
-                  onStatusChange={handleStatusChange}
-                  currentUserId={user?.id}
-                  compact
-                />
-              ))
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                {tasksForSelectedDate.map(task => (
+                  <TaskItem 
+                    key={task.id}
+                    task={task}
+                    onDelete={handleDeleteTask}
+                    onEdit={handleEditTask}
+                    onStatusChange={handleStatusChange}
+                    currentUserId={user?.id}
+                    compact
+                  />
+                ))}
+              </div>
             )}
             
-            <div className="flex justify-between items-center pt-4">
-              <Button variant="outline" size="sm" onClick={() => setSelectedDate(new Date())}>
-                Today
-              </Button>
-              <div className="flex gap-2">
+            <div className="mt-6">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full border-dashed">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Select a date
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <div className="flex justify-between mt-4">
                 <Button 
                   variant="outline" 
-                  size="icon"
-                  onClick={() => {
-                    const newDate = new Date(selectedDate);
-                    newDate.setDate(newDate.getDate() - 1);
-                    setSelectedDate(newDate);
-                  }}
+                  size="sm" 
+                  onClick={() => setSelectedDate(new Date())}
                 >
-                  <Calendar className="h-4 w-4" />
-                  <span className="sr-only">Previous day</span>
+                  Today
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => {
-                    const newDate = new Date(selectedDate);
-                    newDate.setDate(newDate.getDate() + 1);
-                    setSelectedDate(newDate);
-                  }}
-                >
-                  <Clock className="h-4 w-4" />
-                  <span className="sr-only">Next day</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      const newDate = new Date(selectedDate);
+                      newDate.setDate(newDate.getDate() - 1);
+                      setSelectedDate(newDate);
+                    }}
+                  >
+                    <Clock className="h-4 w-4 -rotate-90" />
+                    <span className="sr-only">Previous day</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      const newDate = new Date(selectedDate);
+                      newDate.setDate(newDate.getDate() + 1);
+                      setSelectedDate(newDate);
+                    }}
+                  >
+                    <Clock className="h-4 w-4 rotate-90" />
+                    <span className="sr-only">Next day</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
