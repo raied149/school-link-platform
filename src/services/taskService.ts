@@ -92,16 +92,10 @@ export const taskService = {
     try {
       console.log("Fetching tasks for user:", userId, "with role:", userRole);
       
+      // First, fetch all tasks based on user role with basic details
       let query = supabase
         .from('tasks')
-        .select(`
-          *,
-          creator:profiles!tasks_created_by_fkey(first_name, last_name),
-          assignee:profiles!tasks_assigned_to_user_id_fkey(first_name, last_name),
-          section:sections(name),
-          class:classes(name),
-          subject:subjects(name)
-        `);
+        .select('*');
         
       // Apply different filters based on user role
       if (userRole === 'student') {
@@ -113,7 +107,7 @@ export const taskService = {
       }
       // Admins can see all tasks
 
-      const { data, error } = await query
+      const { data: tasksData, error } = await query
         .order('due_date', { ascending: true, nullsFirst: true })
         .order('created_at', { ascending: false });
 
@@ -123,16 +117,87 @@ export const taskService = {
         return [];
       }
 
-      console.log("Tasks fetched successfully:", data?.length || 0, "tasks found");
+      // No tasks found
+      if (!tasksData || tasksData.length === 0) {
+        return [];
+      }
+
+      // Now, we need to fetch additional details
+      // First, get all the required IDs
+      const creatorIds = tasksData.map(task => task.created_by).filter(Boolean);
+      const userIds = tasksData.map(task => task.assigned_to_user_id).filter(Boolean);
+      const sectionIds = tasksData.map(task => task.assigned_to_section_id).filter(Boolean);
+      const classIds = tasksData.map(task => task.assigned_to_class_id).filter(Boolean);
+      const subjectIds = tasksData.map(task => task.subject_id).filter(Boolean);
+
+      // Fetch creators
+      const { data: creators } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', creatorIds);
+
+      // Fetch assigned users
+      const { data: assignedUsers } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      // Fetch sections
+      const { data: sections } = await supabase
+        .from('sections')
+        .select('id, name')
+        .in('id', sectionIds);
+
+      // Fetch classes
+      const { data: classes } = await supabase
+        .from('classes')
+        .select('id, name')
+        .in('id', classIds);
+
+      // Fetch subjects
+      const { data: subjects } = await supabase
+        .from('subjects')
+        .select('id, name')
+        .in('id', subjectIds);
+
+      // Create lookup maps
+      const creatorMap = creators ? creators.reduce((acc, creator) => {
+        acc[creator.id] = `${creator.first_name} ${creator.last_name}`;
+        return acc;
+      }, {}) : {};
       
-      return (data as any[]).map(item => ({
-        ...item,
-        creator_name: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : '',
-        assigned_to_user_name: item.assignee ? `${item.assignee.first_name} ${item.assignee.last_name}` : '',
-        assigned_to_section_name: item.section?.name,
-        assigned_to_class_name: item.class?.name,
-        subject_name: item.subject?.name
+      const userMap = assignedUsers ? assignedUsers.reduce((acc, user) => {
+        acc[user.id] = `${user.first_name} ${user.last_name}`;
+        return acc;
+      }, {}) : {};
+      
+      const sectionMap = sections ? sections.reduce((acc, section) => {
+        acc[section.id] = section.name;
+        return acc;
+      }, {}) : {};
+      
+      const classMap = classes ? classes.reduce((acc, cls) => {
+        acc[cls.id] = cls.name;
+        return acc;
+      }, {}) : {};
+      
+      const subjectMap = subjects ? subjects.reduce((acc, subject) => {
+        acc[subject.id] = subject.name;
+        return acc;
+      }, {}) : {};
+
+      // Combine all data
+      const enrichedTasks = tasksData.map(task => ({
+        ...task,
+        creator_name: task.created_by ? creatorMap[task.created_by] : '',
+        assigned_to_user_name: task.assigned_to_user_id ? userMap[task.assigned_to_user_id] : '',
+        assigned_to_section_name: task.assigned_to_section_id ? sectionMap[task.assigned_to_section_id] : '',
+        assigned_to_class_name: task.assigned_to_class_id ? classMap[task.assigned_to_class_id] : '',
+        subject_name: task.subject_id ? subjectMap[task.subject_id] : ''
       }));
+
+      console.log("Tasks fetched successfully:", enrichedTasks.length, "tasks found");
+      return enrichedTasks;
     } catch (error: any) {
       console.error("Exception fetching tasks:", error);
       toast.error(`Failed to load tasks: ${error.message}`);
