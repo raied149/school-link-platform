@@ -151,8 +151,8 @@ export function ClassesList({
           }
         }}
         onSave={handleSaveClass}
-        defaultValues={selectedClass}
-        academicYearId={yearId}
+        classData={selectedClass}
+        mode={selectedClass ? 'edit' : 'create'}
       />
 
       <ConfirmationDialog
