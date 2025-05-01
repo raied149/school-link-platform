@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (role: UserRole) => {
     const newUser: User = {
-      id: crypto.randomUUID(),
-      firstName: `Test ${role}`,
-      lastName: 'User',
+      id: `dev-${role}-id`,
+      firstName: 'Simulated',
+      lastName: role.charAt(0).toUpperCase() + role.slice(1),
       role: role
     };
     setUser(newUser);
