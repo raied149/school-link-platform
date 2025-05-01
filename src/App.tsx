@@ -51,7 +51,7 @@ function App() {
               <Route path="/sections/:classId" element={<SectionsPage />} />
               {/* Redirect for class-years to classes */}
               <Route path="/class-years" element={<Navigate to="/classes" replace />} />
-              <Route path="/class-years/:yearId" element={<Navigate to={params => `/classes/${params.yearId}`} replace />} />
+              <Route path="/class-years/:yearId" element={<Navigate to={`/classes/${(params: any) => params.yearId}`} replace />} />
               <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/subjects" element={<SubjectsPage />} />

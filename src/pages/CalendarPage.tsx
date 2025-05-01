@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Task, taskService } from '@/services/taskService';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
+import { useLocation } from 'react-router-dom';
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -20,6 +20,10 @@ export default function CalendarPage() {
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const location = useLocation();
+  
+  // Check if we're on the main calendar page (not a sub-route)
+  const isMainCalendarPage = location.pathname === "/calendar";
 
   // Fetch calendar events
   const { data: events = [], isLoading, refetch } = useQuery({
@@ -211,14 +215,6 @@ export default function CalendarPage() {
                 teachers={[]}
                 onSubmit={handleAddEvent}
               />
-              {user && (
-                <Button variant="outline" onClick={() => {
-                  setSelectedTask(undefined);
-                  setIsTaskFormOpen(true);
-                }}>
-                  Add Task
-                </Button>
-              )}
             </div>
           </div>
           <div className="flex justify-center sm:justify-start">
