@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { mockClasses, mockSections, mockSubjects } from "@/mocks/data";
 import { supabase } from "@/integrations/supabase/client";
 import { createExam, assignExamToSections } from "@/services/examService";
 
@@ -89,7 +88,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   });
 
   // Get current active academic year
-  const activeAcademicYear = academicYears.find(year => year.is_active) || academicYears[0];
+  const activeAcademicYear = academicYears?.find(year => year.is_active) || academicYears?.[0];
 
   // Reset sections when grade changes
   useEffect(() => {
@@ -134,7 +133,20 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
         subject_id: selectedSubject
       };
 
+      // Get user info for logging
+      const { data: userData } = await supabase.auth.getUser();
+      console.log("Creating exam with user:", userData?.user?.id);
+      console.log("Exam data:", examData);
+      
       const newExam = await createExam(examData);
+      
+      if (!newExam?.id) {
+        throw new Error("Failed to create exam record");
+      }
+      
+      console.log("Successfully created exam:", newExam);
+      console.log("Now assigning to sections:", selectedSections);
+      console.log("Academic year:", activeAcademicYear.id);
       
       // Then create assignments to sections
       await assignExamToSections(

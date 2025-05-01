@@ -54,15 +54,23 @@ export const fetchGalleryMediaByEventId = async (eventId: string): Promise<Galle
 
 // Create a new gallery event
 export const createGalleryEvent = async (event: Omit<GalleryEvent, "id" | "created_at" | "created_by">): Promise<string | null> => {
+  // Get the current user
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+  
+  if (!userId) {
+    toast.error("User authentication required");
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("gallery_events")
-    .insert([
-      { 
-        title: event.title, 
-        description: event.description, 
-        event_date: event.event_date,
-      }
-    ])
+    .insert({
+      title: event.title, 
+      description: event.description, 
+      event_date: event.event_date,
+      created_by: userId // Add the created_by field with the user's ID
+    })
     .select("id")
     .single();
 

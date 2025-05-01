@@ -24,20 +24,20 @@ export interface StudentTestResult {
 
 export interface ExamAssignment {
   id: string;
-  examId: string;
-  sectionId: string;
-  academicYearId: string;
+  exam_id: string;
+  section_id: string;
+  academic_year_id: string;
 }
 
 export interface StudentExamResult {
   id: string;
-  examId: string;
-  studentId: string;
-  marksObtained: number;
+  exam_id: string;
+  student_id: string;
+  marks_obtained: number;
   feedback?: string;
-  createdAt: string;
-  updatedAt: string;
-  updatedBy?: string;
+  created_at: string;
+  updated_at: string;
+  updated_by?: string;
 }
 
 export interface ExamWithSubject {

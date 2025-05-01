@@ -78,6 +78,8 @@ export const createExam = async (examData: {
   max_score: number;
   subject_id?: string;
 }) => {
+  console.log("Creating exam with data:", examData);
+  
   const { data, error } = await supabase
     .from('exams')
     .insert(examData)
@@ -88,7 +90,7 @@ export const createExam = async (examData: {
     throw error;
   }
 
-  return data[0];
+  return data?.[0];
 };
 
 export const assignExamToSections = async (
@@ -96,6 +98,13 @@ export const assignExamToSections = async (
   sectionIds: string[],
   academicYearId: string
 ) => {
+  console.log("Assigning exam to sections:", {examId, sectionIds, academicYearId});
+  
+  if (!examId || !sectionIds.length || !academicYearId) {
+    console.error("Missing required parameters for exam assignment");
+    throw new Error("Missing required parameters for exam assignment");
+  }
+  
   // Create an array of assignment objects
   const assignments = sectionIds.map(sectionId => ({
     exam_id: examId,
@@ -103,10 +112,15 @@ export const assignExamToSections = async (
     academic_year_id: academicYearId
   }));
 
+  console.log("Preparing to insert assignments:", assignments);
+
+  // Get current user for tracking
+  const { data: userData } = await supabase.auth.getUser();
+  console.log("Current user:", userData?.user?.id);
+
   const { data, error } = await supabase
     .from('exam_assignments')
-    .insert(assignments)
-    .select();
+    .insert(assignments);
 
   if (error) {
     console.error('Error assigning exam to sections:', error);
