@@ -2,7 +2,7 @@
 import { TimeSlot, TimetableFilter, WeekDay, SlotType } from '@/types/timetable';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeTimeString } from '@/utils/timeUtils';
+import { normalizeTimeString, mapDayToNumber, mapNumberToDay } from '@/utils/timeUtils';
 
 // Service methods
 export const timetableService = {
@@ -21,19 +21,8 @@ export const timetableService = {
       if (filter) {
         if (filter.dayOfWeek) {
           // Convert day name to number (0-6 for Sunday-Saturday)
-          const dayMap: Record<string, number> = {
-            'Monday': 1,
-            'Tuesday': 2,
-            'Wednesday': 3,
-            'Thursday': 4,
-            'Friday': 5,
-            'Saturday': 6,
-            'Sunday': 0,
-          };
-          
-          if (dayMap[filter.dayOfWeek] !== undefined) {
-            query = query.eq('day_of_week', dayMap[filter.dayOfWeek]);
-          }
+          const dayNumber = mapDayToNumber(filter.dayOfWeek);
+          query = query.eq('day_of_week', dayNumber);
         }
         
         if (filter.classId) {
@@ -75,22 +64,27 @@ export const timetableService = {
           .select('class_id')
           .eq('id', record.section_id)
           .single();
+          
+        // Get subject info for title
+        let title = '';
+        let slotType: SlotType = 'event';
+        
+        if (record.subject_id) {
+          slotType = 'subject';
+          
+          const { data: subjectData } = await supabase
+            .from('subjects')
+            .select('name')
+            .eq('id', record.subject_id)
+            .single();
+            
+          if (subjectData) {
+            title = subjectData.name;
+          }
+        }
         
         // Convert day_of_week number to day name
-        const dayMap: Record<number, WeekDay> = {
-          1: 'Monday',
-          2: 'Tuesday',
-          3: 'Wednesday',
-          4: 'Thursday',
-          5: 'Friday',
-          6: 'Saturday',
-          0: 'Sunday',
-        };
-        
-        const dayOfWeek = dayMap[record.day_of_week] || 'Monday';
-        
-        // Determine slot type based on whether it has a subject_id
-        const slotType: SlotType = record.subject_id ? 'subject' : 'event';
+        const dayOfWeek = mapNumberToDay(record.day_of_week);
         
         slots.push({
           id: record.id,
@@ -98,6 +92,7 @@ export const timetableService = {
           endTime: record.end_time,
           dayOfWeek,
           slotType,
+          title,
           subjectId: record.subject_id,
           teacherId: record.teacher_id,
           classId: sectionData?.class_id || "",
@@ -145,21 +140,26 @@ export const timetableService = {
         .eq('id', data.section_id)
         .single();
       
+      // Get subject info for title
+      let title = '';
+      let slotType: SlotType = 'event';
+      
+      if (data.subject_id) {
+        slotType = 'subject';
+        
+        const { data: subjectData } = await supabase
+          .from('subjects')
+          .select('name')
+          .eq('id', data.subject_id)
+          .single();
+          
+        if (subjectData) {
+          title = subjectData.name;
+        }
+      }
+      
       // Convert day_of_week number to day name
-      const dayMap: Record<number, WeekDay> = {
-        1: 'Monday',
-        2: 'Tuesday',
-        3: 'Wednesday',
-        4: 'Thursday',
-        5: 'Friday',
-        6: 'Saturday',
-        0: 'Sunday',
-      };
-      
-      const dayOfWeek = dayMap[data.day_of_week] || 'Monday';
-      
-      // Determine slot type based on whether it has a subject_id
-      const slotType: SlotType = data.subject_id ? 'subject' : 'event';
+      const dayOfWeek = mapNumberToDay(data.day_of_week);
       
       return {
         id: data.id,
@@ -167,6 +167,7 @@ export const timetableService = {
         endTime: data.end_time,
         dayOfWeek,
         slotType,
+        title,
         subjectId: data.subject_id,
         teacherId: data.teacher_id,
         classId: sectionData?.class_id || "",
@@ -184,17 +185,7 @@ export const timetableService = {
   createTimeSlot: async (timeSlotData: Omit<TimeSlot, 'id' | 'createdAt' | 'updatedAt'>): Promise<TimeSlot> => {
     try {
       // Convert day name to number (0-6 for Sunday-Saturday)
-      const dayMap: Record<string, number> = {
-        'Monday': 1,
-        'Tuesday': 2,
-        'Wednesday': 3,
-        'Thursday': 4,
-        'Friday': 5,
-        'Saturday': 6,
-        'Sunday': 0,
-      };
-      
-      const dayOfWeek = dayMap[timeSlotData.dayOfWeek] || 1; // Default to Monday if not found
+      const dayOfWeek = mapDayToNumber(timeSlotData.dayOfWeek);
       
       // Normalize time strings
       const startTime = normalizeTimeString(timeSlotData.startTime);
@@ -297,18 +288,7 @@ export const timetableService = {
       }
       
       if (timeSlotData.dayOfWeek) {
-        // Convert day name to number (0-6 for Sunday-Saturday)
-        const dayMap: Record<string, number> = {
-          'Monday': 1,
-          'Tuesday': 2,
-          'Wednesday': 3,
-          'Thursday': 4,
-          'Friday': 5,
-          'Saturday': 6,
-          'Sunday': 0,
-        };
-        
-        updateData.day_of_week = dayMap[timeSlotData.dayOfWeek] || 1;
+        updateData.day_of_week = mapDayToNumber(timeSlotData.dayOfWeek);
       }
       
       if (timeSlotData.subjectId !== undefined) updateData.subject_id = timeSlotData.subjectId;

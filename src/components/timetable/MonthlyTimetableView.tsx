@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { mapNumberToDay } from '@/utils/timeUtils';
 import { 
   format, 
   addMonths, 
@@ -44,12 +45,6 @@ export function MonthlyTimetableView({
     setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
   };
 
-  // Map day of week number (0-6, starting with Sunday) to WeekDay type
-  const mapNumberToWeekDay = (dayNumber: number): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[dayNumber];
-  };
-
   // Get days with scheduled time slots
   const getDaysWithEvents = () => {
     const days: Date[] = [];
@@ -72,6 +67,19 @@ export function MonthlyTimetableView({
   };
 
   const eventDates = getDaysWithEvents();
+  
+  const formatTimeDisplay = (time: string): string => {
+    try {
+      const [hours, minutes] = time.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      return format(date, 'h:mm a');
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return time;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -112,7 +120,7 @@ export function MonthlyTimetableView({
         ) : (
           <div>
             {timeSlots
-              .filter(slot => slot.dayOfWeek === mapNumberToWeekDay(getDay(selectedDate)))
+              .filter(slot => slot.dayOfWeek === mapNumberToDay(getDay(selectedDate)))
               .map((slot) => (
                 <div 
                   key={slot.id}
@@ -122,7 +130,7 @@ export function MonthlyTimetableView({
                     <div>
                       <p className="font-medium">{slot.title || 'Untitled'}</p>
                       <p className="text-sm text-gray-500">
-                        {slot.startTime} - {slot.endTime}
+                        {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
                       </p>
                     </div>
                     {user?.role === 'admin' && (
@@ -146,7 +154,7 @@ export function MonthlyTimetableView({
                   </div>
                 </div>
               ))}
-            {timeSlots.filter(slot => slot.dayOfWeek === mapNumberToWeekDay(getDay(selectedDate))).length === 0 && (
+            {timeSlots.filter(slot => slot.dayOfWeek === mapNumberToDay(getDay(selectedDate))).length === 0 && (
               <p className="text-gray-500">No time slots scheduled for this day.</p>
             )}
           </div>

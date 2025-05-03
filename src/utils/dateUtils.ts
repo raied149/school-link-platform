@@ -1,6 +1,7 @@
 
 import { format, parse } from 'date-fns';
 import { WeekDay } from '@/types/timetable';
+import { mapNumberToDay, mapDayToNumber } from '@/utils/timeUtils';
 
 /**
  * Formats a time string to a more readable format
@@ -24,8 +25,7 @@ export const formatTimeDisplay = (timeString: string): string => {
  * @returns WeekDay string
  */
 export const mapNumberToWeekDay = (dayNumber: number): WeekDay => {
-  const days: WeekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dayNumber] || 'Monday';
+  return mapNumberToDay(dayNumber) as WeekDay;
 };
 
 /**
@@ -34,8 +34,7 @@ export const mapNumberToWeekDay = (dayNumber: number): WeekDay => {
  * @returns Day number (0-6)
  */
 export const mapWeekDayToNumber = (day: WeekDay): number => {
-  const days: WeekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days.indexOf(day);
+  return mapDayToNumber(day);
 };
 
 /**
@@ -45,14 +44,5 @@ export const mapWeekDayToNumber = (day: WeekDay): number => {
  * @returns Day number (1-7)
  */
 export const mapDayToTimetableNumber = (day: WeekDay): number => {
-  const dayMap: Record<WeekDay, number> = {
-    'Monday': 1,
-    'Tuesday': 2,
-    'Wednesday': 3,
-    'Thursday': 4,
-    'Friday': 5,
-    'Saturday': 6,
-    'Sunday': 0
-  };
-  return dayMap[day];
+  return mapDayToNumber(day);
 };

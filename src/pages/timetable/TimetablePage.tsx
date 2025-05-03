@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { PlusIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { mapNumberToDay } from '@/utils/timeUtils';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -56,22 +57,23 @@ export default function TimetablePage() {
     enabled: !!selectedClassId
   });
 
+  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
+    queryKey: ['subjects', selectedClassId],
+    queryFn: () => subjectService.getSubjectsByClass(selectedClassId),
+    enabled: !!selectedClassId
+  });
+
   const { data: timeSlots = [], isLoading: isLoadingTimeSlots } = useQuery({
-    queryKey: ['timetable', selectedDay, selectedClassId, selectedSectionId, viewMode],
+    queryKey: ['timetable', selectedClassId, selectedSectionId, viewMode],
     queryFn: () => {
-      if (viewMode === 'daily') {
-        return timetableService.getTimeSlots({
-          dayOfWeek: selectedDay,
-          classId: selectedClassId,
-          sectionId: selectedSectionId
-        });
-      } else {
-        // For weekly and monthly views, fetch all days
-        return timetableService.getTimeSlots({
-          classId: selectedClassId,
-          sectionId: selectedSectionId
-        });
+      if (!selectedClassId || !selectedSectionId) {
+        return [];
       }
+      
+      return timetableService.getTimeSlots({
+        classId: selectedClassId,
+        sectionId: selectedSectionId
+      });
     },
     enabled: !!selectedClassId && !!selectedSectionId
   });
@@ -83,6 +85,13 @@ export default function TimetablePage() {
       queryClient.invalidateQueries({ queryKey: ['timetable'] });
       toast({ title: 'Success', description: 'Time slot created successfully' });
       setIsFormOpen(false);
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error', 
+        description: `Failed to create time slot: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive' 
+      });
     }
   });
 
@@ -94,6 +103,13 @@ export default function TimetablePage() {
       toast({ title: 'Success', description: 'Time slot updated successfully' });
       setIsFormOpen(false);
       setEditingTimeSlot(null);
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error', 
+        description: `Failed to update time slot: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive' 
+      });
     }
   });
 
@@ -102,6 +118,13 @@ export default function TimetablePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timetable'] });
       toast({ title: 'Success', description: 'Time slot deleted successfully' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error', 
+        description: `Failed to delete time slot: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive' 
+      });
     }
   });
 
@@ -128,15 +151,21 @@ export default function TimetablePage() {
     if (date) {
       setSelectedDate(date);
       // Map the day of week to our WeekDay type
-      const dayNames: WeekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const dayIndex = date.getDay();
-      setSelectedDay(dayNames[dayIndex]);
+      setSelectedDay(mapNumberToDay(dayIndex) as WeekDay);
     }
   };
 
   const handleAddTimeSlot = () => {
     setEditingTimeSlot(null);
     setIsFormOpen(true);
+  };
+
+  const getSubjectName = (subjectId?: string): string => {
+    if (!subjectId) return 'Unknown Subject';
+    
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject?.name || 'Unknown Subject';
   };
 
   const isReadyToDisplay = !!selectedClassId && !!selectedSectionId;
@@ -227,10 +256,7 @@ export default function TimetablePage() {
                   timeSlots={timeSlots}
                   selectedDay={selectedDay}
                   isLoading={isLoadingTimeSlots}
-                  getSubjectName={(id) => {
-                    const subject = timeSlots.find(s => s.subjectId === id);
-                    return subject?.title || 'Unknown Subject';
-                  }}
+                  getSubjectName={getSubjectName}
                   onEdit={handleEditTimeSlot}
                   onDelete={handleDeleteTimeSlot}
                   user={user}

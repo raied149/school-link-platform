@@ -1,5 +1,6 @@
 
 import { TimeSlot } from '@/types/timetable';
+import { timeToMinutes, normalizeTimeString } from '@/utils/timeUtils';
 
 export const validateTimeSlotConflict = (
   startTime: string,
@@ -9,13 +10,17 @@ export const validateTimeSlotConflict = (
   existingSlots: TimeSlot[],
   currentSlotId?: string
 ): boolean => {
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
-  };
+  // Normalize the time strings first
+  const normalizedStart = normalizeTimeString(startTime);
+  const normalizedEnd = normalizeTimeString(endTime);
+  
+  if (!normalizedStart || !normalizedEnd) {
+    console.error("Invalid time format:", { startTime, endTime });
+    return false;
+  }
 
-  const newStart = timeToMinutes(startTime);
-  const newEnd = timeToMinutes(endTime);
+  const newStart = timeToMinutes(normalizedStart);
+  const newEnd = timeToMinutes(normalizedEnd);
 
   return existingSlots.some(slot => {
     // Skip comparing with itself when editing
@@ -28,8 +33,16 @@ export const validateTimeSlotConflict = (
       return false;
     }
 
-    const slotStart = timeToMinutes(slot.startTime);
-    const slotEnd = timeToMinutes(slot.endTime);
+    // Normalize the existing slot times
+    const normalizedSlotStart = normalizeTimeString(slot.startTime);
+    const normalizedSlotEnd = normalizeTimeString(slot.endTime);
+    
+    if (!normalizedSlotStart || !normalizedSlotEnd) {
+      return false;
+    }
+
+    const slotStart = timeToMinutes(normalizedSlotStart);
+    const slotEnd = timeToMinutes(normalizedSlotEnd);
 
     return (
       (newStart >= slotStart && newStart < slotEnd) || // New slot starts during existing slot
@@ -38,4 +51,3 @@ export const validateTimeSlotConflict = (
     );
   });
 };
-

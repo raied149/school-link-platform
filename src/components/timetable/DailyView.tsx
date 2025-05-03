@@ -3,7 +3,7 @@ import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { format, parse } from 'date-fns';
+import { formatTimeDisplay } from '@/utils/timeUtils';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];
@@ -32,17 +32,6 @@ export function DailyView({
       case 'break': return <Coffee className="mr-2 h-4 w-4" />;
       case 'event': return <Calendar className="mr-2 h-4 w-4" />;
       default: return null;
-    }
-  };
-
-  const formatTimeDisplay = (timeString: string): string => {
-    try {
-      const [hours, minutes] = timeString.split(':');
-      const date = parse(`${hours}:${minutes}`, 'HH:mm', new Date());
-      return format(date, 'hh:mm a');
-    } catch (error) {
-      console.error('Error formatting time:', error);
-      return timeString;
     }
   };
 
@@ -98,14 +87,14 @@ export function DailyView({
                   size="sm"
                   onClick={() => onEdit?.(slot)}
                 >
-                  <span className="sr-only">Edit</span>
+                  Edit
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete?.(slot.id)}
                 >
-                  <span className="sr-only">Delete</span>
+                  Delete
                 </Button>
               </TableCell>
             )}

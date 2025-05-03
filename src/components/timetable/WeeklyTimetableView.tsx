@@ -5,6 +5,7 @@ import { WeeklyView } from '@/components/timetable/WeeklyView';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek } from 'date-fns';
+import { formatTimeDisplay } from '@/utils/timeUtils';
 
 interface WeeklyTimetableViewProps {
   timeSlots: TimeSlot[];
@@ -57,19 +58,6 @@ export function WeeklyTimetableView({
     return teacherId || 'Unknown Teacher';
   };
 
-  const formatTime = (time: string): string => {
-    try {
-      const [hours, minutes] = time.split(':');
-      const date = new Date();
-      date.setHours(parseInt(hours, 10));
-      date.setMinutes(parseInt(minutes, 10));
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      console.error('Error formatting time:', error);
-      return time;
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -88,7 +76,7 @@ export function WeeklyTimetableView({
         timeSlots={timeSlots}
         weekDays={weekDays}
         isLoading={isLoading}
-        formatTime={formatTime}
+        formatTime={formatTimeDisplay}
         getSubjectName={getSubjectName}
         getClassName={getClassName}
         getSectionName={getSectionName}

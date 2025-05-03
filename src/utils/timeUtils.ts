@@ -1,3 +1,4 @@
+
 import { format, isValid, parse, addMinutes } from 'date-fns';
 
 // Generate time options for dropdowns
@@ -13,18 +14,29 @@ export const generateTimeOptions = () => {
   return times;
 };
 
-// Format time for display - keep in 24-hour HH:MM format
+// Format time for display - consistently display in 12-hour format
 export const formatTimeDisplay = (timeString: string): string => {
   if (!timeString || typeof timeString !== 'string') {
     return '';
   }
   
-  // If already in HH:mm format, return as is
-  if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-    return timeString;
+  try {
+    // If already in HH:mm format, parse and format
+    if (timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      
+      if (isValid(date)) {
+        return format(date, 'h:mm a');
+      }
+    }
+  } catch (error) {
+    console.error("Error formatting time:", error);
   }
   
-  return '';
+  return timeString; // Return original if we can't format it
 };
 
 export const convertTo24Hour = (time: string, period: string) => {
@@ -103,16 +115,36 @@ export const normalizeTimeString = (timeString: string): string => {
   }
   
   // Handle "8 AM" or similar format
-  const match = timeString.match(/^(\d{1,2})\s*(am|pm)$/i);
+  const match = timeString.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)$/i);
   if (match) {
     const hours = parseInt(match[1]);
-    const isPM = match[2].toLowerCase() === 'pm';
+    const minutes = match[2] ? parseInt(match[2]) : 0;
+    const isPM = match[3].toLowerCase() === 'pm';
     
     let hour24 = hours;
     if (isPM && hours < 12) hour24 = hours + 12;
     if (!isPM && hours === 12) hour24 = 0;
     
-    return `${hour24.toString().padStart(2, '0')}:00`;
+    return `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+  
+  // Try to parse with date-fns as a last resort
+  try {
+    // Try some common formats
+    const formats = ['h:mm a', 'h:mm aa', 'H:mm'];
+    
+    for (const formatStr of formats) {
+      try {
+        const parsedDate = parse(timeString, formatStr, new Date());
+        if (isValid(parsedDate)) {
+          return format(parsedDate, 'HH:mm');
+        }
+      } catch (e) {
+        // Continue to the next format
+      }
+    }
+  } catch (error) {
+    console.error("Error normalizing time:", error);
   }
   
   return '';
@@ -177,7 +209,41 @@ export const hasTimeConflict = (
 };
 
 // Helper to convert "HH:MM" to minutes since midnight
-const timeToMinutes = (time: string): number => {
+export const timeToMinutes = (time: string): number => {
+  if (!time || !time.includes(':')) return 0;
+  
   const [hours, minutes] = time.split(':').map(Number);
+  
+  if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours * 60 + minutes;
+};
+
+// Map day of week string to database number (0-6 for Sunday-Saturday)
+export const mapDayToNumber = (day: string): number => {
+  const dayMap: Record<string, number> = {
+    'Sunday': 0,
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6,
+  };
+  
+  return dayMap[day] ?? 0;
+};
+
+// Map day of week number (0-6 for Sunday-Saturday) to string
+export const mapNumberToDay = (dayNumber: number): string => {
+  const dayMap: Record<number, string> = {
+    0: 'Sunday',
+    1: 'Monday',
+    2: 'Tuesday',
+    3: 'Wednesday',
+    4: 'Thursday',
+    5: 'Friday',
+    6: 'Saturday',
+  };
+  
+  return dayMap[dayNumber] ?? 'Monday';
 };
