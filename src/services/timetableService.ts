@@ -85,23 +85,29 @@ export const timetableService = {
         
         // Convert day_of_week number to day name - Fix: Cast string to WeekDay
         const dayOfWeekString = mapNumberToDay(record.day_of_week);
+        // Make sure the day is a valid WeekDay type
         const dayOfWeek = dayOfWeekString as WeekDay;
         
-        slots.push({
-          id: record.id,
-          startTime: record.start_time,
-          endTime: record.end_time,
-          dayOfWeek,
-          slotType,
-          title,
-          subjectId: record.subject_id,
-          teacherId: record.teacher_id,
-          classId: sectionData?.class_id || "",
-          sectionId: record.section_id,
-          academicYearId: "1", // Default academic year
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+        // Only add to slots if it's a valid day of week
+        if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(dayOfWeekString)) {
+          slots.push({
+            id: record.id,
+            startTime: record.start_time,
+            endTime: record.end_time,
+            dayOfWeek: dayOfWeekString as WeekDay,
+            slotType,
+            title,
+            subjectId: record.subject_id,
+            teacherId: record.teacher_id,
+            classId: sectionData?.class_id || "",
+            sectionId: record.section_id,
+            academicYearId: "1", // Default academic year
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          console.error(`Invalid day of week: ${dayOfWeekString} from day number: ${record.day_of_week}`);
+        }
       }
       
       return slots;
@@ -251,7 +257,7 @@ export const timetableService = {
         id: data.id,
         startTime: data.start_time,
         endTime: data.end_time,
-        dayOfWeek: timeSlotData.dayOfWeek,
+        dayOfWeek: timeSlotData.dayOfWeek as WeekDay,
         slotType: timeSlotData.slotType,
         subjectId: data.subject_id || undefined,
         title: timeSlotData.title,

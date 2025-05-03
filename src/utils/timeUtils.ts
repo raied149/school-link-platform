@@ -131,3 +131,60 @@ export const normalizeTimeString = (timeString: string): string | null => {
     return null;
   }
 };
+
+/**
+ * Formats hour and minute parts into a time string
+ * @param hour Hour part (0-23)
+ * @param minute Minute part (0-59)
+ * @returns Time string in HH:MM format, or null if invalid
+ */
+export const formatTimeFromParts = (hour: string, minute: string): string | null => {
+  try {
+    const hourNum = parseInt(hour, 10);
+    const minuteNum = parseInt(minute, 10);
+    
+    if (isNaN(hourNum) || isNaN(minuteNum) || 
+        hourNum < 0 || hourNum > 23 || 
+        minuteNum < 0 || minuteNum > 59) {
+      return null;
+    }
+    
+    return `${hourNum.toString().padStart(2, '0')}:${minuteNum.toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error('Error formatting time from parts:', error);
+    return null;
+  }
+};
+
+/**
+ * Calculates end time based on start time and duration
+ * @param startHour Start hour (0-23)
+ * @param startMinute Start minute (0-59)
+ * @param durationMinutes Duration in minutes
+ * @returns End time in HH:MM format, or null if invalid
+ */
+export const calculateEndTime = (startHour: string, startMinute: string, durationMinutes: number): string => {
+  try {
+    const hourNum = parseInt(startHour, 10);
+    const minuteNum = parseInt(startMinute, 10);
+    
+    if (isNaN(hourNum) || isNaN(minuteNum) || isNaN(durationMinutes) ||
+        hourNum < 0 || hourNum > 23 || 
+        minuteNum < 0 || minuteNum > 59 ||
+        durationMinutes <= 0) {
+      return 'Invalid Time';
+    }
+    
+    // Calculate total minutes
+    let totalMinutes = hourNum * 60 + minuteNum + durationMinutes;
+    
+    // Calculate end hour and minute
+    const endHour = Math.floor(totalMinutes / 60) % 24; // Wrap around 24 hours
+    const endMinute = totalMinutes % 60;
+    
+    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error('Error calculating end time:', error);
+    return 'Invalid Time';
+  }
+};
