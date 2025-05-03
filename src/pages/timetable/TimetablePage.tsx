@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { subjectService } from '@/services/subjectService';
 import { TimeSlot, WeekDay } from '@/types/timetable';
 import { useAuth } from '@/contexts/AuthContext';
 import { WeeklyTimetableView } from '@/components/timetable/WeeklyTimetableView';
+import { DailyView } from '@/components/timetable/DailyView';
 import { TimeSlotForm } from '@/components/timetable/TimeSlotForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
@@ -20,10 +20,8 @@ import { Plus } from 'lucide-react';
 export default function TimetablePage() {
   // For testing/development, you can set a default role if needed
   const { user } = useAuth();
-  // Force admin role for testing if needed
-  // const testUser = { ...user, role: 'admin' };
   
-  const [viewMode, setViewMode] = useState<'weekly'>('weekly');
+  const [viewMode, setViewMode] = useState<'weekly' | 'daily'>('weekly');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
@@ -259,23 +257,37 @@ export default function TimetablePage() {
         </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly')} className="w-full">
-        <TabsList className="grid w-full grid-cols-1 mb-4">
+      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'daily')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="weekly">Weekly</TabsTrigger>
+          <TabsTrigger value="daily">Daily</TabsTrigger>
         </TabsList>
         
         <Card className="p-6">
           {isReadyToDisplay ? (
-            <TabsContent value="weekly" className="mt-0">
-              <WeeklyTimetableView
-                timeSlots={timeSlots}
-                isLoading={isLoadingTimeSlots}
-                onEdit={handleEditTimeSlot}
-                onDelete={handleDeleteTimeSlot}
-                onAdd={handleAddTimeSlot}
-                user={user}
-              />
-            </TabsContent>
+            <>
+              <TabsContent value="weekly" className="mt-0">
+                <WeeklyTimetableView
+                  timeSlots={timeSlots}
+                  isLoading={isLoadingTimeSlots}
+                  onEdit={handleEditTimeSlot}
+                  onDelete={handleDeleteTimeSlot}
+                  onAdd={handleAddTimeSlot}
+                  user={user}
+                />
+              </TabsContent>
+              <TabsContent value="daily" className="mt-0">
+                <DailyView
+                  timeSlots={timeSlots}
+                  selectedDay={selectedDay}
+                  isLoading={isLoadingTimeSlots}
+                  getSubjectName={getSubjectName}
+                  onEdit={handleEditTimeSlot}
+                  onDelete={handleDeleteTimeSlot}
+                  user={user}
+                />
+              </TabsContent>
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <p className="text-muted-foreground">Please select a class and section to view timetable</p>
