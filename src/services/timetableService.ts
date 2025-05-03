@@ -1,3 +1,4 @@
+
 import { TimeSlot, TimetableFilter, WeekDay, SlotType } from '@/types/timetable';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -166,13 +167,20 @@ export const timetableService = {
       }
       
       // Convert day_of_week number to day name
-      const dayOfWeek = mapNumberToDay(data.day_of_week);
+      const dayOfWeekString = mapNumberToDay(data.day_of_week);
+      
+      // Ensure the day is a valid WeekDay
+      const validWeekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      if (!validWeekDays.includes(dayOfWeekString as WeekDay)) {
+        console.error(`Invalid day of week: ${dayOfWeekString} from day number: ${data.day_of_week}`);
+        return undefined;
+      }
       
       return {
         id: data.id,
         startTime: data.start_time,
         endTime: data.end_time,
-        dayOfWeek,
+        dayOfWeek: dayOfWeekString as WeekDay,
         slotType,
         title,
         subjectId: data.subject_id,
