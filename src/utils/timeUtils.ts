@@ -24,12 +24,12 @@ export const normalizeTimeString = (timeString?: string): string | null => {
   return null;
 };
 
-// Add missing formatTimeFromParts function
+// Format time from hours and minutes
 export const formatTimeFromParts = (hours: number, minutes: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
-// Add missing calculateEndTime function - modified to use correct parameter types
+// Calculate end time based on start time and duration
 export const calculateEndTime = (startHour: string, startMinute: string, durationMinutes: number): string => {
   const hours = parseInt(startHour, 10);
   const minutes = parseInt(startMinute, 10);
@@ -62,7 +62,7 @@ export const mapNumberToDay = (dayNumber: number): string => {
   return 'Monday'; // Default to Monday if invalid
 };
 
-// Add the isValidTimeFormat function
+// Check if a string is a valid time format
 export const isValidTimeFormat = (time?: string): boolean => {
   if (!time) return false;
   
@@ -71,7 +71,7 @@ export const isValidTimeFormat = (time?: string): boolean => {
   return timeRegex.test(time);
 };
 
-// Add the timeToMinutes function
+// Convert time string to minutes
 export const timeToMinutes = (time: string): number => {
   const [hourStr, minuteStr] = time.split(':');
   const hours = parseInt(hourStr, 10);
@@ -80,7 +80,7 @@ export const timeToMinutes = (time: string): number => {
   return hours * 60 + minutes;
 };
 
-// Add the formatTimeDisplay function
+// Format time for display
 export const formatTimeDisplay = (timeString: string): string => {
   try {
     if (!isValidTimeFormat(timeString)) {

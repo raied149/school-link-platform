@@ -104,7 +104,7 @@ export const timetableService = {
             id: record.id,
             startTime: record.start_time,
             endTime: record.end_time,
-            dayOfWeek: dayOfWeekString as WeekDay,
+            dayOfWeek: asWeekDay(dayOfWeekString),
             slotType,
             title,
             subjectId: record.subject_id,

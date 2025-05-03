@@ -3,12 +3,15 @@ import { useState } from 'react';
 import { TimeSlot, WeekDay } from '@/types/timetable';
 import { WeeklyView } from '@/components/timetable/WeeklyView';
 import { formatTimeDisplay } from '@/utils/timeUtils';
+import { Button } from '@/components/ui/button';
+import { Edit, Plus, Trash2 } from 'lucide-react';
 
 interface WeeklyTimetableViewProps {
   timeSlots: TimeSlot[];
   isLoading: boolean;
   onEdit: (timeSlot: TimeSlot) => void;
   onDelete: (id: string) => void;
+  onAdd?: () => void;
   user?: { role?: string };
 }
 
@@ -17,6 +20,7 @@ export function WeeklyTimetableView({
   isLoading,
   onEdit,
   onDelete,
+  onAdd,
   user
 }: WeeklyTimetableViewProps) {
   const weekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -60,8 +64,19 @@ export function WeeklyTimetableView({
     }
   };
 
+  const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
+
   return (
     <div className="space-y-4">
+      {isAdminOrTeacher && onAdd && (
+        <div className="flex justify-end mb-4">
+          <Button onClick={onAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Time Slot
+          </Button>
+        </div>
+      )}
+
       <WeeklyView
         timeSlots={timeSlots}
         weekDays={weekDays}
@@ -73,6 +88,8 @@ export function WeeklyTimetableView({
         getTeacherName={getTeacherName}
         user={user}
         showTeacher={false}
+        onEdit={isAdminOrTeacher ? onEdit : undefined}
+        onDelete={isAdminOrTeacher ? onDelete : undefined}
       />
     </div>
   );

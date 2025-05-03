@@ -1,7 +1,8 @@
 
-import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
+import { Clock, BookOpen, Coffee, Calendar, Edit, Trash2 } from 'lucide-react';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { isValidTimeFormat } from '@/utils/timeUtils';
 
 interface WeeklyViewProps {
@@ -15,6 +16,8 @@ interface WeeklyViewProps {
   getTeacherName?: (teacherId?: string) => string;
   user?: { role?: string };
   showTeacher?: boolean;
+  onEdit?: (timeSlot: TimeSlot) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function WeeklyView({
@@ -27,7 +30,9 @@ export function WeeklyView({
   getSectionName,
   getTeacherName = () => 'N/A',
   user,
-  showTeacher = true
+  showTeacher = true,
+  onEdit,
+  onDelete
 }: WeeklyViewProps) {
   if (isLoading) {
     return (
@@ -101,6 +106,8 @@ export function WeeklyView({
     }
   };
 
+  const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -126,7 +133,7 @@ export function WeeklyView({
                 return (
                   <TableCell key={day} className="min-w-[150px] p-1">
                     {slot ? (
-                      <div className={`p-2 ${getSlotColor(slot.slotType)} rounded-md`}>
+                      <div className={`p-2 ${getSlotColor(slot.slotType)} rounded-md relative`}>
                         <div className="flex items-center justify-center">
                           {getSlotIcon(slot.slotType)}
                         </div>
@@ -135,6 +142,41 @@ export function WeeklyView({
                           <p className="text-xs text-center text-muted-foreground">
                             {getTeacherName(slot.teacherId)}
                           </p>
+                        )}
+                        
+                        {isAdminOrTeacher && (onEdit || onDelete) && (
+                          <div className="absolute top-1 right-1 flex space-x-1">
+                            {onEdit && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 p-1" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEdit(slot);
+                                }}
+                              >
+                                <Edit className="h-3 w-3" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                            )}
+                            {onDelete && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 p-1" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if(confirm('Are you sure you want to delete this time slot?')) {
+                                    onDelete(slot.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     ) : null}

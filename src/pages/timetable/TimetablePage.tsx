@@ -6,35 +6,20 @@ import { timetableService } from '@/services/timetableService';
 import { subjectService } from '@/services/subjectService';
 import { TimeSlot, WeekDay } from '@/types/timetable';
 import { useAuth } from '@/contexts/AuthContext';
-import { DailyView } from '@/components/timetable/DailyView';
 import { WeeklyTimetableView } from '@/components/timetable/WeeklyTimetableView';
-import { MonthlyTimetableView } from '@/components/timetable/MonthlyTimetableView';
 import { TimeSlotForm } from '@/components/timetable/TimeSlotForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { PlusIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mapNumberToDay } from '@/utils/timeUtils';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious
-} from '@/components/ui/pagination';
-
-type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export default function TimetablePage() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
+  const [viewMode, setViewMode] = useState<'weekly'>('weekly');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -87,7 +72,7 @@ export default function TimetablePage() {
     enabled: !!selectedClassId
   });
 
-  const { data: subjects = [], isLoading: isLoadingSubjects } = useQuery({
+  const { data: subjects = [] } = useQuery({
     queryKey: ['subjects', selectedClassId],
     queryFn: () => subjectService.getSubjectsByClass(selectedClassId),
     enabled: !!selectedClassId
@@ -172,19 +157,7 @@ export default function TimetablePage() {
   };
 
   const handleDeleteTimeSlot = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this time slot?')) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      // Map the day of week to our WeekDay type
-      const dayIndex = date.getDay();
-      const mappedDay = mapNumberToDay(dayIndex) as WeekDay;
-      setSelectedDay(mappedDay);
-    }
+    deleteMutation.mutate(id);
   };
 
   const handleAddTimeSlot = () => {
@@ -200,7 +173,7 @@ export default function TimetablePage() {
   };
 
   const isReadyToDisplay = !!selectedClassId && !!selectedSectionId;
-  const weekDays = timetableService.getWeekDays();
+  const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
 
   return (
     <div className="space-y-6">
@@ -210,10 +183,11 @@ export default function TimetablePage() {
           <p className="text-muted-foreground">Manage class schedules</p>
         </div>
         
-        {isReadyToDisplay && (user?.role === 'admin') && (
+        {isReadyToDisplay && isAdminOrTeacher && (
           <Button onClick={handleAddTimeSlot}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Time Slot
+            <span className="flex items-center">
+              <span className="mr-2">+</span> Add Time Slot
+            </span>
           </Button>
         )}
       </div>
@@ -258,67 +232,38 @@ export default function TimetablePage() {
           </Select>
         </div>
 
-        {viewMode === 'daily' && (
-          <div>
-            <Label htmlFor="day-select">Day</Label>
-            <Select value={selectedDay} onValueChange={(day) => setSelectedDay(day as WeekDay)}>
-              <SelectTrigger id="day-select">
-                <SelectValue placeholder="Select Day" />
-              </SelectTrigger>
-              <SelectContent>
-                {weekDays.map(day => (
-                  <SelectItem key={day} value={day}>{day}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div>
+          <Label htmlFor="day-select">Day</Label>
+          <Select value={selectedDay} onValueChange={(day) => setSelectedDay(day as WeekDay)}>
+            <SelectTrigger id="day-select">
+              <SelectValue placeholder="Select Day" />
+            </SelectTrigger>
+            <SelectContent>
+              {timetableService.getWeekDays().map(day => (
+                <SelectItem key={day} value={day}>{day}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="daily">Daily</TabsTrigger>
+      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly')} className="w-full">
+        <TabsList className="grid w-full grid-cols-1 mb-4">
           <TabsTrigger value="weekly">Weekly</TabsTrigger>
-          <TabsTrigger value="monthly">Monthly</TabsTrigger>
         </TabsList>
         
         <Card className="p-6">
           {isReadyToDisplay ? (
-            <>
-              <TabsContent value="daily" className="mt-0">
-                <DailyView
-                  timeSlots={timeSlots}
-                  selectedDay={selectedDay}
-                  isLoading={isLoadingTimeSlots}
-                  getSubjectName={getSubjectName}
-                  onEdit={handleEditTimeSlot}
-                  onDelete={handleDeleteTimeSlot}
-                  user={user}
-                />
-              </TabsContent>
-              
-              <TabsContent value="weekly" className="mt-0">
-                <WeeklyTimetableView
-                  timeSlots={timeSlots}
-                  isLoading={isLoadingTimeSlots}
-                  onEdit={handleEditTimeSlot}
-                  onDelete={handleDeleteTimeSlot}
-                  user={user}
-                />
-              </TabsContent>
-              
-              <TabsContent value="monthly" className="mt-0">
-                <MonthlyTimetableView
-                  timeSlots={timeSlots}
-                  isLoading={isLoadingTimeSlots}
-                  onEdit={handleEditTimeSlot}
-                  onDelete={handleDeleteTimeSlot}
-                  onDateSelect={handleDateSelect}
-                  selectedDate={selectedDate}
-                  user={user}
-                />
-              </TabsContent>
-            </>
+            <TabsContent value="weekly" className="mt-0">
+              <WeeklyTimetableView
+                timeSlots={timeSlots}
+                isLoading={isLoadingTimeSlots}
+                onEdit={handleEditTimeSlot}
+                onDelete={handleDeleteTimeSlot}
+                onAdd={handleAddTimeSlot}
+                user={user}
+              />
+            </TabsContent>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <p className="text-muted-foreground">Please select a class and section to view timetable</p>
