@@ -3,14 +3,18 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { Users, BookOpen, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
-import { TimetableManagement } from "@/components/timetable/TimetableManagement";
 import { ClassHeader } from "@/components/classes/ClassHeader";
 import { StudentList } from "@/components/classes/StudentList";
+import { WeeklyTimetableView } from "@/components/timetable/WeeklyTimetableView";
+import { timetableService } from "@/services/timetableService";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const ClassDetailsPage = () => {
   const { yearId, classId, sectionId } = useParams<{ 
@@ -18,6 +22,8 @@ const ClassDetailsPage = () => {
     classId: string,
     sectionId: string
   }>();
+  
+  const { user } = useAuth();
   
   const { data: academicYear } = useQuery({
     queryKey: ['academicYear', yearId],
@@ -96,6 +102,23 @@ const ClassDetailsPage = () => {
     enabled: !!sectionId
   });
 
+  // Fetch filtered timetable data
+  const { data: timeSlots = [], isLoading: isLoadingTimeSlots } = useQuery({
+    queryKey: ['class-timetable', classId, sectionId],
+    queryFn: () => {
+      if (!classId || !sectionId) return [];
+      return timetableService.getTimeSlots({
+        classId,
+        sectionId
+      });
+    },
+    enabled: !!classId && !!sectionId
+  });
+
+  if (!classId || !sectionId || !yearId) {
+    return <Navigate to="/classes" replace />;
+  }
+
   return (
     <div className="space-y-6">
       <ClassHeader 
@@ -137,19 +160,30 @@ const ClassDetailsPage = () => {
         </TabsContent>
         
         <TabsContent value="timetable" className="py-4">
-          {classId && sectionId ? (
-            <TimetableManagement
-              classId={classId}
-              sectionId={sectionId}
-              academicYearId={yearId || '1'}
-            />
-          ) : (
-            <Card className="p-6">
-              <div className="text-center py-8 text-muted-foreground">
-                Loading timetable management...
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Class Timetable</h2>
+              <Button asChild>
+                <Link to={`/timetable?classId=${classId}&sectionId=${sectionId}`}>
+                  Full Timetable Management
+                </Link>
+              </Button>
+            </div>
+            
+            {isLoadingTimeSlots ? (
+              <div className="flex items-center justify-center p-8">
+                <p className="text-muted-foreground">Loading timetable...</p>
               </div>
-            </Card>
-          )}
+            ) : (
+              <WeeklyTimetableView
+                timeSlots={timeSlots}
+                isLoading={isLoadingTimeSlots}
+                onEdit={() => {}} // No-op since we redirect to full timetable page
+                onDelete={() => {}}
+                user={user}
+              />
+            )}
+          </Card>
         </TabsContent>
         
         <TabsContent value="attendance" className="py-4">

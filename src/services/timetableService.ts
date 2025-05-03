@@ -83,8 +83,9 @@ export const timetableService = {
           }
         }
         
-        // Convert day_of_week number to day name
-        const dayOfWeek = mapNumberToDay(record.day_of_week);
+        // Convert day_of_week number to day name - Fix: Cast string to WeekDay
+        const dayOfWeekString = mapNumberToDay(record.day_of_week);
+        const dayOfWeek = dayOfWeekString as WeekDay;
         
         slots.push({
           id: record.id,

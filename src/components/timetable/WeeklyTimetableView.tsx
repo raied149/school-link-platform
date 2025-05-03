@@ -41,21 +41,43 @@ export function WeeklyTimetableView({
     return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
   };
 
+  // Enhanced helper functions with better error handling
   const getSubjectName = (subjectId?: string) => {
-    const slot = timeSlots.find(s => s.subjectId === subjectId);
-    return slot?.title || 'Unknown Subject';
+    try {
+      if (!subjectId) return 'Unspecified Subject';
+      const slot = timeSlots.find(s => s.subjectId === subjectId);
+      return slot?.title || 'Unknown Subject';
+    } catch (error) {
+      console.error('Error getting subject name:', error);
+      return 'Error loading subject';
+    }
   };
 
   const getClassName = (classId: string) => {
-    return classId || 'Unknown Class';
+    try {
+      return classId || 'Unspecified Class';
+    } catch (error) {
+      console.error('Error getting class name:', error);
+      return 'Error loading class';
+    }
   };
 
   const getSectionName = (sectionId: string) => {
-    return sectionId || 'Unknown Section';
+    try {
+      return sectionId || 'Unspecified Section';
+    } catch (error) {
+      console.error('Error getting section name:', error);
+      return 'Error loading section';
+    }
   };
 
   const getTeacherName = (teacherId?: string) => {
-    return teacherId || 'Unknown Teacher';
+    try {
+      return teacherId || 'Unassigned Teacher';
+    } catch (error) {
+      console.error('Error getting teacher name:', error);
+      return 'Error loading teacher';
+    }
   };
 
   return (

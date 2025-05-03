@@ -44,15 +44,34 @@ export function WeeklyView({
     );
   }
 
-  // Get unique time slots
+  // Get unique time slots and ensure they're valid
   const timeSet = new Set<string>();
+  
   timeSlots.forEach(slot => {
-    if (isValidTimeFormat(slot.startTime)) {
-      timeSet.add(slot.startTime);
+    try {
+      // Only add if it's a valid time format
+      if (isValidTimeFormat(slot.startTime)) {
+        timeSet.add(slot.startTime);
+      } else {
+        console.warn(`Invalid time format skipped: ${slot.startTime}`);
+      }
+    } catch (error) {
+      console.error(`Error processing time: ${slot.startTime}`, error);
     }
   });
   
+  // Convert to array and sort
   const timeArray = Array.from(timeSet).sort();
+
+  // If no valid times found, show a message
+  if (timeArray.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <Clock className="h-12 w-12 text-muted-foreground mb-2" />
+        <p className="text-muted-foreground">No valid time slots found. Check time formats.</p>
+      </div>
+    );
+  }
 
   const getSlotIcon = (slotType: SlotType) => {
     switch (slotType) {
@@ -85,31 +104,37 @@ export function WeeklyView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Time</TableHead>
+            <TableHead className="min-w-[100px]">Time</TableHead>
             {weekDays.map(day => (
-              <TableHead key={day}>{day}</TableHead>
+              <TableHead key={day} className="min-w-[150px]">{day}</TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {timeArray.map(time => (
             <TableRow key={time}>
-              <TableCell className="font-medium">{formatTime(time)}</TableCell>
+              <TableCell className="font-medium">
+                {formatTime(time)}
+              </TableCell>
               {weekDays.map(day => {
                 const slot = timeSlots.find(
                   s => s.startTime === time && s.dayOfWeek === day
                 );
                 
                 return (
-                  <TableCell key={day} className="min-w-[150px]">
+                  <TableCell key={day} className="min-w-[150px] p-1">
                     {slot ? (
                       <div className={`p-2 ${getSlotColor(slot.slotType)} rounded-md`}>
-                        {getSlotIcon(slot.slotType)}
-                        <p className="font-medium">{getSlotDetails(slot)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Teacher: {slot.teacherId ? getTeacherName(slot.teacherId) : 'N/A'}
+                        <div className="flex items-center justify-center">
+                          {getSlotIcon(slot.slotType)}
+                        </div>
+                        <p className="font-medium text-center">{getSlotDetails(slot)}</p>
+                        <p className="text-xs text-center text-muted-foreground">
+                          {slot.teacherId ? getTeacherName(slot.teacherId) : 'N/A'}
                         </p>
-                        <p className="text-xs">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</p>
+                        <p className="text-xs text-center">
+                          {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                        </p>
                       </div>
                     ) : null}
                   </TableCell>

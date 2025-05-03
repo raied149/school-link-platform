@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { timetableService } from '@/services/timetableService';
@@ -18,6 +18,7 @@ import { toast } from '@/components/ui/use-toast';
 import { PlusIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mapNumberToDay } from '@/utils/timeUtils';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -31,6 +32,27 @@ export default function TimetablePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Get classId and sectionId from URL parameters if available
+  useEffect(() => {
+    const classIdParam = searchParams.get('classId');
+    const sectionIdParam = searchParams.get('sectionId');
+    
+    if (classIdParam) setSelectedClassId(classIdParam);
+    if (classIdParam && sectionIdParam) setSelectedSectionId(sectionIdParam);
+  }, [searchParams]);
+
+  // Update URL parameters when selections change
+  useEffect(() => {
+    if (selectedClassId || selectedSectionId) {
+      const params = new URLSearchParams();
+      if (selectedClassId) params.set('classId', selectedClassId);
+      if (selectedSectionId) params.set('sectionId', selectedSectionId);
+      setSearchParams(params);
+    }
+  }, [selectedClassId, selectedSectionId, setSearchParams]);
 
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes'],
@@ -152,7 +174,8 @@ export default function TimetablePage() {
       setSelectedDate(date);
       // Map the day of week to our WeekDay type
       const dayIndex = date.getDay();
-      setSelectedDay(mapNumberToDay(dayIndex) as WeekDay);
+      const mappedDay = mapNumberToDay(dayIndex) as WeekDay;
+      setSelectedDay(mappedDay);
     }
   };
 
@@ -185,7 +208,10 @@ export default function TimetablePage() {
           <Label htmlFor="class-select">Class</Label>
           <Select
             value={selectedClassId}
-            onValueChange={setSelectedClassId}
+            onValueChange={(value) => {
+              setSelectedClassId(value);
+              setSelectedSectionId(''); // Reset section when class changes
+            }}
             disabled={isLoadingClasses}
           >
             <SelectTrigger id="class-select">
@@ -245,7 +271,7 @@ export default function TimetablePage() {
           {isReadyToDisplay ? (
             <>
               <div className="mb-4 flex justify-end">
-                <Button onClick={handleAddTimeSlot}>
+                <Button onClick={handleAddTimeSlot} disabled={!user || user.role !== 'admin'}>
                   <PlusIcon className="h-4 w-4 mr-2" />
                   Add Time Slot
                 </Button>
