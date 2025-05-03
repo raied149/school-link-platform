@@ -86,8 +86,9 @@ export const timetableService = {
         const dayOfWeekString = mapNumberToDay(record.day_of_week);
         
         // Only add to slots if it's a valid day of week
-        if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(dayOfWeekString)) {
-          const validWeekDay: WeekDay = dayOfWeekString as WeekDay;
+        const validWeekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        if (validWeekDays.includes(dayOfWeekString as WeekDay)) {
+          const validWeekDay = dayOfWeekString as WeekDay;
           
           slots.push({
             id: record.id,

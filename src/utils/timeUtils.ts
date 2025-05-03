@@ -1,3 +1,4 @@
+
 export const normalizeTimeString = (timeString?: string): string | null => {
   if (!timeString) return null;
 
@@ -28,9 +29,10 @@ export const formatTimeFromParts = (hours: number, minutes: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
-// Add missing calculateEndTime function
-export const calculateEndTime = (startTime: string, durationMinutes: number): string => {
-  const [hours, minutes] = startTime.split(':').map(Number);
+// Add missing calculateEndTime function - modified to use correct parameter types
+export const calculateEndTime = (startHour: string, startMinute: string, durationMinutes: number): string => {
+  const hours = parseInt(startHour, 10);
+  const minutes = parseInt(startMinute, 10);
   
   let totalMinutes = hours * 60 + minutes + durationMinutes;
   const newHours = Math.floor(totalMinutes / 60) % 24;
@@ -58,4 +60,45 @@ export const mapNumberToDay = (dayNumber: number): string => {
     return days[dayNumber];
   }
   return 'Monday'; // Default to Monday if invalid
+};
+
+// Add the missing isValidTimeFormat function
+export const isValidTimeFormat = (time?: string): boolean => {
+  if (!time) return false;
+  
+  // Check HH:MM format
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/;
+  return timeRegex.test(time);
+};
+
+// Add the missing timeToMinutes function
+export const timeToMinutes = (time: string): number => {
+  const [hourStr, minuteStr] = time.split(':');
+  const hours = parseInt(hourStr, 10);
+  const minutes = parseInt(minuteStr, 10);
+  
+  return hours * 60 + minutes;
+};
+
+// Add the missing formatTimeDisplay function
+export const formatTimeDisplay = (timeString: string): string => {
+  try {
+    if (!isValidTimeFormat(timeString)) {
+      return 'Invalid Time';
+    }
+    
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    
+    return new Intl.DateTimeFormat('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    }).format(date);
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return 'Invalid Time';
+  }
 };

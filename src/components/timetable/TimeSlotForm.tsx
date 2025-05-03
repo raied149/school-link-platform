@@ -105,7 +105,7 @@ export function TimeSlotForm({
   });
 
   const handleStartTimeChange = (hour: string, minute: string) => {
-    const startTime = formatTimeFromParts(hour, minute);
+    const startTime = formatTimeFromParts(parseInt(hour, 10), parseInt(minute, 10));
     const endTime = calculateEndTime(hour, minute, form.getValues('duration'));
     setCalculatedEndTime(endTime);
 
@@ -126,20 +126,16 @@ export function TimeSlotForm({
     const duration = Number(e.target.value);
     form.setValue('duration', duration);
     
-    const startTime = formatTimeFromParts(
-      form.getValues('startHour'),
-      form.getValues('startMinute')
-    );
+    const hour = form.getValues('startHour');
+    const minute = form.getValues('startMinute');
     
-    const endTime = calculateEndTime(
-      form.getValues('startHour'),
-      form.getValues('startMinute'),
-      duration
-    );
+    const endTime = calculateEndTime(hour, minute, duration);
     
     setCalculatedEndTime(endTime);
 
-    if (startTime && endTime) {
+    if (hour && minute && endTime) {
+      const startTime = formatTimeFromParts(parseInt(hour, 10), parseInt(minute, 10));
+      
       const conflict = validateTimeSlotConflict(
         startTime,
         endTime,
@@ -167,7 +163,9 @@ export function TimeSlotForm({
   };
 
   const onSubmit = (values: FormValues) => {
-    const startTime = formatTimeFromParts(values.startHour, values.startMinute);
+    const hour = parseInt(values.startHour, 10);
+    const minute = parseInt(values.startMinute, 10);
+    const startTime = formatTimeFromParts(hour, minute);
 
     if (!startTime || !calculatedEndTime) {
       console.error("Invalid time format");
@@ -254,4 +252,3 @@ export function TimeSlotForm({
     </Dialog>
   );
 }
-

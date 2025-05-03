@@ -3,7 +3,7 @@ import { Clock, BookOpen, Coffee, Calendar } from 'lucide-react';
 import { TimeSlot, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { isValidTimeFormat } from '@/utils/timeUtils';
+import { isValidTimeFormat, formatTimeDisplay } from '@/utils/timeUtils';
 
 interface DailyViewProps {
   timeSlots: TimeSlot[];
@@ -45,28 +45,6 @@ export function DailyView({
       return getSubjectName(slot.subjectId);
     }
     return slot.title || 'Untitled';
-  };
-
-  const formatTimeDisplay = (timeString: string): string => {
-    try {
-      if (!isValidTimeFormat(timeString)) {
-        return 'Invalid Time';
-      }
-      
-      const [hours, minutes] = timeString.split(':').map(Number);
-      const date = new Date();
-      date.setHours(hours);
-      date.setMinutes(minutes);
-      
-      return new Intl.DateTimeFormat('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      }).format(date);
-    } catch (error) {
-      console.error('Error formatting time:', error);
-      return 'Invalid Time';
-    }
   };
 
   if (isLoading) {
