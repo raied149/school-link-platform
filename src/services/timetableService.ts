@@ -233,7 +233,7 @@ export const timetableService = {
       });
       
       const { data, error } = await supabase
-        .from('timetable')
+        .from("timetable")
         .insert({
           start_time: startTime,
           end_time: endTime,

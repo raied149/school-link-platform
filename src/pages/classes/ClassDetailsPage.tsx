@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, useLocation, Navigate } from "react-router-dom";
 import { Users, BookOpen, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
@@ -17,11 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const ClassDetailsPage = () => {
-  const { yearId, classId, sectionId } = useParams<{ 
-    yearId: string, 
-    classId: string,
-    sectionId: string
-  }>();
+  // Get yearId from either params or location state
+  const { classId, sectionId } = useParams<{ classId: string, sectionId: string }>();
+  const location = useLocation();
+  const yearId = location.state?.yearId;
   
   const { user } = useAuth();
   
@@ -51,6 +50,7 @@ const ClassDetailsPage = () => {
     enabled: !!yearId
   });
   
+  // Also fetch the class's academic year if we don't have it from location state
   const { data: classDetails } = useQuery({
     queryKey: ['class', classId],
     queryFn: async () => {
@@ -93,7 +93,7 @@ const ClassDetailsPage = () => {
         id: data.id,
         name: data.name,
         classId: data.class_id,
-        academicYearId: yearId || "",
+        academicYearId: classDetails?.academicYearId || "",
         teacherId: data.teacher_id,
         createdAt: data.created_at,
         updatedAt: data.created_at
@@ -115,7 +115,7 @@ const ClassDetailsPage = () => {
     enabled: !!classId && !!sectionId
   });
 
-  if (!classId || !sectionId || !yearId) {
+  if (!classId || !sectionId) {
     return <Navigate to="/classes" replace />;
   }
 
@@ -155,7 +155,7 @@ const ClassDetailsPage = () => {
           <SubjectManagement 
             classId={classId} 
             sectionId={sectionId}
-            academicYearId={yearId}
+            academicYearId={classDetails?.academicYearId || ""}
           />
         </TabsContent>
         

@@ -386,9 +386,13 @@ const SectionsPage = () => {
     setIsDeleteDialogOpen(true);
   };
   
-  // Fix the navigation function
+  // Fix the navigation function to include yearId
   const navigateToSectionDetails = (section: Section) => {
-    navigate(`/class/${classId}/section/${section.id}`);
+    // Get the academic year ID from the class details
+    const academicYearId = classDetails?.academicYearId;
+    navigate(`/class/${classId}/section/${section.id}`, { 
+      state: { yearId: academicYearId } 
+    });
   };
   
   // Redirect if params are missing
