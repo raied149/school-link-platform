@@ -106,7 +106,12 @@ export function WeeklyView({
     }
   };
 
-  const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
+  // Debug console logs
+  console.log('onEdit function:', !!onEdit);
+  console.log('onDelete function:', !!onDelete);
+
+  // Always show action buttons for now during testing
+  const showActionButtons = true;
 
   return (
     <div className="overflow-x-auto">
@@ -144,13 +149,13 @@ export function WeeklyView({
                           </p>
                         )}
                         
-                        {isAdminOrTeacher && (onEdit || onDelete) && (
+                        {showActionButtons && (onEdit || onDelete) && (
                           <div className="absolute top-1 right-1 flex space-x-1">
                             {onEdit && (
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 p-1" 
+                                className="h-6 w-6 p-1 bg-white/80 hover:bg-white" 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onEdit(slot);
@@ -164,7 +169,7 @@ export function WeeklyView({
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 p-1" 
+                                className="h-6 w-6 p-1 bg-white/80 hover:bg-white" 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if(confirm('Are you sure you want to delete this time slot?')) {

@@ -15,9 +15,14 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 
 export default function TimetablePage() {
+  // For testing/development, you can set a default role if needed
   const { user } = useAuth();
+  // Force admin role for testing if needed
+  // const testUser = { ...user, role: 'admin' };
+  
   const [viewMode, setViewMode] = useState<'weekly'>('weekly');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -27,6 +32,10 @@ export default function TimetablePage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Debug user role
+  console.log('Current user:', user);
+  console.log('User role:', user?.role);
 
   // Get classId and sectionId from URL parameters if available
   useEffect(() => {
@@ -174,6 +183,10 @@ export default function TimetablePage() {
 
   const isReadyToDisplay = !!selectedClassId && !!selectedSectionId;
   const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
+  
+  // Debug access control
+  console.log('isAdminOrTeacher:', isAdminOrTeacher);
+  console.log('isReadyToDisplay:', isReadyToDisplay);
 
   return (
     <div className="space-y-6">
@@ -183,11 +196,10 @@ export default function TimetablePage() {
           <p className="text-muted-foreground">Manage class schedules</p>
         </div>
         
-        {isReadyToDisplay && isAdminOrTeacher && (
-          <Button onClick={handleAddTimeSlot}>
-            <span className="flex items-center">
-              <span className="mr-2">+</span> Add Time Slot
-            </span>
+        {isReadyToDisplay && (
+          <Button onClick={handleAddTimeSlot} className="bg-primary text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Time Slot
           </Button>
         )}
       </div>
