@@ -62,7 +62,7 @@ export const mapNumberToDay = (dayNumber: number): string => {
   return 'Monday'; // Default to Monday if invalid
 };
 
-// Add the missing isValidTimeFormat function
+// Add the isValidTimeFormat function
 export const isValidTimeFormat = (time?: string): boolean => {
   if (!time) return false;
   
@@ -71,7 +71,7 @@ export const isValidTimeFormat = (time?: string): boolean => {
   return timeRegex.test(time);
 };
 
-// Add the missing timeToMinutes function
+// Add the timeToMinutes function
 export const timeToMinutes = (time: string): number => {
   const [hourStr, minuteStr] = time.split(':');
   const hours = parseInt(hourStr, 10);
@@ -80,7 +80,7 @@ export const timeToMinutes = (time: string): number => {
   return hours * 60 + minutes;
 };
 
-// Add the missing formatTimeDisplay function
+// Add the formatTimeDisplay function
 export const formatTimeDisplay = (timeString: string): string => {
   try {
     if (!isValidTimeFormat(timeString)) {

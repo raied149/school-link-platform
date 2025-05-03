@@ -4,6 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { normalizeTimeString, mapDayToNumber, mapNumberToDay } from '@/utils/timeUtils';
 
+// Valid WeekDay values for type checking
+const validWeekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Helper to safely cast string to WeekDay
+const asWeekDay = (day: string): WeekDay => {
+  if (validWeekDays.includes(day as WeekDay)) {
+    return day as WeekDay;
+  }
+  console.warn(`Invalid day: ${day}, defaulting to Monday`);
+  return 'Monday';
+};
+
 // Service methods
 export const timetableService = {
   getTimeSlots: async (filter?: TimetableFilter): Promise<TimeSlot[]> => {
@@ -83,19 +95,16 @@ export const timetableService = {
           }
         }
         
-        // Convert day_of_week number to day name - Fix: Cast string to WeekDay
+        // Convert day_of_week number to day name
         const dayOfWeekString = mapNumberToDay(record.day_of_week);
         
         // Only add to slots if it's a valid day of week
-        const validWeekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         if (validWeekDays.includes(dayOfWeekString as WeekDay)) {
-          const validWeekDay = dayOfWeekString as WeekDay;
-          
           slots.push({
             id: record.id,
             startTime: record.start_time,
             endTime: record.end_time,
-            dayOfWeek: validWeekDay,
+            dayOfWeek: dayOfWeekString as WeekDay,
             slotType,
             title,
             subjectId: record.subject_id,
@@ -170,7 +179,6 @@ export const timetableService = {
       const dayOfWeekString = mapNumberToDay(data.day_of_week);
       
       // Ensure the day is a valid WeekDay
-      const validWeekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       if (!validWeekDays.includes(dayOfWeekString as WeekDay)) {
         console.error(`Invalid day of week: ${dayOfWeekString} from day number: ${data.day_of_week}`);
         return undefined;
@@ -180,7 +188,7 @@ export const timetableService = {
         id: data.id,
         startTime: data.start_time,
         endTime: data.end_time,
-        dayOfWeek: dayOfWeekString as WeekDay,
+        dayOfWeek: asWeekDay(dayOfWeekString),
         slotType,
         title,
         subjectId: data.subject_id,
@@ -261,14 +269,11 @@ export const timetableService = {
       
       console.log("Created time slot:", data);
       
-      // Ensure we use the correct type for dayOfWeek
-      const validWeekDay: WeekDay = timeSlotData.dayOfWeek;
-      
       return {
         id: data.id,
         startTime: data.start_time,
         endTime: data.end_time,
-        dayOfWeek: validWeekDay,
+        dayOfWeek: asWeekDay(timeSlotData.dayOfWeek),
         slotType: timeSlotData.slotType,
         subjectId: data.subject_id || undefined,
         title: timeSlotData.title,

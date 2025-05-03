@@ -19,12 +19,20 @@ import { PlusIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mapNumberToDay } from '@/utils/timeUtils';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious
+} from '@/components/ui/pagination';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export default function TimetablePage() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>('daily');
+  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -201,6 +209,13 @@ export default function TimetablePage() {
           <h1 className="text-3xl font-bold tracking-tight">Timetable</h1>
           <p className="text-muted-foreground">Manage class schedules</p>
         </div>
+        
+        {isReadyToDisplay && (user?.role === 'admin') && (
+          <Button onClick={handleAddTimeSlot}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add Time Slot
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -270,13 +285,6 @@ export default function TimetablePage() {
         <Card className="p-6">
           {isReadyToDisplay ? (
             <>
-              <div className="mb-4 flex justify-end">
-                <Button onClick={handleAddTimeSlot} disabled={!user || user.role !== 'admin'}>
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Add Time Slot
-                </Button>
-              </div>
-              
               <TabsContent value="daily" className="mt-0">
                 <DailyView
                   timeSlots={timeSlots}
