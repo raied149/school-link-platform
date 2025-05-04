@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OnlineClassFormDialog } from "@/components/online-classes/OnlineClassFormDialog";
 import { OnlineClassList } from "@/components/online-classes/OnlineClassList";
-import { onlineClassService, DEV_USER_UUID } from "@/services/online-classes";
+import { onlineClassService } from "@/services/online-classes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DateSelector } from "@/components/attendance/DateSelector";
 import { toast } from "sonner";
@@ -20,21 +20,13 @@ const OnlineClassesPage = () => {
   const [showAll, setShowAll] = useState(true);
   const queryClient = useQueryClient();
 
-  console.log("Current user:", user);
-
   // Query for fetching online classes
   const { data: classes = [], isLoading, isError, error } = useQuery({
-    queryKey: ["online-classes", user?.id, user?.role],
+    queryKey: ["online-classes"],
     queryFn: () => {
-      if (!user) {
-        console.log("User not authenticated, showing empty classes list");
-        return [];
-      }
-      console.log("Fetching online classes for user:", user.id, user.role);
-      // We're now using a consistent user ID that works with our RLS policies
-      return onlineClassService.getOnlineClassesForUser(DEV_USER_UUID, user.role);
+      console.log("Fetching online classes");
+      return onlineClassService.getOnlineClassesForUser();
     },
-    enabled: !!user,
   });
 
   // Log the fetched classes for debugging
@@ -43,7 +35,6 @@ const OnlineClassesPage = () => {
   // Handle errors from the query
   if (isError) {
     console.error("Error fetching online classes:", error);
-    // Don't show toast here as it would appear on every render
   }
 
   // Mutation for deleting a class
@@ -70,8 +61,6 @@ const OnlineClassesPage = () => {
         cls.date === format(startOfDay(selectedDate), "yyyy-MM-dd")
       );
 
-  const isTeacherOrAdmin = user?.role === "teacher" || user?.role === "admin";
-
   const handleFormClose = (success: boolean = false) => {
     setIsFormOpen(false);
     
@@ -87,12 +76,10 @@ const OnlineClassesPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Online Classes</h1>
         <div className="flex gap-2">
-          {isTeacherOrAdmin && (
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Schedule Class
-            </Button>
-          )}
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Schedule Class
+          </Button>
         </div>
       </div>
 

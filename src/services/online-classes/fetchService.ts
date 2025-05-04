@@ -3,15 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OnlineClassWithDetails } from "./types";
 import { UserRole } from "@/contexts/AuthContext";
-import { isValidUUID, DEV_USER_UUID } from "./validation";
 
-export const getOnlineClassesForUser = async (userId: string, userRole: UserRole): Promise<OnlineClassWithDetails[]> => {
+export const getOnlineClassesForUser = async (): Promise<OnlineClassWithDetails[]> => {
   try {
-    console.log("Getting online classes for user:", userId, userRole);
-    
-    // Use our development UUID for non-UUID IDs
-    const queryUserId = isValidUUID(userId) ? userId : DEV_USER_UUID;
-    console.log("Using query user ID:", queryUserId);
+    console.log("Getting online classes");
     
     let query = supabase
       .from('online_classes')
@@ -22,13 +17,6 @@ export const getOnlineClassesForUser = async (userId: string, userRole: UserRole
         subjects(name),
         profiles!online_classes_created_by_fkey(first_name, last_name)
       `);
-
-    // Apply filters based on user role
-    if (userRole === 'teacher') {
-      query = query.eq('created_by', queryUserId);
-    }
-    
-    // Note: For students, the RLS policy will handle filtering
     
     const { data, error } = await query.order('date', { ascending: true });
 

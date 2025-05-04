@@ -28,8 +28,6 @@ export const createOnlineClass = async (params: CreateOnlineClassParams): Promis
       // Provide more specific error messages based on error codes
       if (error.code === '23503') {
         toast.error("One of the referenced records (class, section, or subject) doesn't exist");
-      } else if (error.code === '42501') {
-        toast.error("Permission denied. You may not have the right access level to create online classes.");
       } else {
         toast.error(`Failed to create online class: ${error.message}`);
       }

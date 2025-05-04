@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -76,7 +75,6 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       }
       return classService.getClasses();
     },
-    enabled: !!user,
   });
 
   // Fetch real sections based on selected class
@@ -102,7 +100,6 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       }
       return subjectService.getSubjects();
     },
-    enabled: !!user,
   });
 
   // Update the form value when date changes
@@ -150,11 +147,6 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
   });
 
   const onSubmit = (formData: any) => {
-    if (!user) {
-      toast.error("You must be logged in to schedule a class");
-      return;
-    }
-
     // Additional validation before submission
     if (!formData.class_id) {
       toast.error("Please select a class");
@@ -171,6 +163,9 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       return;
     }
 
+    // Use a default user ID if no user is authenticated
+    const createdBy = user?.id || "00000000-0000-4000-a000-000000000000";
+
     const onlineClassData: CreateOnlineClassParams = {
       title: formData.title || `${subjects.find(s => s.id === formData.subject_id)?.name || 'Class'} - ${format(formData.date, "MMM d")}`,
       class_id: formData.class_id,
@@ -180,7 +175,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       start_time: formData.start_time,
       end_time: formData.end_time,
       google_meet_link: formData.google_meet_link,
-      created_by: user.id,
+      created_by: createdBy,
     };
 
     console.log("Submitting form data:", onlineClassData);

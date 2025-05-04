@@ -15,7 +15,7 @@ export const DEV_USER_UUID = "00000000-0000-4000-a000-000000000000";
 export const validateCreateParams = (params: CreateOnlineClassParams): string | null => {
   // Validate required fields
   if (!params.class_id || !params.section_id || !params.subject_id || !params.date || 
-      !params.start_time || !params.google_meet_link || !params.created_by) {
+      !params.start_time || !params.google_meet_link) {
     console.error("Missing required fields for online class creation", params);
     toast.error("All required fields must be filled");
     return "Missing required fields";

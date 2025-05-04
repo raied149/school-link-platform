@@ -70,10 +70,6 @@ export function OnlineClassList({ classes, isLoading, onDelete }: OnlineClassLis
     );
   }
 
-  const isOwner = (createdBy: string) => user?.id === createdBy;
-  const isTeacher = user?.role === "teacher";
-  const isAdmin = user?.role === "admin";
-
   return (
     <div className="space-y-8">
       {sortedDates.map((date) => (
@@ -145,15 +141,13 @@ export function OnlineClassList({ classes, isLoading, onDelete }: OnlineClassLis
                         Join Class
                       </Button>
                       
-                      {(isOwner(cls.created_by) || isAdmin) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setClassToDelete(cls.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setClassToDelete(cls.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
