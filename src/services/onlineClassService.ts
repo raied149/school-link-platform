@@ -51,6 +51,33 @@ export const onlineClassService = {
     try {
       console.log("Creating online class with params:", params);
       
+      // Validate required fields
+      if (!params.class_id || !params.section_id || !params.subject_id || !params.date || 
+          !params.start_time || !params.google_meet_link || !params.created_by) {
+        console.error("Missing required fields for online class creation", params);
+        toast.error("All required fields must be filled");
+        return null;
+      }
+      
+      // Check if required IDs are valid UUIDs
+      if (!isValidUUID(params.class_id)) {
+        console.error(`Invalid class_id: ${params.class_id}`);
+        toast.error("Invalid class selection");
+        return null;
+      }
+      
+      if (!isValidUUID(params.section_id)) {
+        console.error(`Invalid section_id: ${params.section_id}`);
+        toast.error("Invalid section selection");
+        return null;
+      }
+      
+      if (!isValidUUID(params.subject_id)) {
+        console.error(`Invalid subject_id: ${params.subject_id}`);
+        toast.error("Invalid subject selection");
+        return null;
+      }
+      
       // Check if created_by is a valid UUID, if not use our development UUID
       if (!isValidUUID(params.created_by)) {
         console.log(`Non-UUID user ID detected: ${params.created_by}, using development UUID`);
@@ -65,7 +92,15 @@ export const onlineClassService = {
 
       if (error) {
         console.error("Error creating online class:", error);
-        toast.error(`Failed to create online class: ${error.message}`);
+        
+        // Provide more specific error messages based on error codes
+        if (error.code === '23503') {
+          toast.error("One of the referenced records (class, section, or subject) doesn't exist");
+        } else if (error.code === '42501') {
+          toast.error("Permission denied. You may not have the right access level to create online classes.");
+        } else {
+          toast.error(`Failed to create online class: ${error.message}`);
+        }
         return null;
       }
 

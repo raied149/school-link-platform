@@ -36,7 +36,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, reset, formState } = useForm({
     defaultValues: {
       title: "",
       class_id: "",
@@ -48,6 +48,13 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       google_meet_link: "",
     }
   });
+
+  // Register the select fields
+  useEffect(() => {
+    register("class_id", { required: "Class is required" });
+    register("section_id", { required: "Section is required" });
+    register("subject_id", { required: "Subject is required" });
+  }, [register]);
 
   // Form fields watch
   const selectedClassId = watch("class_id");
@@ -148,8 +155,24 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       return;
     }
 
+    // Additional validation before submission
+    if (!formData.class_id) {
+      toast.error("Please select a class");
+      return;
+    }
+
+    if (!formData.section_id) {
+      toast.error("Please select a section");
+      return;
+    }
+
+    if (!formData.subject_id) {
+      toast.error("Please select a subject");
+      return;
+    }
+
     const onlineClassData: CreateOnlineClassParams = {
-      title: formData.title,
+      title: formData.title || `${subjects.find(s => s.id === formData.subject_id)?.name || 'Class'} - ${format(formData.date, "MMM d")}`,
       class_id: formData.class_id,
       section_id: formData.section_id,
       subject_id: formData.subject_id,
@@ -163,6 +186,11 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
     console.log("Submitting form data:", onlineClassData);
     createOnlineClassMutation.mutate(onlineClassData);
   };
+
+  // We can add logging to track what's happening during form submission
+  console.log("Form errors:", errors);
+  console.log("Form state:", formState);
+  console.log("Current user:", user);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => onOpenChange(isOpen, false)}>
@@ -180,8 +208,8 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
               <Label htmlFor="title">Class Title</Label>
               <Input
                 id="title"
-                placeholder="Enter class title"
-                {...register("title", { required: "Title is required" })}
+                placeholder="Enter class title (optional)"
+                {...register("title")}
               />
               {errors.title && (
                 <span className="text-sm text-red-500">{errors.title.message}</span>
@@ -190,13 +218,13 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="class_id">Class</Label>
+                <Label htmlFor="class_id">Class <span className="text-red-500">*</span></Label>
                 <Select
                   onValueChange={(value) => {
-                    setValue("class_id", value);
+                    setValue("class_id", value, { shouldValidate: true });
                     setValue("section_id", ""); // Reset section when class changes
                   }}
-                  defaultValue=""
+                  value={watch("class_id")}
                   disabled={classesLoading}
                 >
                   <SelectTrigger className="w-full">
@@ -224,10 +252,10 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="section_id">Section</Label>
+                <Label htmlFor="section_id">Section <span className="text-red-500">*</span></Label>
                 <Select
-                  onValueChange={(value) => setValue("section_id", value)}
-                  defaultValue=""
+                  onValueChange={(value) => setValue("section_id", value, { shouldValidate: true })}
+                  value={watch("section_id")}
                   disabled={!selectedClassId || sectionsLoading}
                 >
                   <SelectTrigger className="w-full">
@@ -258,10 +286,10 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="subject_id">Subject</Label>
+              <Label htmlFor="subject_id">Subject <span className="text-red-500">*</span></Label>
               <Select
-                onValueChange={(value) => setValue("subject_id", value)}
-                defaultValue=""
+                onValueChange={(value) => setValue("subject_id", value, { shouldValidate: true })}
+                value={watch("subject_id")}
                 disabled={subjectsLoading}
               >
                 <SelectTrigger className="w-full">
@@ -289,7 +317,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Date <span className="text-red-500">*</span></Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -316,7 +344,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="start_time">Start Time</Label>
+                <Label htmlFor="start_time">Start Time <span className="text-red-500">*</span></Label>
                 <div className="flex items-center">
                   <Clock className="mr-2 h-4 w-4 text-gray-400" />
                   <Input
@@ -333,7 +361,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="end_time">End Time</Label>
+                <Label htmlFor="end_time">End Time <span className="text-red-500">*</span></Label>
                 <div className="flex items-center">
                   <Clock className="mr-2 h-4 w-4 text-gray-400" />
                   <Input
@@ -351,7 +379,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="google_meet_link">Google Meet Link</Label>
+              <Label htmlFor="google_meet_link">Google Meet Link <span className="text-red-500">*</span></Label>
               <Input
                 id="google_meet_link"
                 placeholder="Enter Google Meet link"

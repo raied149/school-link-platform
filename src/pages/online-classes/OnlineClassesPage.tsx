@@ -27,7 +27,7 @@ const OnlineClassesPage = () => {
     queryKey: ["online-classes", user?.id, user?.role],
     queryFn: () => {
       if (!user) {
-        toast.error("Please login to view online classes");
+        console.log("User not authenticated, showing empty classes list");
         return [];
       }
       console.log("Fetching online classes for user:", user.id, user.role);
@@ -42,6 +42,7 @@ const OnlineClassesPage = () => {
   // Handle errors from the query
   if (isError) {
     console.error("Error fetching online classes:", error);
+    // Don't show toast here as it would appear on every render
   }
 
   // Mutation for deleting a class
@@ -51,9 +52,12 @@ const OnlineClassesPage = () => {
       if (success) {
         queryClient.invalidateQueries({ queryKey: ["online-classes"] });
         toast.success("Class deleted successfully");
+      } else {
+        toast.error("Failed to delete class");
       }
     },
     onError: (error) => {
+      console.error("Delete error:", error);
       toast.error(`Failed to delete class: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
