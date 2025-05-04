@@ -10,7 +10,7 @@ import { CreateOnlineClassParams, onlineClassService } from "@/services/onlineCl
 import { toast } from "sonner";
 
 // UI Components
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -184,7 +184,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(`Failed to create online class: ${error.message}`);
+      toast.error(`Failed to create online class: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
@@ -221,11 +221,12 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       subject_id: selectedSubjectId,
       date: format(selectedDate, "yyyy-MM-dd"),
       start_time: values.startTime,
-      end_time: values.endTime,
+      end_time: values.endTime || undefined,
       google_meet_link: values.googleMeetLink,
       created_by: user.id,
     };
 
+    console.log("Creating online class with data:", onlineClassData);
     createOnlineClassMutation.mutate(onlineClassData);
   });
 
@@ -234,6 +235,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
       <DialogContent className="sm:max-w-[650px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Schedule an Online Class</DialogTitle>
+          <DialogDescription>Fill out the form to schedule an online class session.</DialogDescription>
         </DialogHeader>
         
         <Form {...form}>

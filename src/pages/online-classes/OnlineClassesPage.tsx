@@ -20,6 +20,8 @@ const OnlineClassesPage = () => {
   const [showAll, setShowAll] = useState(true);
   const queryClient = useQueryClient();
 
+  console.log("Current user:", user);
+
   // Query for fetching online classes
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["online-classes", user?.id, user?.role],
@@ -28,17 +30,25 @@ const OnlineClassesPage = () => {
         toast.error("Please login to view online classes");
         return [];
       }
+      console.log("Fetching online classes for user:", user.id, user.role);
       return onlineClassService.getOnlineClassesForUser(user.id, user.role);
     },
     enabled: !!user,
   });
+
+  // Log the fetched classes for debugging
+  console.log("Fetched online classes:", classes);
 
   // Mutation for deleting a class
   const deleteMutation = useMutation({
     mutationFn: onlineClassService.deleteOnlineClass,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+      toast.success("Class deleted successfully");
     },
+    onError: (error) => {
+      toast.error(`Failed to delete class: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   });
 
   // Filter classes based on selected date if not showing all
@@ -49,6 +59,12 @@ const OnlineClassesPage = () => {
       );
 
   const isTeacherOrAdmin = user?.role === "teacher" || user?.role === "admin";
+
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    // Force a refetch after closing the form
+    queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+  };
 
   return (
     <div className="space-y-6">
@@ -106,7 +122,10 @@ const OnlineClassesPage = () => {
         />
       </Card>
 
-      <OnlineClassFormDialog open={isFormOpen} onOpenChange={setIsFormOpen} />
+      <OnlineClassFormDialog 
+        open={isFormOpen} 
+        onOpenChange={handleFormClose} 
+      />
     </div>
   );
 };

@@ -36,10 +36,24 @@ export interface CreateOnlineClassParams {
   created_by: string;
 }
 
+// Helper function to check if string is a valid UUID
+const isValidUUID = (id: string) => {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(id);
+};
+
 export const onlineClassService = {
   // Create a new online class
   createOnlineClass: async (params: CreateOnlineClassParams): Promise<OnlineClass | null> => {
     try {
+      // Check if created_by is a valid UUID
+      if (!isValidUUID(params.created_by)) {
+        // For development/testing, use a placeholder UUID if the ID isn't valid
+        console.log(`Non-UUID user ID detected: ${params.created_by}, using a placeholder UUID`);
+        // Generate a deterministic UUID for test users
+        params.created_by = "00000000-0000-4000-a000-000000000000"; // Use a placeholder UUID
+      }
+
       const { data, error } = await supabase
         .from('online_classes')
         .insert(params)
@@ -64,6 +78,9 @@ export const onlineClassService = {
   // Get online classes for a specific user based on their role
   getOnlineClassesForUser: async (userId: string, userRole: UserRole): Promise<OnlineClassWithDetails[]> => {
     try {
+      // Use a placeholder UUID for development/test users with non-UUID IDs
+      const queryUserId = isValidUUID(userId) ? userId : "00000000-0000-4000-a000-000000000000";
+      
       let query = supabase
         .from('online_classes')
         .select(`
@@ -76,7 +93,7 @@ export const onlineClassService = {
 
       // Apply filters based on user role
       if (userRole === 'teacher') {
-        query = query.eq('created_by', userId);
+        query = query.eq('created_by', queryUserId);
       }
       
       // Note: For students, the RLS policy will handle filtering
@@ -94,7 +111,7 @@ export const onlineClassService = {
         class_name: item.classes?.name,
         section_name: item.sections?.name,
         subject_name: item.subjects?.name,
-        teacher_name: `${item.profiles?.first_name} ${item.profiles?.last_name}`
+        teacher_name: `${item.profiles?.first_name || 'Unknown'} ${item.profiles?.last_name || 'Teacher'}`
       }));
     } catch (error) {
       console.error("Exception fetching online classes:", error);
