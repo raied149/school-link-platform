@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarIcon, Clock } from "lucide-react";
-import { CreateOnlineClassParams, onlineClassService } from "@/services/onlineClassService";
+import { CreateOnlineClassParams, onlineClassService } from "@/services/online-classes";
 import { useAuth } from "@/contexts/AuthContext";
 import { academicYearService } from "@/services/academicYearService";
 import { classService } from "@/services/classService";

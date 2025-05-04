@@ -1,6 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
-import { OnlineClassWithDetails } from "@/services/onlineClassService";
+import { OnlineClassWithDetails } from "@/services/online-classes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Users, Link, Video, Trash2 } from "lucide-react";
