@@ -13,6 +13,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DateSelector } from "@/components/attendance/DateSelector";
 import { toast } from "sonner";
 
+// Development UUID - matches our RLS policies (consistent with other files)
+const DEV_USER_UUID = "00000000-0000-4000-a000-000000000000";
+
 const OnlineClassesPage = () => {
   const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -31,7 +34,8 @@ const OnlineClassesPage = () => {
         return [];
       }
       console.log("Fetching online classes for user:", user.id, user.role);
-      return onlineClassService.getOnlineClassesForUser(user.id, user.role);
+      // We're now using a consistent user ID that works with our RLS policies
+      return onlineClassService.getOnlineClassesForUser(DEV_USER_UUID, user.role);
     },
     enabled: !!user,
   });

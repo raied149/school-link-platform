@@ -20,13 +20,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Development UUID - matches our RLS policies
+const DEV_USER_UUID = "00000000-0000-4000-a000-000000000000";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
   const login = (role: UserRole) => {
+    // Use the development UUID that matches Supabase RLS policies
     const newUser: User = {
-      id: `dev-${role}-id`,
+      id: DEV_USER_UUID,
       firstName: 'Simulated',
       lastName: role.charAt(0).toUpperCase() + role.slice(1),
       role: role

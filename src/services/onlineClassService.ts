@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserRole } from "@/contexts/AuthContext";
@@ -78,11 +77,10 @@ export const onlineClassService = {
         return null;
       }
       
-      // Check if created_by is a valid UUID, if not use our development UUID
-      if (!isValidUUID(params.created_by)) {
-        console.log(`Non-UUID user ID detected: ${params.created_by}, using development UUID`);
-        params.created_by = DEV_USER_UUID; // Use our development UUID that matches RLS policies
-      }
+      // Always use our development UUID for auth compatibility with RLS policies
+      // This ensures RLS policies work correctly with our simulated authentication
+      params.created_by = DEV_USER_UUID;
+      console.log(`Using development UUID: ${params.created_by}`);
 
       const { data, error } = await supabase
         .from('online_classes')
