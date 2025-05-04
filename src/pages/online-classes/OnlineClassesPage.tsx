@@ -23,7 +23,7 @@ const OnlineClassesPage = () => {
   console.log("Current user:", user);
 
   // Query for fetching online classes
-  const { data: classes = [], isLoading } = useQuery({
+  const { data: classes = [], isLoading, isError, error } = useQuery({
     queryKey: ["online-classes", user?.id, user?.role],
     queryFn: () => {
       if (!user) {
@@ -38,6 +38,11 @@ const OnlineClassesPage = () => {
 
   // Log the fetched classes for debugging
   console.log("Fetched online classes:", classes);
+
+  // Handle errors from the query
+  if (isError) {
+    console.error("Error fetching online classes:", error);
+  }
 
   // Mutation for deleting a class
   const deleteMutation = useMutation({
@@ -68,10 +73,6 @@ const OnlineClassesPage = () => {
     // Force a refetch if the form was submitted successfully
     if (success) {
       console.log("Form closed with success, invalidating queries");
-      queryClient.invalidateQueries({ queryKey: ["online-classes"] });
-    } else {
-      // Still do a refetch to ensure the list is up to date
-      console.log("Form closed, refreshing data");
       queryClient.invalidateQueries({ queryKey: ["online-classes"] });
     }
   };

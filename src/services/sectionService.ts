@@ -1,22 +1,72 @@
-
 import { Section } from '@/types/section';
+import { supabase } from '@/integrations/supabase/client';
 import { mockSections } from '@/mocks/data';
 
 // Service methods
 export const sectionService = {
   getSections: async (): Promise<Section[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockSections]), 500);
-    });
+    try {
+      console.log("Fetching all sections");
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching sections:", error);
+        // Fall back to mock data if there's an error
+        return [...mockSections];
+      }
+      
+      // Map to our Section type
+      return data.map(section => ({
+        id: section.id,
+        name: section.name,
+        classId: section.class_id,
+        academicYearId: "", // Not directly available in DB schema
+        teacherId: section.teacher_id || undefined,
+        createdAt: section.created_at,
+        updatedAt: section.created_at
+      }));
+    } catch (error) {
+      console.error("Exception in getSections:", error);
+      return [...mockSections];
+    }
   },
   
   getSectionsByClassAndYear: async (classId: string, academicYearId: string): Promise<Section[]> => {
-    return new Promise((resolve) => {
-      const sections = mockSections.filter(s => 
+    try {
+      console.log(`Fetching sections for class: ${classId}`);
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('class_id', classId)
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching sections by class:", error);
+        // Fall back to mock data if there's an error
+        return mockSections.filter(s => 
+          s.classId === classId && s.academicYearId === academicYearId
+        );
+      }
+      
+      // Map to our Section type
+      return data.map(section => ({
+        id: section.id,
+        name: section.name,
+        classId: section.class_id,
+        academicYearId: academicYearId, // Using the provided parameter
+        teacherId: section.teacher_id || undefined,
+        createdAt: section.created_at,
+        updatedAt: section.created_at
+      }));
+    } catch (error) {
+      console.error("Exception in getSectionsByClassAndYear:", error);
+      return mockSections.filter(s => 
         s.classId === classId && s.academicYearId === academicYearId
       );
-      setTimeout(() => resolve([...sections]), 300);
-    });
+    }
   },
   
   getSectionById: async (id: string): Promise<Section | undefined> => {

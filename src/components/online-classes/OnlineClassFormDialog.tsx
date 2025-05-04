@@ -1,11 +1,16 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarIcon, Clock } from "lucide-react";
 import { CreateOnlineClassParams, onlineClassService } from "@/services/onlineClassService";
 import { useAuth } from "@/contexts/AuthContext";
+import { academicYearService } from "@/services/academicYearService";
+import { classService } from "@/services/classService";
+import { sectionService } from "@/services/sectionService";
+import { subjectService } from "@/services/subjectService";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,22 +51,60 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
 
   // Form fields watch
   const selectedClassId = watch("class_id");
-
-  // States for dynamic dropdowns
-  const [classes, setClasses] = useState<{id: string, name: string}[]>([]);
-  const [sections, setSections] = useState<{id: string, name: string}[]>([]);
-  const [subjects, setSubjects] = useState<{id: string, name: string}[]>([]);
   const [date, setDate] = useState<Date>(new Date());
 
-  useEffect(() => {
-    // Simulate fetching classes data
-    setClasses([
-      { id: "class1", name: "Grade 1" },
-      { id: "class2", name: "Grade 2" },
-      { id: "class3", name: "Grade 3" },
-    ]);
+  // Get the current active academic year
+  const { data: activeYear, isLoading: activeYearLoading } = useQuery({
+    queryKey: ['active-academic-year'],
+    queryFn: () => academicYearService.getActiveAcademicYear(),
+  });
 
-    // Reset form when dialog opens
+  // Fetch real classes from Supabase
+  const { data: classes = [], isLoading: classesLoading } = useQuery({
+    queryKey: ["classes", activeYear?.id],
+    queryFn: () => {
+      console.log("Fetching classes for active year:", activeYear?.id);
+      if (activeYear?.id) {
+        return classService.getClassesByYear(activeYear.id);
+      }
+      return classService.getClasses();
+    },
+    enabled: !!user,
+  });
+
+  // Fetch real sections based on selected class
+  const { data: sections = [], isLoading: sectionsLoading } = useQuery({
+    queryKey: ["sections", selectedClassId],
+    queryFn: () => {
+      console.log("Fetching sections for class:", selectedClassId);
+      if (selectedClassId && activeYear?.id) {
+        return sectionService.getSectionsByClassAndYear(selectedClassId, activeYear.id);
+      }
+      return [];
+    },
+    enabled: !!selectedClassId && !!activeYear?.id,
+  });
+
+  // Fetch real subjects
+  const { data: subjects = [], isLoading: subjectsLoading } = useQuery({
+    queryKey: ["subjects", selectedClassId],
+    queryFn: () => {
+      console.log("Fetching subjects for class:", selectedClassId);
+      if (selectedClassId) {
+        return subjectService.getSubjectsByClass(selectedClassId);
+      }
+      return subjectService.getSubjects();
+    },
+    enabled: !!user,
+  });
+
+  // Update the form value when date changes
+  useEffect(() => {
+    setValue("date", date);
+  }, [date, setValue]);
+
+  // Reset form when dialog opens
+  useEffect(() => {
     if (open) {
       reset({
         title: "",
@@ -73,38 +116,9 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
         end_time: "10:00",
         google_meet_link: "",
       });
+      setDate(new Date());
     }
   }, [open, reset]);
-
-  useEffect(() => {
-    // Simulate fetching sections based on selected class
-    if (selectedClassId) {
-      const sectionsData = [
-        { id: "section1", name: "Section A" },
-        { id: "section2", name: "Section B" },
-        { id: "section3", name: "Section C" },
-      ];
-      setSections(sectionsData);
-    } else {
-      setSections([]);
-    }
-  }, [selectedClassId]);
-
-  useEffect(() => {
-    // Simulate fetching subjects
-    const subjectsData = [
-      { id: "subject1", name: "Mathematics" },
-      { id: "subject2", name: "Science" },
-      { id: "subject3", name: "English" },
-      { id: "subject4", name: "History" },
-    ];
-    setSubjects(subjectsData);
-  }, []);
-
-  // Update the form value when date changes
-  useEffect(() => {
-    setValue("date", date);
-  }, [date, setValue]);
 
   const createOnlineClassMutation = useMutation({
     mutationFn: async (data: CreateOnlineClassParams) => {
@@ -178,18 +192,28 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
               <div className="grid gap-2">
                 <Label htmlFor="class_id">Class</Label>
                 <Select
-                  onValueChange={(value) => setValue("class_id", value)}
+                  onValueChange={(value) => {
+                    setValue("class_id", value);
+                    setValue("section_id", ""); // Reset section when class changes
+                  }}
                   defaultValue=""
+                  disabled={classesLoading}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select class" />
+                    <SelectValue placeholder={classesLoading ? "Loading..." : "Select class"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name}
-                      </SelectItem>
-                    ))}
+                    {classesLoading ? (
+                      <SelectItem value="loading" disabled>Loading classes...</SelectItem>
+                    ) : classes.length === 0 ? (
+                      <SelectItem value="no-classes" disabled>No classes available</SelectItem>
+                    ) : (
+                      classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.class_id && (
@@ -204,17 +228,25 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
                 <Select
                   onValueChange={(value) => setValue("section_id", value)}
                   defaultValue=""
-                  disabled={!selectedClassId}
+                  disabled={!selectedClassId || sectionsLoading}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select section" />
+                    <SelectValue placeholder={!selectedClassId ? "Select class first" : sectionsLoading ? "Loading..." : "Select section"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {sections.map((section) => (
-                      <SelectItem key={section.id} value={section.id}>
-                        {section.name}
-                      </SelectItem>
-                    ))}
+                    {!selectedClassId ? (
+                      <SelectItem value="select-class" disabled>Select a class first</SelectItem>
+                    ) : sectionsLoading ? (
+                      <SelectItem value="loading" disabled>Loading sections...</SelectItem>
+                    ) : sections.length === 0 ? (
+                      <SelectItem value="no-sections" disabled>No sections available</SelectItem>
+                    ) : (
+                      sections.map((section) => (
+                        <SelectItem key={section.id} value={section.id}>
+                          {section.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.section_id && (
@@ -230,16 +262,23 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
               <Select
                 onValueChange={(value) => setValue("subject_id", value)}
                 defaultValue=""
+                disabled={subjectsLoading}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder={subjectsLoading ? "Loading..." : "Select subject"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
+                  {subjectsLoading ? (
+                    <SelectItem value="loading" disabled>Loading subjects...</SelectItem>
+                  ) : subjects.length === 0 ? (
+                    <SelectItem value="no-subjects" disabled>No subjects available</SelectItem>
+                  ) : (
+                    subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {errors.subject_id && (

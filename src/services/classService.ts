@@ -1,20 +1,66 @@
-
 import { Class } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { mockClasses } from '@/mocks/data';
 
 // Service methods
 export const classService = {
   getClasses: async (): Promise<Class[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockClasses]), 500);
-    });
+    try {
+      console.log("Fetching all classes");
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching classes:", error);
+        // Fall back to mock data if there's an error
+        return [...mockClasses];
+      }
+      
+      // Map to our Class type
+      return data.map(cls => ({
+        id: cls.id,
+        name: cls.name,
+        level: 0, // Default value as it's not in the DB schema
+        academicYearId: cls.year_id,
+        createdAt: cls.created_at,
+        updatedAt: cls.created_at
+      }));
+    } catch (error) {
+      console.error("Exception in getClasses:", error);
+      return [...mockClasses];
+    }
   },
   
   getClassesByYear: async (yearId: string): Promise<Class[]> => {
-    return new Promise((resolve) => {
-      const classes = mockClasses.filter(c => c.academicYearId === yearId);
-      setTimeout(() => resolve([...classes]), 300);
-    });
+    try {
+      console.log("Fetching classes for year:", yearId);
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('year_id', yearId)
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching classes by year:", error);
+        // Fall back to mock data if there's an error
+        return mockClasses.filter(c => c.academicYearId === yearId);
+      }
+      
+      // Map to our Class type
+      return data.map(cls => ({
+        id: cls.id,
+        name: cls.name,
+        level: 0, // Default value as it's not in the DB schema
+        academicYearId: cls.year_id,
+        createdAt: cls.created_at,
+        updatedAt: cls.created_at
+      }));
+    } catch (error) {
+      console.error("Exception in getClassesByYear:", error);
+      return mockClasses.filter(c => c.academicYearId === yearId);
+    }
   },
   
   getClassById: async (id: string): Promise<Class | undefined> => {
