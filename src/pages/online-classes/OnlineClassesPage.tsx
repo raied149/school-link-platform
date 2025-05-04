@@ -60,10 +60,18 @@ const OnlineClassesPage = () => {
 
   const isTeacherOrAdmin = user?.role === "teacher" || user?.role === "admin";
 
-  const handleFormClose = () => {
+  const handleFormClose = (success: boolean = false) => {
     setIsFormOpen(false);
-    // Force a refetch after closing the form
-    queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+    
+    // Force a refetch if the form was submitted successfully
+    if (success) {
+      console.log("Form closed with success, invalidating queries");
+      queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+    } else {
+      // Still do a refetch to ensure the list is up to date
+      console.log("Form closed, refreshing data");
+      queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+    }
   };
 
   return (

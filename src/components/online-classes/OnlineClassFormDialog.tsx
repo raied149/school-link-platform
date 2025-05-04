@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 interface OnlineClassFormDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: boolean, success?: boolean) => void;
 }
 
 export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDialogProps) {
@@ -178,12 +179,19 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
     mutationFn: async (data: CreateOnlineClassParams) => {
       return onlineClassService.createOnlineClass(data);
     },
-    onSuccess: () => {
-      toast.success("Online class created successfully");
-      queryClient.invalidateQueries({ queryKey: ["online-classes"] });
-      onOpenChange(false);
+    onSuccess: (data) => {
+      if (data) {
+        console.log("Class created successfully:", data);
+        toast.success("Online class created successfully");
+        queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+        onOpenChange(false, true); // Pass true to indicate success
+      } else {
+        console.error("Failed to create online class: returned null");
+        toast.error("Failed to create online class");
+      }
     },
     onError: (error) => {
+      console.error("Mutation error:", error);
       toast.error(`Failed to create online class: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
@@ -231,7 +239,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => onOpenChange(isOpen, false)}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Schedule an Online Class</DialogTitle>
@@ -404,7 +412,7 @@ export function OnlineClassFormDialog({ open, onOpenChange }: OnlineClassFormDia
             </div>
             
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false, false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={createOnlineClassMutation.isPending}>

@@ -46,6 +46,8 @@ export const onlineClassService = {
   // Create a new online class
   createOnlineClass: async (params: CreateOnlineClassParams): Promise<OnlineClass | null> => {
     try {
+      console.log("Creating online class with params:", params);
+      
       // Check if created_by is a valid UUID
       if (!isValidUUID(params.created_by)) {
         // For development/testing, use a placeholder UUID if the ID isn't valid
@@ -66,6 +68,7 @@ export const onlineClassService = {
         return null;
       }
 
+      console.log("Online class created successfully:", data);
       toast.success("Online class scheduled successfully");
       return data;
     } catch (error) {
@@ -78,8 +81,11 @@ export const onlineClassService = {
   // Get online classes for a specific user based on their role
   getOnlineClassesForUser: async (userId: string, userRole: UserRole): Promise<OnlineClassWithDetails[]> => {
     try {
+      console.log("Getting online classes for user:", userId, userRole);
+      
       // Use a placeholder UUID for development/test users with non-UUID IDs
       const queryUserId = isValidUUID(userId) ? userId : "00000000-0000-4000-a000-000000000000";
+      console.log("Using query user ID:", queryUserId);
       
       let query = supabase
         .from('online_classes')
@@ -106,6 +112,8 @@ export const onlineClassService = {
         return [];
       }
 
+      console.log("Fetched online classes:", data);
+      
       return (data as any[]).map(item => ({
         ...item,
         class_name: item.classes?.name,
