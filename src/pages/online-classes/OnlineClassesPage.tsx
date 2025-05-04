@@ -42,9 +42,11 @@ const OnlineClassesPage = () => {
   // Mutation for deleting a class
   const deleteMutation = useMutation({
     mutationFn: onlineClassService.deleteOnlineClass,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["online-classes"] });
-      toast.success("Class deleted successfully");
+    onSuccess: (success) => {
+      if (success) {
+        queryClient.invalidateQueries({ queryKey: ["online-classes"] });
+        toast.success("Class deleted successfully");
+      }
     },
     onError: (error) => {
       toast.error(`Failed to delete class: ${error instanceof Error ? error.message : 'Unknown error'}`);

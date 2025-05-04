@@ -42,18 +42,19 @@ const isValidUUID = (id: string) => {
   return uuidPattern.test(id);
 };
 
+// Development UUID - matches our RLS policies
+const DEV_USER_UUID = "00000000-0000-4000-a000-000000000000";
+
 export const onlineClassService = {
   // Create a new online class
   createOnlineClass: async (params: CreateOnlineClassParams): Promise<OnlineClass | null> => {
     try {
       console.log("Creating online class with params:", params);
       
-      // Check if created_by is a valid UUID
+      // Check if created_by is a valid UUID, if not use our development UUID
       if (!isValidUUID(params.created_by)) {
-        // For development/testing, use a placeholder UUID if the ID isn't valid
-        console.log(`Non-UUID user ID detected: ${params.created_by}, using a placeholder UUID`);
-        // Generate a deterministic UUID for test users
-        params.created_by = "00000000-0000-4000-a000-000000000000"; // Use a placeholder UUID
+        console.log(`Non-UUID user ID detected: ${params.created_by}, using development UUID`);
+        params.created_by = DEV_USER_UUID; // Use our development UUID that matches RLS policies
       }
 
       const { data, error } = await supabase
@@ -64,16 +65,16 @@ export const onlineClassService = {
 
       if (error) {
         console.error("Error creating online class:", error);
-        toast.error("Failed to schedule online class");
+        toast.error(`Failed to create online class: ${error.message}`);
         return null;
       }
 
       console.log("Online class created successfully:", data);
-      toast.success("Online class scheduled successfully");
+      // Don't show toast here, let the component handle success messaging
       return data;
     } catch (error) {
       console.error("Exception creating online class:", error);
-      toast.error("An unexpected error occurred");
+      toast.error("An unexpected error occurred when creating class");
       return null;
     }
   },
@@ -83,8 +84,8 @@ export const onlineClassService = {
     try {
       console.log("Getting online classes for user:", userId, userRole);
       
-      // Use a placeholder UUID for development/test users with non-UUID IDs
-      const queryUserId = isValidUUID(userId) ? userId : "00000000-0000-4000-a000-000000000000";
+      // Use our development UUID for non-UUID IDs
+      const queryUserId = isValidUUID(userId) ? userId : DEV_USER_UUID;
       console.log("Using query user ID:", queryUserId);
       
       let query = supabase
@@ -174,11 +175,11 @@ export const onlineClassService = {
 
       if (error) {
         console.error("Error deleting online class:", error);
-        toast.error("Failed to delete online class");
+        toast.error(`Failed to delete online class: ${error.message}`);
         return false;
       }
 
-      toast.success("Online class deleted successfully");
+      // Don't show toast here, let component handle success messaging
       return true;
     } catch (error) {
       console.error("Exception deleting online class:", error);
