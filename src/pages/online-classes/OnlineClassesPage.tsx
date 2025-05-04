@@ -8,13 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OnlineClassFormDialog } from "@/components/online-classes/OnlineClassFormDialog";
 import { OnlineClassList } from "@/components/online-classes/OnlineClassList";
-import { onlineClassService } from "@/services/onlineClassService";
+import { onlineClassService, DEV_USER_UUID } from "@/services/online-classes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DateSelector } from "@/components/attendance/DateSelector";
 import { toast } from "sonner";
-
-// Development UUID - matches our RLS policies (consistent with other files)
-const DEV_USER_UUID = "00000000-0000-4000-a000-000000000000";
 
 const OnlineClassesPage = () => {
   const { user } = useAuth();
