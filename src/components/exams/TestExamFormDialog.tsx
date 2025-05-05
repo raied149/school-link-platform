@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,14 +14,16 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { createExam, assignExamToSections } from "@/services/examService";
+import { createExam, assignExamToSections, updateExam, getExamAssignments } from "@/services/examService";
 
 interface TestExamFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  examToEdit?: any; // The exam to edit, if any
+  onExamUpdated?: () => void; // Callback for when an exam is updated
 }
 
-export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogProps) {
+export function TestExamFormDialog({ open, onOpenChange, examToEdit, onExamUpdated }: TestExamFormDialogProps) {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>();
   const [testType, setTestType] = useState<'test' | 'exam'>('test');
@@ -32,6 +33,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Fetch academic years, classes, sections, subjects
   const { data: academicYears = [], isLoading: isLoadingYears } = useQuery({
@@ -90,10 +92,51 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   // Get current active academic year
   const activeAcademicYear = academicYears?.find(year => year.is_active) || academicYears?.[0];
 
+  // If in edit mode, fetch the exam's existing assignments
+  const { data: existingAssignments = [] } = useQuery({
+    queryKey: ['examAssignmentsForEdit', examToEdit?.id],
+    queryFn: () => getExamAssignments(examToEdit.id),
+    enabled: !!examToEdit?.id
+  });
+
+  // Set up form for editing if examToEdit is provided
+  useEffect(() => {
+    if (examToEdit) {
+      setIsEditMode(true);
+      setName(examToEdit.name);
+      setDate(examToEdit.date ? new Date(examToEdit.date) : undefined);
+      setMaxMarks(examToEdit.max_score || 100);
+      setSelectedSubject(examToEdit.subject_id || "");
+      
+      // For test type, we would need a field in the database to determine this
+      // For now, we'll just default to 'exam'
+      setTestType('exam');
+    } else {
+      setIsEditMode(false);
+      resetForm();
+    }
+  }, [examToEdit]);
+
+  // When existing assignments are loaded, set the selected sections
+  useEffect(() => {
+    if (isEditMode && existingAssignments.length > 0) {
+      // Extract section IDs and unique class ID
+      const sectionIds = existingAssignments.map(assignment => assignment.section_id);
+      const classId = existingAssignments[0]?.sections?.class_id;
+      
+      setSelectedSections(sectionIds);
+      if (classId) {
+        setSelectedGrade(classId);
+      }
+    }
+  }, [isEditMode, existingAssignments]);
+
   // Reset sections when grade changes
   useEffect(() => {
-    setSelectedSections([]);
-  }, [selectedGrade]);
+    if (!isEditMode) {
+      setSelectedSections([]);
+    }
+  }, [selectedGrade, isEditMode]);
 
   const handleSectionToggle = (sectionId: string) => {
     setSelectedSections(prev =>
@@ -104,10 +147,19 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
   };
 
   const handleSubmit = async () => {
-    if (!name || !date || !selectedGrade || selectedSections.length === 0 || !selectedSubject) {
+    if (!name || !date || !selectedSubject) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isEditMode && (!selectedGrade || selectedSections.length === 0)) {
+      toast({
+        title: "Missing sections",
+        description: "Please select a grade and at least one section.",
         variant: "destructive",
       });
       return;
@@ -125,7 +177,6 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
     setIsSubmitting(true);
 
     try {
-      // First create the exam
       const examData = {
         name,
         date: date.toISOString().split('T')[0],
@@ -133,40 +184,48 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
         subject_id: selectedSubject
       };
 
-      // Get user info for logging
-      const { data: userData } = await supabase.auth.getUser();
-      console.log("Creating exam with user:", userData?.user?.id);
-      console.log("Exam data:", examData);
-      
-      const newExam = await createExam(examData);
-      
-      if (!newExam?.id) {
-        throw new Error("Failed to create exam record");
+      if (isEditMode) {
+        // Update existing exam
+        await updateExam(examToEdit.id, examData);
+        
+        toast({
+          title: "Exam updated",
+          description: `${name} has been updated successfully.`,
+        });
+        
+        if (onExamUpdated) {
+          onExamUpdated();
+        }
+      } else {
+        // Create new exam
+        const newExam = await createExam(examData);
+        
+        if (!newExam?.id) {
+          throw new Error("Failed to create exam record");
+        }
+        
+        // Assign to sections
+        await assignExamToSections(
+          newExam.id,
+          selectedSections,
+          activeAcademicYear.id
+        );
+        
+        toast({
+          title: `${testType === 'test' ? 'Test' : 'Exam'} created`,
+          description: `${name} has been scheduled for ${format(date, "PPP")}`,
+        });
       }
       
-      console.log("Successfully created exam:", newExam);
-      console.log("Now assigning to sections:", selectedSections);
-      console.log("Academic year:", activeAcademicYear.id);
-      
-      // Then create assignments to sections
-      await assignExamToSections(
-        newExam.id,
-        selectedSections,
-        activeAcademicYear.id
-      );
-      
-      toast({
-        title: `${testType === 'test' ? 'Test' : 'Exam'} created`,
-        description: `${name} has been scheduled for ${format(date, "PPP")}`,
-      });
-      
       onOpenChange(false);
-      resetForm();
+      if (!isEditMode) {
+        resetForm();
+      }
     } catch (error) {
-      console.error("Error creating exam:", error);
+      console.error("Error saving exam:", error);
       toast({
         title: "Error",
-        description: "Failed to create exam. Please try again.",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} exam. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -188,29 +247,34 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Add New {testType === 'test' ? 'Test' : 'Exam'}</DialogTitle>
+          <DialogTitle>{isEditMode ? `Edit ${testType === 'test' ? 'Test' : 'Exam'}` : `Add New ${testType === 'test' ? 'Test' : 'Exam'}`}</DialogTitle>
           <DialogDescription>
-            Create a new {testType === 'test' ? 'test' : 'exam'} by filling out the information below.
+            {isEditMode 
+              ? `Edit the ${testType === 'test' ? 'test' : 'exam'} details below.`
+              : `Create a new ${testType === 'test' ? 'test' : 'exam'} by filling out the information below.`
+            }
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          {/* Test Type Selection */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="test-type" className="text-right">Type</Label>
-            <Select
-              value={testType}
-              onValueChange={(value) => setTestType(value as 'test' | 'exam')}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="test">Test</SelectItem>
-                <SelectItem value="exam">Exam</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Test Type Selection - only show in create mode */}
+          {!isEditMode && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="test-type" className="text-right">Type</Label>
+              <Select
+                value={testType}
+                onValueChange={(value) => setTestType(value as 'test' | 'exam')}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="test">Test</SelectItem>
+                  <SelectItem value="exam">Exam</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           {/* Name Input */}
           <div className="grid grid-cols-4 items-center gap-4">
@@ -276,59 +340,64 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
             </Select>
           </div>
           
-          {/* Grade Selection */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Grade/Class</Label>
-            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select grade" />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {isLoadingClasses ? (
-                    <SelectItem value="loading" disabled>Loading classes...</SelectItem>
-                  ) : classes.length > 0 ? (
-                    classes.map((grade) => (
-                      <SelectItem key={grade.id} value={grade.id}>
-                        {grade.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>No classes available</SelectItem>
-                  )}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Sections Selection */}
-          <div className="grid grid-cols-4 gap-4">
-            <Label className="text-right pt-2">Sections</Label>
-            <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
-              <div className="space-y-2">
-                {isLoadingSections ? (
-                  <div className="text-muted-foreground text-sm py-2">
-                    Loading sections...
-                  </div>
-                ) : sections.length > 0 ? (
-                  sections.map((section) => (
-                    <div key={section.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`section-${section.id}`}
-                        checked={selectedSections.includes(section.id)}
-                        onCheckedChange={() => handleSectionToggle(section.id)}
-                      />
-                      <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground text-sm py-2">
-                    {selectedGrade ? "No sections available for this class" : "Select a class first"}
-                  </div>
-                )}
+          {/* Only show section selection in create mode */}
+          {!isEditMode && (
+            <>
+              {/* Grade Selection */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Grade/Class</Label>
+                <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[200px]">
+                      {isLoadingClasses ? (
+                        <SelectItem value="loading" disabled>Loading classes...</SelectItem>
+                      ) : classes.length > 0 ? (
+                        classes.map((grade) => (
+                          <SelectItem key={grade.id} value={grade.id}>
+                            {grade.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No classes available</SelectItem>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
-            </ScrollArea>
-          </div>
+              
+              {/* Sections Selection */}
+              <div className="grid grid-cols-4 gap-4">
+                <Label className="text-right pt-2">Sections</Label>
+                <ScrollArea className="h-[100px] w-full col-span-3 border rounded-md p-4">
+                  <div className="space-y-2">
+                    {isLoadingSections ? (
+                      <div className="text-muted-foreground text-sm py-2">
+                        Loading sections...
+                      </div>
+                    ) : sections.length > 0 ? (
+                      sections.map((section) => (
+                        <div key={section.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`section-${section.id}`}
+                            checked={selectedSections.includes(section.id)}
+                            onCheckedChange={() => handleSectionToggle(section.id)}
+                          />
+                          <Label htmlFor={`section-${section.id}`}>{section.name}</Label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted-foreground text-sm py-2">
+                        {selectedGrade ? "No sections available for this class" : "Select a class first"}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </>
+          )}
           
           {/* Max Marks Input */}
           <div className="grid grid-cols-4 items-center gap-4">
@@ -346,7 +415,7 @@ export function TestExamFormDialog({ open, onOpenChange }: TestExamFormDialogPro
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save"}
+            {isSubmitting ? "Saving..." : isEditMode ? "Update" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -33,16 +32,18 @@ import {
   getStudentExamResults
 } from "@/services/examService";
 import { MarkEntryTable } from "@/components/exams/MarkEntryTable";
+import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSection, setSelectedSection] = useState<string>("");
   const [activeTab, setActiveTab] = useState("students");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const { data: exam, isLoading: isLoadingExam } = useQuery({
+  const { data: exam, isLoading: isLoadingExam, refetch: refetchExam } = useQuery({
     queryKey: ['exam', examId],
     queryFn: () => examId ? getExamById(examId) : null,
     enabled: !!examId
@@ -98,6 +99,16 @@ export default function ExamDetailPage() {
       title: "Marks Updated",
       description: "Student marks have been saved successfully."
     });
+  };
+
+  // Handle successful exam edit
+  const handleExamUpdated = () => {
+    refetchExam();
+    toast({
+      title: "Exam Updated",
+      description: "Exam details have been updated successfully."
+    });
+    setEditDialogOpen(false);
   };
   
   // Export results as CSV
@@ -176,11 +187,19 @@ export default function ExamDetailPage() {
 
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">{exam.name}</h1>
-        <Button variant="outline">
+        <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Details
         </Button>
       </div>
+
+      {/* Test/Exam Form Dialog for editing */}
+      <TestExamFormDialog 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+        examToEdit={exam}
+        onExamUpdated={handleExamUpdated}
+      />
 
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

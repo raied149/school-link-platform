@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { StudentExamResult } from "@/types/exam";
 
@@ -87,6 +86,31 @@ export const createExam = async (examData: {
 
   if (error) {
     console.error('Error creating exam:', error);
+    throw error;
+  }
+
+  return data?.[0];
+};
+
+export const updateExam = async (
+  examId: string,
+  examData: {
+    name: string;
+    date: string;
+    max_score: number;
+    subject_id?: string;
+  }
+) => {
+  console.log("Updating exam with ID:", examId, "Data:", examData);
+  
+  const { data, error } = await supabase
+    .from('exams')
+    .update(examData)
+    .eq('id', examId)
+    .select();
+
+  if (error) {
+    console.error('Error updating exam:', error);
     throw error;
   }
 
@@ -183,6 +207,11 @@ export const getExamsForSection = async (sectionId: string, academicYearId: stri
 };
 
 export const getStudentsInSection = async (sectionId: string) => {
+  // Skip if sectionId is "all-sections"
+  if (sectionId === "all-sections") {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('student_sections')
     .select(`
@@ -206,6 +235,11 @@ export const getStudentsInSection = async (sectionId: string) => {
 };
 
 export const getStudentExamResults = async (examId: string, sectionId: string) => {
+  // Skip if sectionId is "all-sections"
+  if (sectionId === "all-sections") {
+    return [];
+  }
+
   // First get all students in the section
   const students = await getStudentsInSection(sectionId);
   
