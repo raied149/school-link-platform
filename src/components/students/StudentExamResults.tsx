@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface StudentExamResultsProps {
   studentId: string;
@@ -55,23 +56,42 @@ export function StudentExamResults({ studentId }: StudentExamResultsProps) {
             <TableHead>Score</TableHead>
             <TableHead>Max Score</TableHead>
             <TableHead>Percentage</TableHead>
+            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {examResults.map((result, index) => (
-            <TableRow key={index}>
-              <TableCell>{result.exams?.subjects?.name || "Unknown"}</TableCell>
-              <TableCell>{result.exams?.name || "Unknown"}</TableCell>
-              <TableCell>{result.exams?.date ? format(new Date(result.exams.date), 'PPP') : "Unknown"}</TableCell>
-              <TableCell>{result.score || "0"}</TableCell>
-              <TableCell>{result.exams?.max_score || "0"}</TableCell>
-              <TableCell>
-                {result.exams?.max_score ? 
-                  `${Math.round((result.score / result.exams.max_score) * 100)}%` : 
-                  "N/A"}
-              </TableCell>
-            </TableRow>
-          ))}
+          {examResults.map((result, index) => {
+            const scorePercentage = result.exams?.max_score ? 
+              (result.score / result.exams.max_score) * 100 : 0;
+              
+            let statusColor = "bg-gray-500";
+            if (scorePercentage >= 80) statusColor = "bg-green-500";
+            else if (scorePercentage >= 60) statusColor = "bg-blue-500";
+            else if (scorePercentage >= 40) statusColor = "bg-amber-500";
+            else statusColor = "bg-red-500";
+            
+            return (
+              <TableRow key={index}>
+                <TableCell>{result.exams?.subjects?.name || "Unknown"}</TableCell>
+                <TableCell>{result.exams?.name || "Unknown"}</TableCell>
+                <TableCell>{result.exams?.date ? format(new Date(result.exams.date), 'PPP') : "Unknown"}</TableCell>
+                <TableCell>{result.score || "0"}</TableCell>
+                <TableCell>{result.exams?.max_score || "0"}</TableCell>
+                <TableCell>
+                  {result.exams?.max_score ? 
+                    `${Math.round((result.score / result.exams.max_score) * 100)}%` : 
+                    "N/A"}
+                </TableCell>
+                <TableCell>
+                  <Badge className={statusColor}>
+                    {scorePercentage >= 80 ? "Excellent" : 
+                     scorePercentage >= 60 ? "Good" : 
+                     scorePercentage >= 40 ? "Pass" : "Needs Improvement"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

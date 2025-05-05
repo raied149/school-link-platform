@@ -13,15 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getStudentExamResults, bulkSaveStudentExamResults } from "@/services/examService";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface MarkEntryTableProps {
   examId: string;
   sectionId: string;
   maxMarks: number;
+  onMarksUpdated?: () => void;
 }
 
-export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTableProps) {
+export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: MarkEntryTableProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,6 +31,7 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     const fetchStudentResults = async () => {
@@ -81,11 +84,13 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
       setMarks({...marks, [studentId]: numValue});
     }
     setHasChanges(true);
+    setSaveSuccess(false);
   };
 
   const handleFeedbackChange = (studentId: string, value: string) => {
     setFeedback({...feedback, [studentId]: value});
     setHasChanges(true);
+    setSaveSuccess(false);
   };
 
   const handleSave = async () => {
@@ -110,6 +115,11 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
       });
       
       setHasChanges(false);
+      setSaveSuccess(true);
+      
+      if (onMarksUpdated) {
+        onMarksUpdated();
+      }
     } catch (error) {
       console.error("Error saving student marks:", error);
       toast({
@@ -121,6 +131,26 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
       setIsSaving(false);
     }
   };
+
+  // Calculate stats
+  const calculateStats = () => {
+    if (!students.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
+    
+    const markValues = Object.values(marks).filter(mark => mark > 0);
+    if (!markValues.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
+    
+    const avg = markValues.reduce((sum, mark) => sum + mark, 0) / markValues.length;
+    const highest = Math.max(...markValues);
+    const lowest = Math.min(...markValues);
+    const passPercentage = 40; // Pass threshold percentage
+    const passThreshold = (maxMarks * passPercentage) / 100;
+    const passCount = markValues.filter(mark => mark >= passThreshold).length;
+    const pass = markValues.length ? (passCount / markValues.length) * 100 : 0;
+    
+    return { avg, highest, lowest, pass };
+  };
+  
+  const stats = calculateStats();
 
   if (isLoading) {
     return (
@@ -156,11 +186,33 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
         >
           {isSaving ? (
             <Loader2 className="animate-spin h-4 w-4" />
+          ) : saveSuccess ? (
+            <CheckCircle className="h-4 w-4 text-green-500" />
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Save Marks
+          {saveSuccess ? "Saved" : "Save Marks"}
         </Button>
+      </div>
+      
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div className="bg-muted rounded p-3">
+          <div className="text-sm text-muted-foreground">Average Score</div>
+          <div className="text-xl font-bold">{stats.avg.toFixed(1)} / {maxMarks}</div>
+        </div>
+        <div className="bg-muted rounded p-3">
+          <div className="text-sm text-muted-foreground">Highest Score</div>
+          <div className="text-xl font-bold">{stats.highest} / {maxMarks}</div>
+        </div>
+        <div className="bg-muted rounded p-3">
+          <div className="text-sm text-muted-foreground">Lowest Score</div>
+          <div className="text-xl font-bold">{stats.lowest} / {maxMarks}</div>
+        </div>
+        <div className="bg-muted rounded p-3">
+          <div className="text-sm text-muted-foreground">Pass Percentage</div>
+          <div className="text-xl font-bold">{stats.pass.toFixed(1)}%</div>
+        </div>
       </div>
       
       <div className="border rounded-md">
@@ -170,38 +222,60 @@ export function MarkEntryTable({ examId, sectionId, maxMarks }: MarkEntryTablePr
               <TableHead>Student ID</TableHead>
               <TableHead>Student Name</TableHead>
               <TableHead>Marks (/{maxMarks})</TableHead>
+              <TableHead>Percentage</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Feedback (Optional)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((item) => (
-              <TableRow key={item.student.id}>
-                <TableCell>
-                  {item.student.student_details?.admission_number || item.student.id.substring(0, 8)}
-                </TableCell>
-                <TableCell>
-                  {item.student.first_name} {item.student.last_name}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={maxMarks}
-                    value={marks[item.student.id] || 0}
-                    onChange={(e) => handleMarkChange(item.student.id, e.target.value)}
-                    className="w-24"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Textarea
-                    value={feedback[item.student.id] || ''}
-                    onChange={(e) => handleFeedbackChange(item.student.id, e.target.value)}
-                    placeholder="Add feedback (optional)"
-                    className="h-10 min-h-0 resize-none"
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+            {students.map((item) => {
+              const student = item.student;
+              const currentMark = marks[student.id] || 0;
+              const percentage = maxMarks > 0 ? Math.round((currentMark / maxMarks) * 100) : 0;
+              
+              let statusColor = "bg-gray-500";
+              if (percentage >= 80) statusColor = "bg-green-500";
+              else if (percentage >= 60) statusColor = "bg-blue-500";
+              else if (percentage >= 40) statusColor = "bg-amber-500";
+              else statusColor = "bg-red-500";
+              
+              return (
+                <TableRow key={student.id}>
+                  <TableCell>
+                    {student.student_details?.admission_number || student.id.substring(0, 8)}
+                  </TableCell>
+                  <TableCell>
+                    {student.first_name} {student.last_name}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={maxMarks}
+                      value={currentMark}
+                      onChange={(e) => handleMarkChange(student.id, e.target.value)}
+                      className="w-24"
+                    />
+                  </TableCell>
+                  <TableCell>{percentage}%</TableCell>
+                  <TableCell>
+                    <Badge className={statusColor}>
+                      {percentage >= 80 ? "Excellent" : 
+                       percentage >= 60 ? "Good" : 
+                       percentage >= 40 ? "Pass" : "Needs Improvement"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Textarea
+                      value={feedback[student.id] || ''}
+                      onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
+                      placeholder="Add feedback (optional)"
+                      className="h-10 min-h-0 resize-none"
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

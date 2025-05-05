@@ -55,4 +55,12 @@ export interface ExamWithSubject {
 export interface ExamResult {
   score: number;
   exams?: ExamWithSubject;
+  student?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    student_details?: {
+      admission_number?: string;
+    };
+  };
 }

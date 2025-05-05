@@ -1,23 +1,36 @@
 
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Edit, FileText, Users, ArrowLeft } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  Edit, 
+  FileText, 
+  Users, 
+  ArrowLeft,
+  Download
+} from "lucide-react";
 import { format } from "date-fns";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TestResultFormDialog } from "@/components/exams/TestResultFormDialog";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
   getExamById, 
   getExamAssignments,
-  getStudentsInSection 
+  getStudentExamResults
 } from "@/services/examService";
 import { MarkEntryTable } from "@/components/exams/MarkEntryTable";
 
@@ -25,8 +38,6 @@ export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSection, setSelectedSection] = useState<string>("");
-  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("students");
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -43,12 +54,23 @@ export default function ExamDetailPage() {
     enabled: !!examId
   });
   
+  // Fetch student results when a section is selected
+  const { 
+    data: studentResults, 
+    isLoading: isLoadingResults,
+    refetch: refetchResults
+  } = useQuery({
+    queryKey: ['examResults', examId, selectedSection],
+    queryFn: () => examId && selectedSection ? 
+      getStudentExamResults(examId, selectedSection) : [],
+    enabled: !!examId && !!selectedSection
+  });
+  
   // Extract unique classes from sections
   const availableClasses = assignments ? 
     Array.from(new Set(assignments.map(a => a.sections.class_id)))
       .map(classId => ({
         id: classId,
-        // Find a section assignment with this class to get class details
         name: `Class ${classId}`
       })) : [];
 
@@ -67,6 +89,44 @@ export default function ExamDetailPage() {
     setSelectedClass(classId);
     // Reset section selection
     setSelectedSection("");
+  };
+  
+  // Handle successful mark entry
+  const handleMarksUpdated = () => {
+    refetchResults();
+    toast({
+      title: "Marks Updated",
+      description: "Student marks have been saved successfully."
+    });
+  };
+  
+  // Export results as CSV
+  const exportResultsAsCSV = () => {
+    if (!studentResults || !exam) return;
+    
+    const csvHeader = "Student ID,Student Name,Marks,Max Marks,Percentage,Feedback\n";
+    const csvRows = studentResults.map(item => {
+      const student = item.student;
+      const result = item.result;
+      const studentId = student.student_details?.admission_number || student.id.substring(0, 8);
+      const studentName = `${student.first_name} ${student.last_name}`;
+      const marks = result ? result.marks_obtained : 0;
+      const percentage = exam.max_score > 0 ? 
+        Math.round((marks / exam.max_score) * 100) : 0;
+      const feedback = result?.feedback || '';
+      
+      return `"${studentId}","${studentName}",${marks},${exam.max_score},${percentage}%,"${feedback}"`;
+    }).join('\n');
+    
+    const csvContent = csvHeader + csvRows;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${exam.name}_results.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (isLoadingExam || isLoadingAssignments) {
@@ -209,16 +269,96 @@ export default function ExamDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {selectedSection && studentResults && studentResults.length > 0 && (
+                <div className="sm:w-1/3 flex items-end">
+                  <Button variant="outline" onClick={exportResultsAsCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Results
+                  </Button>
+                </div>
+              )}
             </div>
             
             {selectedSection ? (
-              <p className="text-center text-muted-foreground py-6">
-                Select a section and switch to the "Mark Entry" tab to manage student marks.
-              </p>
+              isLoadingResults ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : studentResults && studentResults.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead>Student Name</TableHead>
+                      <TableHead>Marks</TableHead>
+                      <TableHead>Percentage</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Feedback</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentResults.map((item) => {
+                      const student = item.student;
+                      const result = item.result;
+                      
+                      const marks = result ? result.marks_obtained : 0;
+                      const percentage = exam.max_score > 0 ? 
+                        Math.round((marks / exam.max_score) * 100) : 0;
+                        
+                      let statusColor = "bg-gray-500";
+                      if (percentage >= 80) statusColor = "bg-green-500";
+                      else if (percentage >= 60) statusColor = "bg-blue-500";
+                      else if (percentage >= 40) statusColor = "bg-amber-500";
+                      else statusColor = "bg-red-500";
+                      
+                      return (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            {student.student_details?.admission_number || student.id.substring(0, 8)}
+                          </TableCell>
+                          <TableCell>{student.first_name} {student.last_name}</TableCell>
+                          <TableCell>
+                            {result ? (
+                              <span>{result.marks_obtained} / {exam.max_score}</span>
+                            ) : (
+                              <span className="text-muted-foreground">No marks</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{percentage}%</TableCell>
+                          <TableCell>
+                            <Badge className={statusColor}>
+                              {percentage >= 80 ? "Excellent" : 
+                               percentage >= 60 ? "Good" : 
+                               percentage >= 40 ? "Pass" : "Needs Improvement"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {result && result.feedback ? (
+                              <span>{result.feedback}</span>
+                            ) : (
+                              <span className="text-muted-foreground">No feedback</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground mb-2">
+                    No results found for this section.
+                  </p>
+                  <Button onClick={() => setActiveTab("mark-entry")}>
+                    Enter Marks
+                  </Button>
+                </div>
+              )
             ) : (
               <div className="text-center py-6">
                 <p className="text-muted-foreground mb-2">
-                  Please select a section to view or enter marks.
+                  Please select a section to view student results.
                 </p>
               </div>
             )}
@@ -264,7 +404,8 @@ export default function ExamDetailPage() {
               <MarkEntryTable 
                 examId={exam.id} 
                 sectionId={selectedSection} 
-                maxMarks={exam.max_score} 
+                maxMarks={exam.max_score}
+                onMarksUpdated={handleMarksUpdated}
               />
             )}
           </TabsContent>
