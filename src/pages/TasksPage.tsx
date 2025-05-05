@@ -58,7 +58,7 @@ export default function TasksPage() {
     },
   });
 
-  // Filter and search logic
+  // Filter and search logic - FIXED to handle potentially undefined values
   const filteredTasks = tasks.filter(task => {
     // Date filter (if we're viewing by date, only show tasks due on that date)
     if (currentTab === 'by_date' && task.due_date !== formattedSelectedDate) {
@@ -89,14 +89,14 @@ export default function TasksPage() {
       return false;
     }
     
-    // Search query
+    // Search query - Fixed to safely handle undefined values
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        task.title.toLowerCase().includes(query) ||
-        (task.description && task.description.toLowerCase().includes(query)) ||
-        (task.assigned_to_user_name && task.assigned_to_user_name.toLowerCase().includes(query)) ||
-        (task.creator_name && task.creator_name.toLowerCase().includes(query))
+        (task.title?.toLowerCase() || '').includes(query) ||
+        (task.description?.toLowerCase() || '').includes(query) ||
+        (task.assigned_to_user_name?.toLowerCase() || '').includes(query) ||
+        (task.creator_name?.toLowerCase() || '').includes(query)
       );
     }
     
