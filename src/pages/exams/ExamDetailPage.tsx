@@ -11,7 +11,8 @@ import {
   FileText, 
   Users, 
   ArrowLeft,
-  Download
+  Download,
+  Trash
 } from "lucide-react";
 import { format } from "date-fns";
 import { 
@@ -30,11 +31,13 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   getExamById, 
   getExamAssignments,
-  getStudentExamResults
+  getStudentExamResults,
+  deleteExam
 } from "@/services/examService";
 import { MarkEntryTable } from "@/components/exams/MarkEntryTable";
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
@@ -42,6 +45,8 @@ export default function ExamDetailPage() {
   const [selectedSection, setSelectedSection] = useState<string>("");
   const [activeTab, setActiveTab] = useState("students");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -84,7 +89,8 @@ export default function ExamDetailPage() {
   
   // Extract unique class IDs from section assignments and map to class objects with names
   const availableClasses = assignments && classes ? 
-    Array.from(new Set(assignments.map(a => a.sections.class_id)))
+    Array.from(new Set(assignments.map(a => a.sections?.class_id || '')))
+      .filter(classId => classId !== '')  // Filter out empty class IDs
       .map(classId => {
         // Find the class name from classes data
         const classObj = classes.find(c => c.id === classId);
@@ -97,7 +103,7 @@ export default function ExamDetailPage() {
   // Get sections for selected class from assignments
   const availableSections = assignments ? 
     assignments.filter(a => 
-      selectedClass ? a.sections.class_id === selectedClass : true
+      !selectedClass || (a.sections && a.sections.class_id === selectedClass)
     ).map(a => ({
       id: a.sections.id,
       name: a.sections.name,
@@ -128,6 +134,31 @@ export default function ExamDetailPage() {
       description: "Exam details have been updated successfully."
     });
     setEditDialogOpen(false);
+  };
+
+  // Handle exam deletion
+  const handleDeleteExam = async () => {
+    if (!examId) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteExam(examId);
+      toast({
+        title: "Exam Deleted",
+        description: "The exam has been successfully deleted."
+      });
+      navigate("/exams");
+    } catch (error) {
+      console.error('Error deleting exam:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the exam. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
   };
   
   // Export results as CSV
@@ -206,10 +237,16 @@ export default function ExamDetailPage() {
 
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">{exam.name}</h1>
-        <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-          <Edit className="mr-2 h-4 w-4" />
-          Edit Details
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Details
+          </Button>
+          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+            <Trash className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+        </div>
       </div>
 
       {/* Test/Exam Form Dialog for editing */}
@@ -218,6 +255,18 @@ export default function ExamDetailPage() {
         onOpenChange={setEditDialogOpen} 
         examToEdit={exam}
         onExamUpdated={handleExamUpdated}
+      />
+
+      {/* Confirmation Dialog for deletion */}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Exam"
+        description="Are you sure you want to delete this exam? This action cannot be undone and will remove all related data including student results."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteExam}
+        isProcessing={isDeleting}
       />
 
       <Card className="p-6">
