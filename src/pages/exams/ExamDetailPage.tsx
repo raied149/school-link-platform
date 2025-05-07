@@ -41,7 +41,6 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
-  const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSection, setSelectedSection] = useState<string>("");
   const [activeTab, setActiveTab] = useState("students");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -82,41 +81,20 @@ export default function ExamDetailPage() {
     refetch: refetchResults
   } = useQuery({
     queryKey: ['examResults', examId, selectedSection],
-    queryFn: () => examId && selectedSection && selectedSection !== "all-sections" ? 
+    queryFn: () => examId && selectedSection ? 
       getStudentExamResults(examId, selectedSection) : [],
-    enabled: !!examId && !!selectedSection && selectedSection !== "all-sections"
+    enabled: !!examId && !!selectedSection
   });
   
-  // Extract unique class IDs from section assignments and map to class objects with names
-  const availableClasses = assignments && classes ? 
-    Array.from(new Set(assignments.map(a => a.sections?.class_id || '')))
-      .filter(classId => classId !== '')  // Filter out empty class IDs
-      .map(classId => {
-        // Find the class name from classes data
-        const classObj = classes.find(c => c.id === classId);
-        return {
-          id: classId,
-          name: classObj ? classObj.name : `Class ${classId.substring(0, 4)}...`
-        };
-      }) : [];
-
-  // Get sections for selected class from assignments
+  // Get all available sections for this exam
   const availableSections = assignments ? 
-    assignments.filter(a => 
-      !selectedClass || (a.sections && a.sections.class_id === selectedClass)
-    ).map(a => ({
-      id: a.sections.id,
-      name: a.sections.name,
-      classId: a.sections.class_id
-    })) : [];
+    assignments
+      .filter(a => a.sections)
+      .map(a => ({
+        id: a.sections.id,
+        name: a.sections.name
+      })) : [];
 
-  // Handle class selection
-  const handleClassChange = (classId: string) => {
-    setSelectedClass(classId);
-    // Reset section selection to prevent showing results for a section not in the selected class
-    setSelectedSection("");
-  };
-  
   // Handle successful mark entry
   const handleMarksUpdated = () => {
     refetchResults();
@@ -224,6 +202,20 @@ export default function ExamDetailPage() {
     return 'ongoing';
   };
 
+  // Get the class name if available (from first section assignment)
+  const getClassName = () => {
+    if (!assignments || !assignments.length || !classes) return null;
+    
+    const firstAssignment = assignments[0];
+    if (!firstAssignment.sections || !firstAssignment.sections.class_id) return null;
+    
+    const classId = firstAssignment.sections.class_id;
+    const classObj = classes.find(c => c.id === classId);
+    return classObj?.name || null;
+  };
+
+  const className = getClassName();
+
   return (
     <div className="space-y-6">
       <Button 
@@ -283,6 +275,11 @@ export default function ExamDetailPage() {
               `}>
                 {getExamStatus().charAt(0).toUpperCase() + getExamStatus().slice(1)}
               </Badge>
+              {className && (
+                <Badge className="ml-2 bg-purple-500">
+                  Class: {className}
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center space-x-2">
@@ -327,40 +324,15 @@ export default function ExamDetailPage() {
             <h3 className="text-xl font-semibold mb-4">Student Results</h3>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="sm:w-1/3">
-                <label className="text-sm font-medium mb-1 block">Filter by Class</label>
-                <Select value={selectedClass} onValueChange={handleClassChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={availableClasses.length > 0 ? "Select Class" : "No classes available"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableClasses.length === 0 ? (
-                      <SelectItem value="no-classes" disabled>No classes assigned</SelectItem>
-                    ) : (
-                      <>
-                        {availableClasses.length > 1 && (
-                          <SelectItem value="">All Classes</SelectItem>
-                        )}
-                        {availableClasses.map(cls => (
-                          <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="sm:w-1/3">
+              <div className="sm:w-1/2">
                 <label className="text-sm font-medium mb-1 block">Filter by Section</label>
-                <Select value={selectedSection} onValueChange={setSelectedSection} disabled={availableSections.length === 0}>
+                <Select value={selectedSection} onValueChange={setSelectedSection}>
                   <SelectTrigger>
                     <SelectValue placeholder={availableSections.length > 0 ? "Select Section" : "No sections available"} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableSections.length === 0 ? (
-                      <SelectItem value="no-sections" disabled>
-                        {selectedClass ? "No sections in this class" : "Select a class first"}
-                      </SelectItem>
+                      <SelectItem value="no-sections" disabled>No sections available</SelectItem>
                     ) : (
                       availableSections.map(section => (
                         <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
@@ -371,7 +343,7 @@ export default function ExamDetailPage() {
               </div>
               
               {selectedSection && studentResults && studentResults.length > 0 && (
-                <div className="sm:w-1/3 flex items-end">
+                <div className="sm:w-1/2 flex items-end">
                   <Button variant="outline" onClick={exportResultsAsCSV}>
                     <Download className="mr-2 h-4 w-4" />
                     Export Results
@@ -470,34 +442,15 @@ export default function ExamDetailPage() {
                 <p className="text-muted-foreground mb-2">
                   Please select a section to enter marks for students.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mt-4 max-w-md mx-auto">
-                  <div className="w-full">
-                    <Select value={selectedClass} onValueChange={handleClassChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={availableClasses.length > 0 ? "Select Class" : "No classes available"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableClasses.length === 0 ? (
-                          <SelectItem value="no-classes" disabled>No classes assigned</SelectItem>
-                        ) : (
-                          availableClasses.map(cls => (
-                            <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="w-full">
-                    <Select value={selectedSection} onValueChange={setSelectedSection} disabled={availableSections.length === 0}>
+                <div className="flex justify-center mt-4">
+                  <div className="w-full max-w-xs">
+                    <Select value={selectedSection} onValueChange={setSelectedSection}>
                       <SelectTrigger>
                         <SelectValue placeholder={availableSections.length > 0 ? "Select Section" : "No sections available"} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableSections.length === 0 ? (
-                          <SelectItem value="no-sections" disabled>
-                            {selectedClass ? "No sections in this class" : "Select a class first"}
-                          </SelectItem>
+                          <SelectItem value="no-sections" disabled>No sections available</SelectItem>
                         ) : (
                           availableSections.map(section => (
                             <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
