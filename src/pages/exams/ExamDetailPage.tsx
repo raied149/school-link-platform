@@ -172,7 +172,7 @@ export default function ExamDetailPage() {
         Math.round((marks / exam.max_score) * 100) : 0;
       const feedback = result?.feedback || '';
       
-      return `"${studentId}","${studentName}",${marks},${exam.max_score},${percentage}%,"${feedback}"`;
+      return `"${studentId}","${studentName}","${marks}","${exam.max_score}","${percentage}%","${feedback}"`;
     }).join('\n');
     
     const csvContent = csvHeader + csvRows;
@@ -290,7 +290,7 @@ export default function ExamDetailPage() {
       )}
 
       {!assignmentsError && assignments.length === 0 && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="default" className="mb-4 border-yellow-400 bg-yellow-50 text-yellow-800">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Sections Assigned</AlertTitle>
           <AlertDescription>
