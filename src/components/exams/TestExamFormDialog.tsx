@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -184,6 +185,8 @@ export function TestExamFormDialog({ open, onOpenChange, examToEdit, onExamUpdat
         subject_id: selectedSubject
       };
 
+      console.log("Exam data being submitted:", examData);
+
       if (isEditMode) {
         // Update existing exam
         await updateExam(examToEdit.id, examData);
@@ -204,12 +207,31 @@ export function TestExamFormDialog({ open, onOpenChange, examToEdit, onExamUpdat
           throw new Error("Failed to create exam record");
         }
         
+        console.log("Created exam:", newExam);
+        
         // Assign to sections
-        await assignExamToSections(
-          newExam.id,
-          selectedSections,
-          activeAcademicYear.id
-        );
+        try {
+          console.log("Assigning to sections:", {
+            examId: newExam.id,
+            sections: selectedSections,
+            academicYear: activeAcademicYear.id
+          });
+          
+          await assignExamToSections(
+            newExam.id,
+            selectedSections,
+            activeAcademicYear.id
+          );
+          
+          console.log("Assignment successful");
+        } catch (assignError) {
+          console.error("Error assigning exam to sections:", assignError);
+          toast({
+            title: "Assignment Error",
+            description: `Exam was created but could not be assigned to sections: ${assignError.message || "Unknown error"}`,
+            variant: "destructive",
+          });
+        }
         
         toast({
           title: `${testType === 'test' ? 'Test' : 'Exam'} created`,
@@ -225,7 +247,7 @@ export function TestExamFormDialog({ open, onOpenChange, examToEdit, onExamUpdat
       console.error("Error saving exam:", error);
       toast({
         title: "Error",
-        description: `Failed to ${isEditMode ? 'update' : 'create'} exam. Please try again.`,
+        description: `Failed to ${isEditMode ? 'update' : 'create'} exam. Please try again. Error: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
     } finally {

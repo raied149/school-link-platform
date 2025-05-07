@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,8 @@ import {
   Users, 
   ArrowLeft,
   Download,
-  Trash
+  Trash,
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 import { 
@@ -38,6 +38,7 @@ import { MarkEntryTable } from "@/components/exams/MarkEntryTable";
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>();
@@ -55,7 +56,12 @@ export default function ExamDetailPage() {
     enabled: !!examId
   });
   
-  const { data: assignments, isLoading: isLoadingAssignments } = useQuery({
+  const { 
+    data: assignments = [], 
+    isLoading: isLoadingAssignments,
+    refetch: refetchAssignments,
+    error: assignmentsError
+  } = useQuery({
     queryKey: ['examAssignments', examId],
     queryFn: () => examId ? getExamAssignments(examId) : [],
     enabled: !!examId
@@ -86,14 +92,25 @@ export default function ExamDetailPage() {
     enabled: !!examId && !!selectedSection
   });
   
+  useEffect(() => {
+    // Auto-select the first section when assignments load
+    if (assignments && assignments.length > 0 && !selectedSection) {
+      setSelectedSection(assignments[0].section_id);
+    }
+  }, [assignments, selectedSection]);
+
   // Get all available sections for this exam
-  const availableSections = assignments ? 
+  const availableSections = assignments && assignments.length > 0 ? 
     assignments
       .filter(a => a.sections)
       .map(a => ({
         id: a.sections.id,
         name: a.sections.name
       })) : [];
+
+  console.log("Available sections:", availableSections);
+  console.log("Assignments:", assignments);
+  console.log("Selected section:", selectedSection);
 
   // Handle successful mark entry
   const handleMarksUpdated = () => {
@@ -107,6 +124,7 @@ export default function ExamDetailPage() {
   // Handle successful exam edit
   const handleExamUpdated = () => {
     refetchExam();
+    refetchAssignments();
     toast({
       title: "Exam Updated",
       description: "Exam details have been updated successfully."
@@ -261,6 +279,26 @@ export default function ExamDetailPage() {
         isProcessing={isDeleting}
       />
 
+      {assignmentsError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            There was an error fetching exam assignments. The exam may not be assigned to any sections.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!assignmentsError && assignments.length === 0 && (
+        <Alert variant="warning" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No Sections Assigned</AlertTitle>
+          <AlertDescription>
+            This exam is not assigned to any sections. Please edit the exam to assign it to sections.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="space-y-4">
@@ -401,8 +439,8 @@ export default function ExamDetailPage() {
                           <TableCell>
                             <Badge className={statusColor}>
                               {percentage >= 80 ? "Excellent" : 
-                               percentage >= 60 ? "Good" : 
-                               percentage >= 40 ? "Pass" : "Needs Improvement"}
+                              percentage >= 60 ? "Good" : 
+                              percentage >= 40 ? "Pass" : "Needs Improvement"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -430,14 +468,31 @@ export default function ExamDetailPage() {
             ) : (
               <div className="text-center py-6">
                 <p className="text-muted-foreground mb-2">
-                  Please select a section to view student results.
+                  {availableSections.length === 0 
+                    ? "No sections are assigned to this exam. Please edit the exam to assign sections."
+                    : "Please select a section to view student results."
+                  }
                 </p>
+                {availableSections.length === 0 && (
+                  <Button onClick={() => setEditDialogOpen(true)}>
+                    Edit Exam
+                  </Button>
+                )}
               </div>
             )}
           </TabsContent>
           
           <TabsContent value="mark-entry" className="mt-4">
-            {!selectedSection ? (
+            {availableSections.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground mb-2">
+                  No sections are assigned to this exam. Please edit the exam to assign sections first.
+                </p>
+                <Button onClick={() => setEditDialogOpen(true)}>
+                  Edit Exam
+                </Button>
+              </div>
+            ) : !selectedSection ? (
               <div className="text-center py-6">
                 <p className="text-muted-foreground mb-2">
                   Please select a section to enter marks for students.
@@ -446,16 +501,12 @@ export default function ExamDetailPage() {
                   <div className="w-full max-w-xs">
                     <Select value={selectedSection} onValueChange={setSelectedSection}>
                       <SelectTrigger>
-                        <SelectValue placeholder={availableSections.length > 0 ? "Select Section" : "No sections available"} />
+                        <SelectValue placeholder="Select Section" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableSections.length === 0 ? (
-                          <SelectItem value="no-sections" disabled>No sections available</SelectItem>
-                        ) : (
-                          availableSections.map(section => (
-                            <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
-                          ))
-                        )}
+                        {availableSections.map(section => (
+                          <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

@@ -89,7 +89,12 @@ export const createExam = async (examData: {
     throw error;
   }
 
-  return data?.[0];
+  if (!data || data.length === 0) {
+    throw new Error("No data returned from exam creation");
+  }
+
+  console.log("Created exam data:", data);
+  return data[0];
 };
 
 export const updateExam = async (
@@ -138,45 +143,60 @@ export const assignExamToSections = async (
 
   console.log("Preparing to insert assignments:", assignments);
 
-  // Get current user for tracking
+  // Get current user information - RLS no longer needed since we disabled it
   const { data: userData } = await supabase.auth.getUser();
   console.log("Current user:", userData?.user?.id);
 
-  const { data, error } = await supabase
-    .from('exam_assignments')
-    .insert(assignments);
+  try {
+    const { data, error } = await supabase
+      .from('exam_assignments')
+      .insert(assignments)
+      .select();
 
-  if (error) {
-    console.error('Error assigning exam to sections:', error);
+    if (error) {
+      console.error('Error assigning exam to sections:', error);
+      throw error;
+    }
+
+    console.log("Successfully created assignments:", data);
+    return data;
+  } catch (error) {
+    console.error('Error in assignExamToSections:', error);
+    console.error('Request details:', { examId, sectionIds, academicYearId });
     throw error;
   }
-
-  return data;
 };
 
 export const getExamAssignments = async (examId: string) => {
-  const { data, error } = await supabase
-    .from('exam_assignments')
-    .select(`
-      *,
-      sections (
-        id,
-        name,
-        class_id
-      ),
-      academic_years (
-        id,
-        name
-      )
-    `)
-    .eq('exam_id', examId);
+  console.log("Fetching assignments for exam:", examId);
+  try {
+    const { data, error } = await supabase
+      .from('exam_assignments')
+      .select(`
+        *,
+        sections (
+          id,
+          name,
+          class_id
+        ),
+        academic_years (
+          id,
+          name
+        )
+      `)
+      .eq('exam_id', examId);
 
-  if (error) {
-    console.error('Error fetching exam assignments:', error);
+    if (error) {
+      console.error('Error fetching exam assignments:', error);
+      throw error;
+    }
+
+    console.log("Retrieved exam assignments:", data);
+    return data;
+  } catch (error) {
+    console.error('Error in getExamAssignments:', error);
     throw error;
   }
-
-  return data;
 };
 
 export const getExamsForSection = async (sectionId: string, academicYearId: string) => {
@@ -235,6 +255,7 @@ export const getStudentsInSection = async (sectionId: string) => {
 };
 
 export const getStudentExamResults = async (examId: string, sectionId: string) => {
+  console.log("Fetching student results for exam:", examId, "section:", sectionId);
   // Skip if sectionId is "all-sections"
   if (sectionId === "all-sections") {
     return [];
@@ -256,6 +277,8 @@ export const getStudentExamResults = async (examId: string, sectionId: string) =
     console.error('Error fetching student exam results:', error);
     throw error;
   }
+
+  console.log("Retrieved student results:", results);
 
   // Combine student data with their results
   return students.map(student => {
