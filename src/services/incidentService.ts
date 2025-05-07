@@ -1,4 +1,3 @@
-
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -70,199 +69,248 @@ let incidents: Incident[] = [
 
 // Get all incidents
 export const getIncidents = async (): Promise<Incident[]> => {
-  const { data: incidents, error } = await supabase
-    .from('school_incidents')
-    .select(`
-      *,
-      school_incident_involved (
-        user_id,
-        role
-      )
-    `);
+  try {
+    const { data: incidents, error } = await supabase
+      .from('school_incidents')
+      .select(`
+        *,
+        school_incident_involved (
+          user_id,
+          role
+        )
+      `);
 
-  if (error) {
-    console.error("Error fetching incidents:", error);
+    if (error) {
+      console.error("Error fetching incidents:", error);
+      throw error;
+    }
+
+    return incidents.map(incident => ({
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by,
+      assignedTo: incident.assigned_to,
+      investigationNotes: incident.investigation_notes,
+      resolutionDetails: incident.resolution_details,
+      resolutionDate: incident.resolution_date,
+      // Map the database field names to our TypeScript type field names
+      involvedPersons: (incident.school_incident_involved || []).map(person => ({
+        userId: person.user_id,
+        role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+      })),
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error in getIncidents:", error);
     throw error;
   }
-
-  return incidents.map(incident => ({
-    id: incident.id,
-    title: incident.title,
-    date: incident.date,
-    time: incident.time,
-    location: incident.location,
-    type: incident.type as IncidentType,
-    subType: incident.sub_type,
-    description: incident.description,
-    severity: incident.severity as IncidentSeverity,
-    status: incident.status as IncidentStatus,
-    reportedBy: incident.reported_by,
-    assignedTo: incident.assigned_to,
-    investigationNotes: incident.investigation_notes,
-    resolutionDetails: incident.resolution_details,
-    resolutionDate: incident.resolution_date,
-    // Map the database field names to our TypeScript type field names
-    involvedPersons: (incident.school_incident_involved || []).map(person => ({
-      userId: person.user_id,
-      role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
-    })),
-    createdAt: incident.created_at,
-    updatedAt: incident.updated_at,
-  }));
 };
 
 // Get incident by ID
 export const getIncidentById = async (id: string): Promise<Incident | undefined> => {
-  const { data: incident, error } = await supabase
-    .from('school_incidents')
-    .select(`
-      *,
-      school_incident_involved (
-        user_id,
-        role
-      )
-    `)
-    .eq('id', id)
-    .single();
+  try {
+    const { data: incident, error } = await supabase
+      .from('school_incidents')
+      .select(`
+        *,
+        school_incident_involved (
+          user_id,
+          role
+        )
+      `)
+      .eq('id', id)
+      .single();
 
-  if (error) {
-    console.error("Error fetching incident:", error);
+    if (error) {
+      console.error("Error fetching incident:", error);
+      throw error;
+    }
+
+    if (!incident) return undefined;
+
+    return {
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by,
+      assignedTo: incident.assigned_to,
+      investigationNotes: incident.investigation_notes,
+      resolutionDetails: incident.resolution_details,
+      resolutionDate: incident.resolution_date,
+      // Map the database field names to our TypeScript type field names
+      involvedPersons: (incident.school_incident_involved || []).map(person => ({
+        userId: person.user_id,
+        role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+      })),
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    };
+  } catch (error) {
+    console.error("Error in getIncidentById:", error);
     throw error;
   }
-
-  if (!incident) return undefined;
-
-  return {
-    id: incident.id,
-    title: incident.title,
-    date: incident.date,
-    time: incident.time,
-    location: incident.location,
-    type: incident.type as IncidentType,
-    subType: incident.sub_type,
-    description: incident.description,
-    severity: incident.severity as IncidentSeverity,
-    status: incident.status as IncidentStatus,
-    reportedBy: incident.reported_by,
-    assignedTo: incident.assigned_to,
-    investigationNotes: incident.investigation_notes,
-    resolutionDetails: incident.resolution_details,
-    resolutionDate: incident.resolution_date,
-    // Map the database field names to our TypeScript type field names
-    involvedPersons: (incident.school_incident_involved || []).map(person => ({
-      userId: person.user_id,
-      role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
-    })),
-    createdAt: incident.created_at,
-    updatedAt: incident.updated_at,
-  };
 };
 
 // Create a new incident
 export const createIncident = async (incidentData: Omit<Incident, "id" | "createdAt" | "updatedAt">): Promise<Incident> => {
-  const { data: incident, error: incidentError } = await supabase
-    .from('school_incidents')
-    .insert({
-      title: incidentData.title,
-      date: incidentData.date,
-      time: incidentData.time,
-      location: incidentData.location,
-      type: incidentData.type,
-      sub_type: incidentData.subType,
-      description: incidentData.description,
-      severity: incidentData.severity,
-      status: incidentData.status,
-      reported_by: incidentData.reportedBy,
-      assigned_to: incidentData.assignedTo,
-      investigation_notes: incidentData.investigationNotes,
-      resolution_details: incidentData.resolutionDetails,
-      resolution_date: incidentData.resolutionDate,
-    })
-    .select()
-    .single();
+  try {
+    console.log("Creating incident with data:", incidentData);
+    
+    // Prepare data for insertion, ensuring reported_by and assigned_to are properly formatted
+    const { data: incident, error: incidentError } = await supabase
+      .from('school_incidents')
+      .insert({
+        title: incidentData.title,
+        date: incidentData.date,
+        time: incidentData.time,
+        location: incidentData.location,
+        type: incidentData.type,
+        sub_type: incidentData.subType,
+        description: incidentData.description,
+        severity: incidentData.severity,
+        status: incidentData.status,
+        reported_by: incidentData.reportedBy || null,
+        assigned_to: incidentData.assignedTo || null,
+        investigation_notes: incidentData.investigationNotes,
+        resolution_details: incidentData.resolutionDetails,
+        resolution_date: incidentData.resolutionDate,
+      })
+      .select()
+      .single();
 
-  if (incidentError) throw incidentError;
+    if (incidentError) {
+      console.error("Error creating incident:", incidentError);
+      throw incidentError;
+    }
 
-  if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
-    // Map our TypeScript field names to the database field names
-    const { error: involvedError } = await supabase
-      .from('school_incident_involved')
-      .insert(
-        incidentData.involvedPersons.map(person => ({
-          incident_id: incident.id,
-          user_id: person.userId,
-          role: person.role,
-        }))
-      );
+    console.log("Incident created successfully:", incident);
 
-    if (involvedError) throw involvedError;
-  }
-
-  return await getIncidentById(incident.id) as Incident;
-};
-
-// Update an incident
-export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
-  const updateData: any = {
-    ...(incidentData.title && { title: incidentData.title }),
-    ...(incidentData.date && { date: incidentData.date }),
-    ...(incidentData.time && { time: incidentData.time }),
-    ...(incidentData.location && { location: incidentData.location }),
-    ...(incidentData.type && { type: incidentData.type }),
-    ...(incidentData.subType !== undefined && { sub_type: incidentData.subType }),
-    ...(incidentData.description && { description: incidentData.description }),
-    ...(incidentData.severity && { severity: incidentData.severity }),
-    ...(incidentData.status && { status: incidentData.status }),
-    ...(incidentData.assignedTo !== undefined && { assigned_to: incidentData.assignedTo }),
-    ...(incidentData.investigationNotes !== undefined && { investigation_notes: incidentData.investigationNotes }),
-    ...(incidentData.resolutionDetails !== undefined && { resolution_details: incidentData.resolutionDetails }),
-    ...(incidentData.resolutionDate !== undefined && { resolution_date: incidentData.resolutionDate }),
-  };
-
-  const { error: incidentError } = await supabase
-    .from('school_incidents')
-    .update(updateData)
-    .eq('id', id);
-
-  if (incidentError) throw incidentError;
-
-  if (incidentData.involvedPersons) {
-    // Delete existing involved persons
-    const { error: deleteError } = await supabase
-      .from('school_incident_involved')
-      .delete()
-      .eq('incident_id', id);
-
-    if (deleteError) throw deleteError;
-
-    // Insert new involved persons with the correct field mappings
-    if (incidentData.involvedPersons.length > 0) {
+    if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
+      // Map our TypeScript field names to the database field names
       const { error: involvedError } = await supabase
         .from('school_incident_involved')
         .insert(
           incidentData.involvedPersons.map(person => ({
-            incident_id: id,
+            incident_id: incident.id,
             user_id: person.userId,
             role: person.role,
           }))
         );
 
-      if (involvedError) throw involvedError;
+      if (involvedError) {
+        console.error("Error creating involved persons:", involvedError);
+        throw involvedError;
+      }
     }
-  }
 
-  return await getIncidentById(id);
+    return await getIncidentById(incident.id) as Incident;
+  } catch (error) {
+    console.error("Error in createIncident:", error);
+    throw error;
+  }
+};
+
+// Update an incident
+export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
+  try {
+    const updateData: any = {
+      ...(incidentData.title && { title: incidentData.title }),
+      ...(incidentData.date && { date: incidentData.date }),
+      ...(incidentData.time && { time: incidentData.time }),
+      ...(incidentData.location && { location: incidentData.location }),
+      ...(incidentData.type && { type: incidentData.type }),
+      ...(incidentData.subType !== undefined && { sub_type: incidentData.subType }),
+      ...(incidentData.description && { description: incidentData.description }),
+      ...(incidentData.severity && { severity: incidentData.severity }),
+      ...(incidentData.status && { status: incidentData.status }),
+      ...(incidentData.assignedTo !== undefined && { assigned_to: incidentData.assignedTo }),
+      ...(incidentData.investigationNotes !== undefined && { investigation_notes: incidentData.investigationNotes }),
+      ...(incidentData.resolutionDetails !== undefined && { resolution_details: incidentData.resolutionDetails }),
+      ...(incidentData.resolutionDate !== undefined && { resolution_date: incidentData.resolutionDate }),
+    };
+
+    const { error: incidentError } = await supabase
+      .from('school_incidents')
+      .update(updateData)
+      .eq('id', id);
+
+    if (incidentError) {
+      console.error("Error updating incident:", incidentError);
+      throw incidentError;
+    }
+
+    if (incidentData.involvedPersons) {
+      // Delete existing involved persons
+      const { error: deleteError } = await supabase
+        .from('school_incident_involved')
+        .delete()
+        .eq('incident_id', id);
+
+      if (deleteError) {
+        console.error("Error deleting involved persons:", deleteError);
+        throw deleteError;
+      }
+
+      // Insert new involved persons with the correct field mappings
+      if (incidentData.involvedPersons.length > 0) {
+        const { error: involvedError } = await supabase
+          .from('school_incident_involved')
+          .insert(
+            incidentData.involvedPersons.map(person => ({
+              incident_id: id,
+              user_id: person.userId,
+              role: person.role,
+            }))
+          );
+
+        if (involvedError) {
+          console.error("Error updating involved persons:", involvedError);
+          throw involvedError;
+        }
+      }
+    }
+
+    return await getIncidentById(id);
+  } catch (error) {
+    console.error("Error in updateIncident:", error);
+    throw error;
+  }
 };
 
 // Delete an incident
 export const deleteIncident = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('school_incidents')
-    .delete()
-    .eq('id', id);
+  try {
+    const { error } = await supabase
+      .from('school_incidents')
+      .delete()
+      .eq('id', id);
 
-  if (error) throw error;
-  return true;
+    if (error) {
+      console.error("Error deleting incident:", error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in deleteIncident:", error);
+    throw error;
+  }
 };
 
 // Filter incidents by status

@@ -19,15 +19,15 @@ import {
 import { Incident, User, IncidentStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Mock users - in a real app, would come from a user service
+// Mock users with valid UUIDs - in a real app, would come from a user service
 const mockUsers: User[] = [
-  { id: "t1", name: "John Smith", email: "john.smith@school.edu", role: "admin" },
-  { id: "t2", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" },
-  { id: "t3", name: "Robert Brown", email: "robert.brown@school.edu", role: "teacher" },
-  { id: "s1", name: "Alice Cooper", email: "alice.cooper@school.edu", role: "student" },
-  { id: "s2", name: "Bob Davis", email: "bob.davis@school.edu", role: "student" },
-  { id: "s3", name: "Charlie Evans", email: "charlie.evans@school.edu", role: "student" },
-  { id: "s4", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" },
+  { id: "123e4567-e89b-12d3-a456-426614174000", name: "John Smith", email: "john.smith@school.edu", role: "admin" },
+  { id: "223e4567-e89b-12d3-a456-426614174001", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" },
+  { id: "323e4567-e89b-12d3-a456-426614174002", name: "Robert Brown", email: "robert.brown@school.edu", role: "teacher" },
+  { id: "423e4567-e89b-12d3-a456-426614174003", name: "Alice Cooper", email: "alice.cooper@school.edu", role: "student" },
+  { id: "523e4567-e89b-12d3-a456-426614174004", name: "Bob Davis", email: "bob.davis@school.edu", role: "student" },
+  { id: "623e4567-e89b-12d3-a456-426614174005", name: "Charlie Evans", email: "charlie.evans@school.edu", role: "student" },
+  { id: "723e4567-e89b-12d3-a456-426614174006", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" },
 ];
 
 export default function IncidentsPage() {
@@ -51,7 +51,7 @@ export default function IncidentsPage() {
     mutationFn: (newIncident: Omit<Incident, "id" | "createdAt" | "updatedAt">) => 
       createIncident({
         ...newIncident,
-        reportedBy: user?.id || "t1", // Use logged-in user or fallback
+        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use logged-in user or fallback to admin
         involvedPersons: [], // In a real app, this would be selected
       }),
     onSuccess: () => {
@@ -62,7 +62,8 @@ export default function IncidentsPage() {
       refetch();
       setOpenIncidentForm(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error creating incident:", error);
       toast({
         title: "Error",
         description: "Failed to report incident. Please try again.",
@@ -84,7 +85,8 @@ export default function IncidentsPage() {
       setOpenIncidentForm(false);
       setOpenIncidentDetail(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error updating incident:", error);
       toast({
         title: "Error",
         description: "Failed to update incident. Please try again.",
@@ -105,7 +107,8 @@ export default function IncidentsPage() {
       setOpenDeleteConfirm(false);
       setDeleteIncidentId(null);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error deleting incident:", error);
       toast({
         title: "Error",
         description: "Failed to delete incident. Please try again.",
