@@ -15,6 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { getStudentExamResults, bulkSaveStudentExamResults } from "@/services/examService";
 import { Loader2, Save, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ExamStatsDisplay } from "./marks/ExamStatsDisplay";
+import { StudentMarkRow } from "./marks/StudentMarkRow";
+import { useMarkEntry } from "@/hooks/useMarkEntry";
 
 interface MarkEntryTableProps {
   examId: string;
@@ -24,140 +27,19 @@ interface MarkEntryTableProps {
 }
 
 export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: MarkEntryTableProps) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [students, setStudents] = useState<any[]>([]);
-  const [marks, setMarks] = useState<Record<string, number>>({});
-  const [feedback, setFeedback] = useState<Record<string, string>>({});
-  const [hasChanges, setHasChanges] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    const fetchStudentResults = async () => {
-      setIsLoading(true);
-      try {
-        // Don't fetch if sectionId is "all-sections"
-        if (sectionId === "all-sections") {
-          setStudents([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        const data = await getStudentExamResults(examId, sectionId);
-        setStudents(data);
-        
-        // Initialize marks and feedback from existing data
-        const initialMarks: Record<string, number> = {};
-        const initialFeedback: Record<string, string> = {};
-        
-        data.forEach((item) => {
-          if (item.result) {
-            initialMarks[item.student.id] = item.result.marks_obtained;
-            initialFeedback[item.student.id] = item.result.feedback || '';
-          } else {
-            initialMarks[item.student.id] = 0;
-            initialFeedback[item.student.id] = '';
-          }
-        });
-        
-        setMarks(initialMarks);
-        setFeedback(initialFeedback);
-      } catch (error) {
-        console.error("Error fetching student results:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load student list. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (examId && sectionId) {
-      fetchStudentResults();
-    }
-  }, [examId, sectionId, toast]);
-
-  const handleMarkChange = (studentId: string, value: string) => {
-    const numValue = Number(value);
-    // Validate the input
-    if (numValue < 0) {
-      setMarks({...marks, [studentId]: 0});
-    } else if (numValue > maxMarks) {
-      setMarks({...marks, [studentId]: maxMarks});
-    } else {
-      setMarks({...marks, [studentId]: numValue});
-    }
-    setHasChanges(true);
-    setSaveSuccess(false);
-  };
-
-  const handleFeedbackChange = (studentId: string, value: string) => {
-    setFeedback({...feedback, [studentId]: value});
-    setHasChanges(true);
-    setSaveSuccess(false);
-  };
-
-  const handleSave = async () => {
-    if (!hasChanges) return;
-
-    setIsSaving(true);
-    
-    try {
-      // Prepare data for bulk save
-      const resultsToSave = students.map((student) => ({
-        exam_id: examId,
-        student_id: student.student.id,
-        marks_obtained: marks[student.student.id] || 0,
-        feedback: feedback[student.student.id] || undefined
-      }));
-
-      await bulkSaveStudentExamResults(resultsToSave);
-      
-      toast({
-        title: "Success",
-        description: "Student marks have been saved successfully.",
-      });
-      
-      setHasChanges(false);
-      setSaveSuccess(true);
-      
-      if (onMarksUpdated) {
-        onMarksUpdated();
-      }
-    } catch (error) {
-      console.error("Error saving student marks:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save student marks. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Calculate stats
-  const calculateStats = () => {
-    if (!students.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
-    
-    const markValues = Object.values(marks).filter(mark => mark > 0);
-    if (!markValues.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
-    
-    const avg = markValues.reduce((sum, mark) => sum + mark, 0) / markValues.length;
-    const highest = Math.max(...markValues);
-    const lowest = Math.min(...markValues);
-    const passPercentage = 40; // Pass threshold percentage
-    const passThreshold = (maxMarks * passPercentage) / 100;
-    const passCount = markValues.filter(mark => mark >= passThreshold).length;
-    const pass = markValues.length ? (passCount / markValues.length) * 100 : 0;
-    
-    return { avg, highest, lowest, pass };
-  };
-  
-  const stats = calculateStats();
+  const {
+    isLoading,
+    isSaving,
+    students,
+    marks,
+    feedback,
+    hasChanges,
+    saveSuccess,
+    stats,
+    handleMarkChange,
+    handleFeedbackChange,
+    handleSave
+  } = useMarkEntry(examId, sectionId, maxMarks, onMarksUpdated);
 
   if (isLoading) {
     return (
@@ -202,25 +84,7 @@ export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: 
         </Button>
       </div>
       
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-        <div className="bg-muted rounded p-3">
-          <div className="text-sm text-muted-foreground">Average Score</div>
-          <div className="text-xl font-bold">{stats.avg.toFixed(1)} / {maxMarks}</div>
-        </div>
-        <div className="bg-muted rounded p-3">
-          <div className="text-sm text-muted-foreground">Highest Score</div>
-          <div className="text-xl font-bold">{stats.highest} / {maxMarks}</div>
-        </div>
-        <div className="bg-muted rounded p-3">
-          <div className="text-sm text-muted-foreground">Lowest Score</div>
-          <div className="text-xl font-bold">{stats.lowest} / {maxMarks}</div>
-        </div>
-        <div className="bg-muted rounded p-3">
-          <div className="text-sm text-muted-foreground">Pass Percentage</div>
-          <div className="text-xl font-bold">{stats.pass.toFixed(1)}%</div>
-        </div>
-      </div>
+      <ExamStatsDisplay stats={stats} maxMarks={maxMarks} />
       
       <div className="border rounded-md">
         <Table>
@@ -235,54 +99,17 @@ export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((item) => {
-              const student = item.student;
-              const currentMark = marks[student.id] || 0;
-              const percentage = maxMarks > 0 ? Math.round((currentMark / maxMarks) * 100) : 0;
-              
-              let statusColor = "bg-gray-500";
-              if (percentage >= 80) statusColor = "bg-green-500";
-              else if (percentage >= 60) statusColor = "bg-blue-500";
-              else if (percentage >= 40) statusColor = "bg-amber-500";
-              else statusColor = "bg-red-500";
-              
-              return (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    {student.student_details?.admission_number || student.id.substring(0, 8)}
-                  </TableCell>
-                  <TableCell>
-                    {student.first_name} {student.last_name}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={maxMarks}
-                      value={currentMark}
-                      onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                      className="w-24"
-                    />
-                  </TableCell>
-                  <TableCell>{percentage}%</TableCell>
-                  <TableCell>
-                    <Badge className={statusColor}>
-                      {percentage >= 80 ? "Excellent" : 
-                       percentage >= 60 ? "Good" : 
-                       percentage >= 40 ? "Pass" : "Needs Improvement"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Textarea
-                      value={feedback[student.id] || ''}
-                      onChange={(e) => handleFeedbackChange(student.id, e.target.value)}
-                      placeholder="Add feedback (optional)"
-                      className="h-10 min-h-0 resize-none"
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {students.map((item) => (
+              <StudentMarkRow
+                key={item.student.id}
+                student={item.student}
+                mark={marks[item.student.id] || 0}
+                feedback={feedback[item.student.id] || ''}
+                maxMarks={maxMarks}
+                onMarkChange={handleMarkChange}
+                onFeedbackChange={handleFeedbackChange}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>

@@ -9,6 +9,7 @@ import {
   getStudentExamResults,
   deleteExam
 } from "@/services/examService";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 export function useExamDetail(examId: string | undefined) {
