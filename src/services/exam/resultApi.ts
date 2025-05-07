@@ -108,11 +108,9 @@ export const saveStudentExamResult = async (resultData: {
     .eq('student_id', resultData.student_id)
     .maybeSingle();
 
-  // Add updated_by field
-  const { data: userData } = await supabase.auth.getUser();
-  const dataWithUser = {
-    ...resultData,
-    updated_by: userData.user?.id
+  // Remove updated_by field - no longer using authenticated user
+  const dataToSave = {
+    ...resultData
   };
 
   let result;
@@ -121,7 +119,7 @@ export const saveStudentExamResult = async (resultData: {
     // Update existing result
     const { data, error } = await supabase
       .from('student_exam_results')
-      .update(dataWithUser)
+      .update(dataToSave)
       .eq('id', existingResult.id)
       .select();
 
@@ -135,7 +133,7 @@ export const saveStudentExamResult = async (resultData: {
     // Insert new result
     const { data, error } = await supabase
       .from('student_exam_results')
-      .insert(dataWithUser)
+      .insert(dataToSave)
       .select();
 
     if (error) {
@@ -155,15 +153,13 @@ export const bulkSaveStudentExamResults = async (results: {
   marks_obtained: number;
   feedback?: string;
 }[]) => {
-  // Add updated_by field to all results
-  const { data: userData } = await supabase.auth.getUser();
-  const dataWithUser = results.map(result => ({
-    ...result,
-    updated_by: userData.user?.id
+  // Remove updated_by field from all results
+  const dataToSave = results.map(result => ({
+    ...result
   }));
 
   // For each result, upsert (update if exists, insert if not)
-  const promises = dataWithUser.map(async (result) => {
+  const promises = dataToSave.map(async (result) => {
     const { data: existingResult } = await supabase
       .from('student_exam_results')
       .select('id')
@@ -176,8 +172,7 @@ export const bulkSaveStudentExamResults = async (results: {
         .from('student_exam_results')
         .update({
           marks_obtained: result.marks_obtained,
-          feedback: result.feedback,
-          updated_by: result.updated_by
+          feedback: result.feedback
         })
         .eq('id', existingResult.id);
     } else {
