@@ -37,6 +37,13 @@ export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: 
     const fetchStudentResults = async () => {
       setIsLoading(true);
       try {
+        // Don't fetch if sectionId is "all-sections"
+        if (sectionId === "all-sections") {
+          setStudents([]);
+          setIsLoading(false);
+          return;
+        }
+        
         const data = await getStudentExamResults(examId, sectionId);
         setStudents(data);
         
