@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Task, CreateTaskInput, taskService } from "@/services/taskService";
+import { Task, CreateTaskInput, taskService, DEFAULT_USER_ID } from "@/services/taskService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,15 +280,7 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     }
   });
 
-  // Default user ID to use when no authenticated user is available
-  const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user
-
   const onSubmit = handleSubmit((data) => {
-    if (!user) {
-      toast.error("You must be logged in to create a task");
-      return;
-    }
-
     const formattedDate = date ? format(date, 'yyyy-MM-dd') : undefined;
     
     let taskInput: CreateTaskInput = {
@@ -298,7 +290,8 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
       due_time: time || undefined,
       type: taskType,
       google_drive_link: googleDriveLink || undefined,
-      subject_id: selectedSubjectId
+      subject_id: selectedSubjectId,
+      created_by: user?.id || DEFAULT_USER_ID  // Always set created_by
     };
     
     // Set assignment target based on assignment type
@@ -343,10 +336,7 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
         updates: taskInput
       });
     } else {
-      // Create new task with default user if not authenticated
-      if (!user) {
-        taskInput.created_by = DEFAULT_USER_ID;
-      }
+      // Create new task
       createTaskMutation.mutate(taskInput);
     }
   });

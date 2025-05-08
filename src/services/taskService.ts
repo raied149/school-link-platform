@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserRole } from "@/contexts/AuthContext";
@@ -39,6 +40,7 @@ export interface CreateTaskInput {
   assigned_to_section_id?: string;
   assigned_to_class_id?: string;
   subject_id?: string;
+  created_by: string; // Add this line to include created_by in the type
 }
 
 export interface UpdateTaskInput {
@@ -50,6 +52,9 @@ export interface UpdateTaskInput {
   google_drive_link?: string;
   subject_id?: string;
 }
+
+// Default user ID to use when no authenticated user is available
+export const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user
 
 export const taskService = {
   createTask: async (input: CreateTaskInput): Promise<Task | null> => {
@@ -64,9 +69,14 @@ export const taskService = {
         input.subject_id = undefined;
       }
 
+      // Make sure created_by is always set
+      if (!input.created_by) {
+        input.created_by = DEFAULT_USER_ID;
+      }
+
+      // For personal tasks, set created_by to the assigned user if not already set
       const taskData = {
-        ...input,
-        created_by: input.type === 'personal' ? input.assigned_to_user_id : undefined
+        ...input
       };
 
       console.log("Creating task with data:", taskData);

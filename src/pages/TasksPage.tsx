@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { taskService, Task } from "@/services/taskService";
+import { taskService, Task, DEFAULT_USER_ID } from "@/services/taskService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Search, Filter, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { toast } from "sonner";
