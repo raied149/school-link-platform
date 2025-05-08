@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -281,6 +280,9 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     }
   });
 
+  // Default user ID to use when no authenticated user is available
+  const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user
+
   const onSubmit = handleSubmit((data) => {
     if (!user) {
       toast.error("You must be logged in to create a task");
@@ -301,7 +303,7 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     
     // Set assignment target based on assignment type
     if (taskType === 'personal') {
-      taskInput.assigned_to_user_id = user.id;
+      taskInput.assigned_to_user_id = user?.id || DEFAULT_USER_ID;
     } else if (taskType === 'admin_task') {
       if (!selectedUserId) {
         toast.error("Please select a teacher to assign this task to");
@@ -341,7 +343,10 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
         updates: taskInput
       });
     } else {
-      // Create new task
+      // Create new task with default user if not authenticated
+      if (!user) {
+        taskInput.created_by = DEFAULT_USER_ID;
+      }
       createTaskMutation.mutate(taskInput);
     }
   });

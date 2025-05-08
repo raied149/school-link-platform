@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserRole } from "@/contexts/AuthContext";
@@ -102,10 +101,12 @@ export const taskService = {
         return [];
       }
       
-      // Fetch tasks with basic details
+      // Fetch all tasks without RLS filtering
+      // We'll still keep some basic filtering based on role for UI purposes
       let query = supabase.from('tasks').select('*');
         
-      // Apply different filters based on user role
+      // Since RLS is disabled, we'll apply filters in the query instead
+      // These filters are now optional and just for UI/UX purposes
       if (userRole === 'student') {
         // Students should only see tasks assigned to them
         query = query.eq('assigned_to_user_id', userId);
@@ -158,7 +159,7 @@ export const taskService = {
             }));
           }
         }
-
+        
         // Get assignee info
         const assigneeIds = tasksData
           .map(task => task.assigned_to_user_id)

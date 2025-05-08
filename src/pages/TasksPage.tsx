@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 
+// Default user ID to use when no authenticated user is available
+const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user
+
 export default function TasksPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -31,16 +33,15 @@ export default function TasksPage() {
   // Format selected date for filtering
   const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch tasks for the logged-in user
+  // Fetch tasks for the logged-in user or use default user
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", user?.id, user?.role],
+    queryKey: ["tasks", user?.id || DEFAULT_USER_ID, user?.role || "admin"],
     queryFn: async () => {
-      if (!user) {
-        return [];
-      }
-      return taskService.getTasksForUser(user.id, user.role);
+      return taskService.getTasksForUser(
+        user?.id || DEFAULT_USER_ID, 
+        user?.role || "admin"
+      );
     },
-    enabled: !!user,
   });
   
   const deleteTaskMutation = useMutation({
@@ -76,10 +77,10 @@ export default function TasksPage() {
     }
     
     // Tab filter
-    if (currentTab === 'assigned' && task.created_by === user?.id) {
+    if (currentTab === 'assigned' && task.created_by === (user?.id || DEFAULT_USER_ID)) {
       return false;
     }
-    if (currentTab === 'received' && task.created_by !== user?.id) {
+    if (currentTab === 'received' && task.created_by !== (user?.id || DEFAULT_USER_ID)) {
       return false;
     }
     if (currentTab === 'completed' && task.status !== 'completed') {
@@ -347,9 +348,8 @@ export default function TasksPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
       
       <TaskFormDialog 
         open={isFormOpen} 
