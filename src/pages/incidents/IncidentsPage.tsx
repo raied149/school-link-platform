@@ -30,6 +30,9 @@ const mockUsers: User[] = [
   { id: "723e4567-e89b-12d3-a456-426614174006", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" },
 ];
 
+// Default user ID to use when no authenticated user is available
+const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user from mock users
+
 export default function IncidentsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -51,7 +54,7 @@ export default function IncidentsPage() {
     mutationFn: (newIncident: Omit<Incident, "id" | "createdAt" | "updatedAt">) => 
       createIncident({
         ...newIncident,
-        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use logged-in user or fallback to admin UUID
+        reportedBy: user?.id || DEFAULT_USER_ID, // Use logged-in user or fallback to default user
         involvedPersons: [], // In a real app, this would be selected
       }),
     onSuccess: () => {
@@ -131,7 +134,7 @@ export default function IncidentsPage() {
       console.log("Creating new incident with data:", data);
       createIncidentMutation.mutate({
         ...data,
-        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use valid UUID here
+        reportedBy: user?.id || DEFAULT_USER_ID, // Use authenticated user ID or fallback to default
         involvedPersons: [], // In a real app, this would be selected
       });
     }
@@ -268,7 +271,7 @@ export default function IncidentsPage() {
         onSubmit={handleIncidentSubmit}
         incident={selectedIncident}
         availableUsers={mockUsers}
-        currentUserId={user?.id || "123e4567-e89b-12d3-a456-426614174000"}
+        currentUserId={user?.id || DEFAULT_USER_ID}
         mode={selectedIncident ? "edit" : "create"}
       />
 
