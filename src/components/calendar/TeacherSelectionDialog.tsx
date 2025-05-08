@@ -54,7 +54,7 @@ export function TeacherSelectionDialog({
           
           return {
             id: teacher.id,
-            name: `${teacher.first_name} ${teacher.last_name}`,
+            name: `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim() || 'Unnamed Teacher',
             employeeId: employeeId
           };
         });
@@ -67,8 +67,8 @@ export function TeacherSelectionDialog({
   });
 
   const filteredTeachers = teachers.filter(teacher =>
-    teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    teacher.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+    (teacher.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (teacher.employeeId?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const handleSelectAll = () => {
