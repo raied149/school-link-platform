@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PlusCircle, AlertCircle } from "lucide-react";
@@ -9,7 +10,6 @@ import { IncidentTable } from "@/components/incidents/IncidentTable";
 import { IncidentFormDialog } from "@/components/incidents/IncidentForm";
 import { IncidentDetail } from "@/components/incidents/IncidentDetail";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { SeedDataButton } from "@/components/incidents/SeedDataButton";
 import { 
   getIncidents, 
   createIncident, 
@@ -201,7 +201,6 @@ export default function IncidentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <SeedDataButton />
           <Button onClick={handleAddIncident}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Report Incident
@@ -237,18 +236,15 @@ export default function IncidentsPage() {
                   <CardTitle className="text-xl">No incidents found</CardTitle>
                   <CardDescription>
                     {selectedTab === "all"
-                      ? "There are no incidents reported in the system. Click 'Report Incident' to add a new one or 'Seed Sample Data' to add sample incidents."
+                      ? "There are no incidents reported in the system. Click 'Report Incident' to add a new one."
                       : `There are no incidents with '${selectedTab.replace('_', ' ')}' status.`}
                   </CardDescription>
                   <div className="flex gap-2 mt-4">
                     {selectedTab === "all" && (
-                      <>
-                        <SeedDataButton />
-                        <Button onClick={handleAddIncident}>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Report Incident
-                        </Button>
-                      </>
+                      <Button onClick={handleAddIncident}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Report Incident
+                      </Button>
                     )}
                   </div>
                 </div>
