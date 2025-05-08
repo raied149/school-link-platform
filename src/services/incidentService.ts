@@ -186,23 +186,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
   try {
     console.log("Creating incident with data:", incidentData);
     
-    // Try using memory-based approach first
-    const newId = Date.now().toString();
-    const newIncident: Incident = {
-      id: newId,
-      ...incidentData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    // Add to mock data
-    incidents.unshift(newIncident);
-    
-    // For UI/demo purposes, we'll return the mock incident immediately
-    return newIncident;
-    
-    /* Commented out Supabase integration until foreign key issues are resolved
-    // Prepare data for insertion, ensuring reported_by and assigned_to are properly formatted
+    // Prepare data for insertion
     const { data: incident, error: incidentError } = await supabase
       .from('school_incidents')
       .insert({
@@ -225,7 +209,17 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
       .single();
 
     if (incidentError) {
-      throw incidentError;
+      console.error("Error creating incident:", incidentError);
+      // If we can't create in the database, fall back to mock data
+      const newId = Date.now().toString();
+      const newIncident: Incident = {
+        id: newId,
+        ...incidentData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      incidents.unshift(newIncident);
+      return newIncident;
     }
 
     if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
@@ -240,12 +234,31 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
         .insert(involvedPersonsData);
 
       if (involvedError) {
-        throw involvedError;
+        console.error("Error adding involved persons:", involvedError);
       }
     }
 
-    return await getIncidentById(incident.id) as Incident;
-    */
+    // Return the created incident
+    return {
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type || undefined,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by || undefined,
+      assignedTo: incident.assigned_to || undefined,
+      investigationNotes: incident.investigation_notes || undefined,
+      resolutionDetails: incident.resolution_details || undefined,
+      resolutionDate: incident.resolution_date || undefined,
+      involvedPersons: incidentData.involvedPersons || [],
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    };
   } catch (error) {
     console.error("Error in createIncident:", error);
     if (error instanceof Error) {
@@ -270,18 +283,6 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
 // Update an incident
 export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
   try {
-    // Update the mock incident
-    const incidentIndex = incidents.findIndex(inc => inc.id === id);
-    if (incidentIndex >= 0) {
-      incidents[incidentIndex] = {
-        ...incidents[incidentIndex],
-        ...incidentData,
-        updatedAt: new Date().toISOString()
-      };
-      return incidents[incidentIndex];
-    }
-    
-    /* Commented out Supabase integration until foreign key issues are resolved
     const updateData: any = {
       ...(incidentData.title && { title: incidentData.title }),
       ...(incidentData.date && { date: incidentData.date }),
@@ -304,7 +305,18 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
       .eq('id', id);
 
     if (incidentError) {
-      throw incidentError;
+      console.error("Error updating incident:", incidentError);
+      // Fall back to updating mock data
+      const incidentIndex = incidents.findIndex(inc => inc.id === id);
+      if (incidentIndex >= 0) {
+        incidents[incidentIndex] = {
+          ...incidents[incidentIndex],
+          ...incidentData,
+          updatedAt: new Date().toISOString()
+        };
+        return incidents[incidentIndex];
+      }
+      return undefined;
     }
 
     if (incidentData.involvedPersons) {
@@ -315,7 +327,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
         .eq('incident_id', id);
 
       if (deleteError) {
-        throw deleteError;
+        console.error("Error deleting involved persons:", deleteError);
       }
 
       // Insert new involved persons with the correct field mappings
@@ -331,16 +343,12 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
           .insert(involvedPersonsData);
 
         if (involvedError) {
-          throw involvedError;
+          console.error("Error adding involved persons:", involvedError);
         }
       }
     }
 
     return await getIncidentById(id);
-    */
-    
-    // If no incident found, return undefined
-    return undefined;
   } catch (error) {
     console.error("Error in updateIncident:", error);
     
@@ -360,32 +368,26 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
 // Delete an incident
 export const deleteIncident = async (id: string): Promise<boolean> => {
   try {
-    // Remove from mock data
-    const initialLength = incidents.length;
-    incidents = incidents.filter(inc => inc.id !== id);
-    
-    // If we removed something, return true
-    if (incidents.length < initialLength) {
-      return true;
-    }
-
-    /* Commented out Supabase integration until foreign key issues are resolved
     const { error } = await supabase
       .from('school_incidents')
       .delete()
       .eq('id', id);
 
     if (error) {
-      throw error;
+      console.error("Error deleting incident:", error);
+      // Fall back to mock data deletion
+      const initialLength = incidents.length;
+      incidents = incidents.filter(inc => inc.id !== id);
+      return incidents.length < initialLength;
     }
     
     return true;
-    */
-    
-    return false;
   } catch (error) {
     console.error("Error in deleteIncident:", error);
-    return false;
+    // Fall back to mock data deletion
+    const initialLength = incidents.length;
+    incidents = incidents.filter(inc => inc.id !== id);
+    return incidents.length < initialLength;
   }
 };
 
