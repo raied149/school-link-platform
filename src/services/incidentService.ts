@@ -1,11 +1,11 @@
-
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
-// Mock database for incidents - keeping this for reference
+// Mock database for incidents - updated with proper UUID format
 let incidents: Incident[] = [
   {
-    id: "1",
+    id: "61469c3a-5da0-47e8-bb64-5b71fba5faea",
     title: "Classroom Disruption",
     date: "2025-04-10",
     time: "10:30",
@@ -26,7 +26,7 @@ let incidents: Incident[] = [
     updatedAt: "2025-04-11T14:30:00Z"
   },
   {
-    id: "2",
+    id: "72e5c7b9-3a1f-48a9-b2c5-38d6f4e71b0d",
     title: "Playground Injury",
     date: "2025-04-12",
     time: "12:15",
@@ -47,7 +47,7 @@ let incidents: Incident[] = [
     updatedAt: "2025-04-12T13:00:00Z"
   },
   {
-    id: "3",
+    id: "83f1d4e2-b6c8-4793-a5d7-29e8f53b1c2a",
     title: "Suspected Bullying",
     date: "2025-04-14",
     time: "14:00",
@@ -67,6 +67,12 @@ let incidents: Incident[] = [
     updatedAt: "2025-04-15T09:00:00Z"
   }
 ];
+
+// Helper function to validate UUID
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
 
 // Get all incidents
 export const getIncidents = async (): Promise<Incident[]> => {
@@ -128,6 +134,12 @@ export const getIncidents = async (): Promise<Incident[]> => {
 // Get incident by ID
 export const getIncidentById = async (id: string): Promise<Incident | undefined> => {
   try {
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      console.error("Invalid UUID format:", id);
+      return incidents.find(inc => inc.id === id);
+    }
+    
     const { data: incident, error } = await supabase
       .from('school_incidents')
       .select(`
@@ -211,7 +223,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
     if (incidentError) {
       console.error("Error creating incident:", incidentError);
       // If we can't create in the database, fall back to mock data
-      const newId = Date.now().toString();
+      const newId = uuidv4();
       const newIncident: Incident = {
         id: newId,
         ...incidentData,
@@ -268,7 +280,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
     
     // Even if there's an error with the database, still return the mock incident
     // so the UI doesn't break
-    const newId = Date.now().toString();
+    const newId = uuidv4();
     const newIncident: Incident = {
       id: newId,
       ...incidentData,
@@ -280,9 +292,15 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
   }
 };
 
-// Update an incident
+// Update an incident - Improved with better error handling
 export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
   try {
+    // Validate UUID format before proceeding
+    if (!isValidUUID(id)) {
+      console.error("Invalid UUID format for update:", id);
+      throw new Error("Invalid incident ID format");
+    }
+
     const updateData: any = {
       ...(incidentData.title && { title: incidentData.title }),
       ...(incidentData.date && { date: incidentData.date }),
@@ -297,8 +315,17 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
       ...(incidentData.investigationNotes !== undefined && { investigation_notes: incidentData.investigationNotes }),
       ...(incidentData.resolutionDetails !== undefined && { resolution_details: incidentData.resolutionDetails }),
       ...(incidentData.resolutionDate !== undefined && { resolution_date: incidentData.resolutionDate }),
+      // Always update timestamp when updating
+      updated_at: new Date().toISOString()
     };
 
+    // Check if we have an actual update to make
+    if (Object.keys(updateData).length === 0) {
+      console.warn("No data provided for update.");
+      return await getIncidentById(id);
+    }
+
+    // Update the incident in Supabase
     const { error: incidentError } = await supabase
       .from('school_incidents')
       .update(updateData)
@@ -316,43 +343,49 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
         };
         return incidents[incidentIndex];
       }
-      return undefined;
+      throw new Error("Failed to update incident and could not find matching mock data");
     }
 
+    // Update involved persons if provided
     if (incidentData.involvedPersons) {
-      // Delete existing involved persons
-      const { error: deleteError } = await supabase
-        .from('school_incident_involved')
-        .delete()
-        .eq('incident_id', id);
-
-      if (deleteError) {
-        console.error("Error deleting involved persons:", deleteError);
-      }
-
-      // Insert new involved persons with the correct field mappings
-      if (incidentData.involvedPersons.length > 0) {
-        const involvedPersonsData = incidentData.involvedPersons.map(person => ({
-          incident_id: id,
-          user_id: person.userId,
-          role: person.role,
-        }));
-        
-        const { error: involvedError } = await supabase
+      try {
+        // Delete existing involved persons
+        const { error: deleteError } = await supabase
           .from('school_incident_involved')
-          .insert(involvedPersonsData);
+          .delete()
+          .eq('incident_id', id);
 
-        if (involvedError) {
-          console.error("Error adding involved persons:", involvedError);
+        if (deleteError) {
+          console.error("Error deleting involved persons:", deleteError);
         }
+
+        // Insert new involved persons with the correct field mappings
+        if (incidentData.involvedPersons.length > 0) {
+          const involvedPersonsData = incidentData.involvedPersons.map(person => ({
+            incident_id: id,
+            user_id: person.userId,
+            role: person.role,
+          }));
+          
+          const { error: involvedError } = await supabase
+            .from('school_incident_involved')
+            .insert(involvedPersonsData);
+
+          if (involvedError) {
+            console.error("Error adding involved persons:", involvedError);
+          }
+        }
+      } catch (error) {
+        console.error("Error handling involved persons update:", error);
       }
     }
 
+    // Return the updated incident
     return await getIncidentById(id);
   } catch (error) {
     console.error("Error in updateIncident:", error);
     
-    // Still try to return the mock incident if possible
+    // Return any mock data as a fallback if possible
     const foundIncident = incidents.find(inc => inc.id === id);
     if (foundIncident) {
       return {
@@ -361,52 +394,209 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
         updatedAt: new Date().toISOString()
       };
     }
+    // Let the caller handle undefined
     return undefined;
   }
 };
 
-// Delete an incident
+// Delete an incident - Improved with better error handling and validation
 export const deleteIncident = async (id: string): Promise<boolean> => {
   try {
+    // Validate UUID format
+    if (!isValidUUID(id)) {
+      console.error("Invalid UUID format for delete:", id);
+      throw new Error("Invalid incident ID format");
+    }
+    
+    // Delete the incident from Supabase
     const { error } = await supabase
       .from('school_incidents')
       .delete()
       .eq('id', id);
 
     if (error) {
-      console.error("Error deleting incident:", error);
+      console.error("Error deleting incident from Supabase:", error);
+      
       // Fall back to mock data deletion
       const initialLength = incidents.length;
       incidents = incidents.filter(inc => inc.id !== id);
       return incidents.length < initialLength;
     }
     
+    // Also remove from mock data in case we fall back to it later
+    incidents = incidents.filter(inc => inc.id !== id);
     return true;
   } catch (error) {
     console.error("Error in deleteIncident:", error);
-    // Fall back to mock data deletion
-    const initialLength = incidents.length;
-    incidents = incidents.filter(inc => inc.id !== id);
-    return incidents.length < initialLength;
+    
+    // Try to handle the mock data deletion anyway to keep UI consistent
+    try {
+      const initialLength = incidents.length;
+      incidents = incidents.filter(inc => inc.id !== id);
+      return incidents.length < initialLength;
+    } catch (e) {
+      console.error("Failed to delete from mock data:", e);
+      return false;
+    }
   }
 };
 
 // Filter incidents by status
-export const filterIncidentsByStatus = (status: IncidentStatus): Promise<Incident[]> => {
-  const filteredIncidents = incidents.filter(incident => incident.status === status);
-  return Promise.resolve(filteredIncidents);
+export const filterIncidentsByStatus = async (status: IncidentStatus): Promise<Incident[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('school_incidents')
+      .select(`
+        *,
+        school_incident_involved (
+          user_id,
+          role
+        )
+      `)
+      .eq('status', status);
+      
+    if (error) {
+      console.error("Error filtering incidents by status:", error);
+      // Fall back to filtering mock data
+      return incidents.filter(incident => incident.status === status);
+    }
+    
+    if (!data || data.length === 0) {
+      // If no results from Supabase, fall back to mock data
+      return incidents.filter(incident => incident.status === status);
+    }
+    
+    return data.map(incident => ({
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by,
+      assignedTo: incident.assigned_to,
+      investigationNotes: incident.investigation_notes,
+      resolutionDetails: incident.resolution_details,
+      resolutionDate: incident.resolution_date,
+      involvedPersons: (incident.school_incident_involved || []).map(person => ({
+        userId: person.user_id,
+        role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+      })),
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error in filterIncidentsByStatus:", error);
+    return incidents.filter(incident => incident.status === status);
+  }
 };
 
 // Filter incidents by type
-export const filterIncidentsByType = (type: IncidentType): Promise<Incident[]> => {
-  const filteredIncidents = incidents.filter(incident => incident.type === type);
-  return Promise.resolve(filteredIncidents);
+export const filterIncidentsByType = async (type: IncidentType): Promise<Incident[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('school_incidents')
+      .select(`
+        *,
+        school_incident_involved (
+          user_id,
+          role
+        )
+      `)
+      .eq('type', type);
+      
+    if (error) {
+      console.error("Error filtering incidents by type:", error);
+      return incidents.filter(incident => incident.type === type);
+    }
+    
+    if (!data || data.length === 0) {
+      return incidents.filter(incident => incident.type === type);
+    }
+    
+    return data.map(incident => ({
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by,
+      assignedTo: incident.assigned_to,
+      investigationNotes: incident.investigation_notes,
+      resolutionDetails: incident.resolution_details,
+      resolutionDate: incident.resolution_date,
+      involvedPersons: (incident.school_incident_involved || []).map(person => ({
+        userId: person.user_id,
+        role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+      })),
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error in filterIncidentsByType:", error);
+    return incidents.filter(incident => incident.type === type);
+  }
 };
 
 // Filter incidents by severity
-export const filterIncidentsBySeverity = (severity: IncidentSeverity): Promise<Incident[]> => {
-  const filteredIncidents = incidents.filter(incident => incident.severity === severity);
-  return Promise.resolve(filteredIncidents);
+export const filterIncidentsBySeverity = async (severity: IncidentSeverity): Promise<Incident[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('school_incidents')
+      .select(`
+        *,
+        school_incident_involved (
+          user_id,
+          role
+        )
+      `)
+      .eq('severity', severity);
+      
+    if (error) {
+      console.error("Error filtering incidents by severity:", error);
+      return incidents.filter(incident => incident.severity === severity);
+    }
+    
+    if (!data || data.length === 0) {
+      return incidents.filter(incident => incident.severity === severity);
+    }
+    
+    return data.map(incident => ({
+      id: incident.id,
+      title: incident.title,
+      date: incident.date,
+      time: incident.time,
+      location: incident.location,
+      type: incident.type as IncidentType,
+      subType: incident.sub_type,
+      description: incident.description,
+      severity: incident.severity as IncidentSeverity,
+      status: incident.status as IncidentStatus,
+      reportedBy: incident.reported_by,
+      assignedTo: incident.assigned_to,
+      investigationNotes: incident.investigation_notes,
+      resolutionDetails: incident.resolution_details,
+      resolutionDate: incident.resolution_date,
+      involvedPersons: (incident.school_incident_involved || []).map(person => ({
+        userId: person.user_id,
+        role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+      })),
+      createdAt: incident.created_at,
+      updatedAt: incident.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error in filterIncidentsBySeverity:", error);
+    return incidents.filter(incident => incident.severity === severity);
+  }
 };
 
 // Get incident type display name
