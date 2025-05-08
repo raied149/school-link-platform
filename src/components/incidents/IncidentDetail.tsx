@@ -43,7 +43,6 @@ export function IncidentDetail({
 }: IncidentDetailProps) {
   const [notes, setNotes] = useState("");
   const [newStatus, setNewStatus] = useState<string | null>(null);
-  const [assignedTo, setAssignedTo] = useState<string | null>(null);
   
   if (!incident) return null;
 
@@ -56,9 +55,13 @@ export function IncidentDetail({
       : "bg-gray-100 text-gray-800";
 
   const handleUpdateStatus = () => {
-    if (!newStatus) return;
+    if (!newStatus && !notes.trim()) return;
     
-    const updates: Partial<Incident> = { status: newStatus as any };
+    const updates: Partial<Incident> = {};
+    
+    if (newStatus) {
+      updates.status = newStatus as any;
+    }
     
     if (notes.trim()) {
       // Append new notes to existing notes if any
@@ -69,16 +72,11 @@ export function IncidentDetail({
       updates.investigationNotes = updatedNotes;
     }
     
-    if (assignedTo !== null) {
-      updates.assignedTo = assignedTo === "unassigned" ? undefined : assignedTo;
-    }
-    
     onUpdate(incident.id, updates);
     setNotes("");
     setNewStatus(null);
   };
 
-  const assignedUser = availableUsers.find(user => user.id === incident.assignedTo);
   const reportedByUser = availableUsers.find(user => user.id === incident.reportedBy);
 
   return (
@@ -124,15 +122,9 @@ export function IncidentDetail({
               <p className="whitespace-pre-wrap">{incident.description}</p>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Reported By</h4>
-                <p>{reportedByUser?.name || "Unknown"}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Assigned To</h4>
-                <p>{assignedUser?.name || "Unassigned"}</p>
-              </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Reported By</h4>
+              <p>{reportedByUser?.name || "Unknown"}</p>
             </div>
           </div>
           
@@ -164,46 +156,22 @@ export function IncidentDetail({
             <div className="space-y-4 pt-4 border-t">
               <h4 className="font-medium">Update Incident</h4>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Change Status</label>
-                  <Select
-                    value={newStatus || incident.status}
-                    onValueChange={setNewStatus}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="reported">Reported</SelectItem>
-                      <SelectItem value="under_investigation">Under Investigation</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Reassign</label>
-                  <Select
-                    value={assignedTo !== null ? assignedTo : incident.assignedTo || ""}
-                    onValueChange={setAssignedTo}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Assign to" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {availableUsers
-                        .filter((user) => user.role === "admin" || user.role === "teacher")
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.role})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <label className="text-sm font-medium">Change Status</label>
+                <Select
+                  value={newStatus || incident.status}
+                  onValueChange={setNewStatus}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reported">Reported</SelectItem>
+                    <SelectItem value="under_investigation">Under Investigation</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
@@ -216,7 +184,7 @@ export function IncidentDetail({
                 />
               </div>
               
-              <Button onClick={handleUpdateStatus} disabled={!newStatus && !notes && assignedTo === null}>
+              <Button onClick={handleUpdateStatus} disabled={!newStatus && !notes.trim()}>
                 Save Updates
               </Button>
             </div>

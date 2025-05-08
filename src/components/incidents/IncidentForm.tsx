@@ -40,7 +40,6 @@ const formSchema = z.object({
   description: z.string().min(1, "Description is required"),
   severity: z.string().min(1, "Severity is required"),
   status: z.string().min(1, "Status is required"),
-  assignedTo: z.string().optional(),
   investigationNotes: z.string().optional(),
   resolutionDetails: z.string().optional(),
   resolutionDate: z.string().optional(),
@@ -77,7 +76,6 @@ export function IncidentFormDialog({
       description: "",
       severity: "medium",
       status: "reported",
-      assignedTo: "",
       investigationNotes: "",
       resolutionDetails: "",
       resolutionDate: "",
@@ -96,7 +94,6 @@ export function IncidentFormDialog({
         description: incident.description,
         severity: incident.severity,
         status: incident.status,
-        assignedTo: incident.assignedTo || "",
         investigationNotes: incident.investigationNotes || "",
         resolutionDetails: incident.resolutionDetails || "",
         resolutionDate: incident.resolutionDate || "",
@@ -112,7 +109,6 @@ export function IncidentFormDialog({
         description: "",
         severity: "medium",
         status: "reported",
-        assignedTo: "",
         investigationNotes: "",
         resolutionDetails: "",
         resolutionDate: "",
@@ -131,7 +127,6 @@ export function IncidentFormDialog({
       description: values.description,
       severity: values.severity as IncidentSeverity,
       status: values.status as IncidentStatus,
-      assignedTo: values.assignedTo || undefined,
       investigationNotes: values.investigationNotes || undefined,
       resolutionDetails: values.resolutionDetails || undefined,
       resolutionDate: values.resolutionDate || undefined,
@@ -327,38 +322,6 @@ export function IncidentFormDialog({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="assignedTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign To</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a person to handle this incident" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {availableUsers
-                        .filter((user) => user.role === "admin" || user.role === "teacher")
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.role})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {(form.watch("status") === "under_investigation" || 
               form.watch("status") === "resolved" || 
