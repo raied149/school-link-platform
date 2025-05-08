@@ -19,7 +19,7 @@ import {
 import { Incident, User, IncidentStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Mock users with valid UUIDs - in a real app, would come from a user service
+// Mock users with valid UUIDs
 const mockUsers: User[] = [
   { id: "123e4567-e89b-12d3-a456-426614174000", name: "John Smith", email: "john.smith@school.edu", role: "admin" },
   { id: "223e4567-e89b-12d3-a456-426614174001", name: "Maria Johnson", email: "maria.johnson@school.edu", role: "teacher" },
@@ -51,7 +51,7 @@ export default function IncidentsPage() {
     mutationFn: (newIncident: Omit<Incident, "id" | "createdAt" | "updatedAt">) => 
       createIncident({
         ...newIncident,
-        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use logged-in user or fallback to admin
+        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use logged-in user or fallback to admin UUID
         involvedPersons: [], // In a real app, this would be selected
       }),
     onSuccess: () => {
@@ -128,9 +128,10 @@ export default function IncidentsPage() {
         },
       });
     } else {
+      console.log("Creating new incident with data:", data);
       createIncidentMutation.mutate({
         ...data,
-        reportedBy: user?.id || "t1", // Use logged-in user or fallback
+        reportedBy: user?.id || "123e4567-e89b-12d3-a456-426614174000", // Use valid UUID here
         involvedPersons: [], // In a real app, this would be selected
       });
     }
@@ -263,7 +264,7 @@ export default function IncidentsPage() {
         onSubmit={handleIncidentSubmit}
         incident={selectedIncident}
         availableUsers={mockUsers}
-        currentUserId={user?.id || "t1"}
+        currentUserId={user?.id || "123e4567-e89b-12d3-a456-426614174000"}
         mode={selectedIncident ? "edit" : "create"}
       />
 

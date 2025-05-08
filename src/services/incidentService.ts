@@ -1,3 +1,4 @@
+
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -70,6 +71,7 @@ let incidents: Incident[] = [
 // Get all incidents
 export const getIncidents = async (): Promise<Incident[]> => {
   try {
+    console.log("Fetching incidents from Supabase");
     const { data: incidents, error } = await supabase
       .from('school_incidents')
       .select(`
@@ -85,6 +87,7 @@ export const getIncidents = async (): Promise<Incident[]> => {
       throw error;
     }
 
+    console.log("Received incidents data:", incidents);
     return incidents.map(incident => ({
       id: incident.id,
       title: incident.title,
@@ -172,6 +175,12 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
   try {
     console.log("Creating incident with data:", incidentData);
     
+    // Properly handle reported_by and assigned_to fields - ensure they're either valid UUIDs or null
+    let reportedBy = incidentData.reportedBy || null;
+    let assignedTo = incidentData.assignedTo || null;
+    
+    console.log("Inserting incident with reported_by:", reportedBy, "and assigned_to:", assignedTo);
+    
     // Prepare data for insertion, ensuring reported_by and assigned_to are properly formatted
     const { data: incident, error: incidentError } = await supabase
       .from('school_incidents')
@@ -185,8 +194,8 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
         description: incidentData.description,
         severity: incidentData.severity,
         status: incidentData.status,
-        reported_by: incidentData.reportedBy || null,
-        assigned_to: incidentData.assignedTo || null,
+        reported_by: reportedBy,
+        assigned_to: assignedTo,
         investigation_notes: incidentData.investigationNotes,
         resolution_details: incidentData.resolutionDetails,
         resolution_date: incidentData.resolutionDate,
@@ -196,25 +205,31 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
 
     if (incidentError) {
       console.error("Error creating incident:", incidentError);
+      console.error("Error details:", JSON.stringify(incidentError, null, 2));
       throw incidentError;
     }
 
     console.log("Incident created successfully:", incident);
 
     if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
+      console.log("Adding involved persons:", incidentData.involvedPersons);
+      
       // Map our TypeScript field names to the database field names
+      const involvedPersonsData = incidentData.involvedPersons.map(person => ({
+        incident_id: incident.id,
+        user_id: person.userId,
+        role: person.role,
+      }));
+      
+      console.log("Inserting involved persons data:", involvedPersonsData);
+      
       const { error: involvedError } = await supabase
         .from('school_incident_involved')
-        .insert(
-          incidentData.involvedPersons.map(person => ({
-            incident_id: incident.id,
-            user_id: person.userId,
-            role: person.role,
-          }))
-        );
+        .insert(involvedPersonsData);
 
       if (involvedError) {
         console.error("Error creating involved persons:", involvedError);
+        console.error("Error details:", JSON.stringify(involvedError, null, 2));
         throw involvedError;
       }
     }
@@ -222,6 +237,10 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
     return await getIncidentById(incident.id) as Incident;
   } catch (error) {
     console.error("Error in createIncident:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     throw error;
   }
 };
@@ -229,6 +248,8 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
 // Update an incident
 export const updateIncident = async (id: string, incidentData: Partial<Omit<Incident, "id" | "createdAt" | "updatedAt">>): Promise<Incident | undefined> => {
   try {
+    console.log("Updating incident:", id, "with data:", incidentData);
+    
     const updateData: any = {
       ...(incidentData.title && { title: incidentData.title }),
       ...(incidentData.date && { date: incidentData.date }),
@@ -245,6 +266,8 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
       ...(incidentData.resolutionDate !== undefined && { resolution_date: incidentData.resolutionDate }),
     };
 
+    console.log("Sending update data:", updateData);
+
     const { error: incidentError } = await supabase
       .from('school_incidents')
       .update(updateData)
@@ -257,6 +280,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
 
     if (incidentData.involvedPersons) {
       // Delete existing involved persons
+      console.log("Deleting existing involved persons for incident:", id);
       const { error: deleteError } = await supabase
         .from('school_incident_involved')
         .delete()
@@ -269,15 +293,17 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
 
       // Insert new involved persons with the correct field mappings
       if (incidentData.involvedPersons.length > 0) {
+        const involvedPersonsData = incidentData.involvedPersons.map(person => ({
+          incident_id: id,
+          user_id: person.userId,
+          role: person.role,
+        }));
+
+        console.log("Adding new involved persons:", involvedPersonsData);
+        
         const { error: involvedError } = await supabase
           .from('school_incident_involved')
-          .insert(
-            incidentData.involvedPersons.map(person => ({
-              incident_id: id,
-              user_id: person.userId,
-              role: person.role,
-            }))
-          );
+          .insert(involvedPersonsData);
 
         if (involvedError) {
           console.error("Error updating involved persons:", involvedError);
