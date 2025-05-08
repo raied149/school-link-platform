@@ -15,9 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 
-// Default user ID to use when no authenticated user is available
-const DEFAULT_USER_ID = "123e4567-e89b-12d3-a456-426614174000"; // Admin user
-
 export default function TasksPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
