@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PlusCircle, AlertCircle } from "lucide-react";
@@ -15,6 +14,7 @@ import {
   createIncident, 
   updateIncident, 
   deleteIncident,
+  MOCK_USER_ID
 } from "@/services/incidentService";
 import { Incident, User, IncidentStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,7 +54,7 @@ export default function IncidentsPage() {
     mutationFn: (newIncident: Omit<Incident, "id" | "createdAt" | "updatedAt">) => 
       createIncident({
         ...newIncident,
-        reportedBy: MOCK_USER_ID, // Use mock user ID for demo purposes
+        reportedBy: user?.id || MOCK_USER_ID, // Use MOCK_USER_ID as fallback
         involvedPersons: [], // In a real app, this would be selected
       }),
     onSuccess: () => {
@@ -134,7 +134,7 @@ export default function IncidentsPage() {
       console.log("Creating new incident with data:", data);
       createIncidentMutation.mutate({
         ...data,
-        reportedBy: MOCK_USER_ID, // Use mock user ID for demo
+        reportedBy: user?.id || MOCK_USER_ID, // Use MOCK_USER_ID as fallback
         involvedPersons: [], // In a real app, this would be selected
       });
     }
