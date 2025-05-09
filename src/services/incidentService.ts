@@ -109,24 +109,34 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
     console.log("Creating incident with data:", incidentData);
     
     // Prepare data for insertion
+    // Remove reportedBy if it's the default UUID value or null to avoid foreign key constraint errors
+    const insertData = {
+      title: incidentData.title,
+      date: incidentData.date,
+      time: incidentData.time,
+      location: incidentData.location,
+      type: incidentData.type,
+      sub_type: incidentData.subType,
+      description: incidentData.description,
+      severity: incidentData.severity,
+      status: incidentData.status,
+      assigned_to: incidentData.assignedTo || null,
+      investigation_notes: incidentData.investigationNotes,
+      resolution_details: incidentData.resolutionDetails,
+      resolution_date: incidentData.resolutionDate,
+    };
+
+    // Only include reported_by if it's a valid UUID and not the default one
+    if (incidentData.reportedBy && 
+        incidentData.reportedBy !== "00000000-0000-4000-a000-000000000000" &&
+        isValidUUID(incidentData.reportedBy)) {
+      // @ts-ignore - We're dynamically adding this field
+      insertData.reported_by = incidentData.reportedBy;
+    }
+
     const { data: incident, error: incidentError } = await supabase
       .from('school_incidents')
-      .insert({
-        title: incidentData.title,
-        date: incidentData.date,
-        time: incidentData.time,
-        location: incidentData.location,
-        type: incidentData.type,
-        sub_type: incidentData.subType,
-        description: incidentData.description,
-        severity: incidentData.severity,
-        status: incidentData.status,
-        reported_by: incidentData.reportedBy || null,
-        assigned_to: incidentData.assignedTo || null,
-        investigation_notes: incidentData.investigationNotes,
-        resolution_details: incidentData.resolutionDetails,
-        resolution_date: incidentData.resolutionDate,
-      })
+      .insert(insertData)
       .select()
       .single();
 
