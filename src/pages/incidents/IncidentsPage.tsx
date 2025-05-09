@@ -271,7 +271,7 @@ export default function IncidentsPage() {
         onSubmit={handleIncidentSubmit}
         incident={selectedIncident}
         availableUsers={mockUsers}
-        currentUserId={user?.id || DEFAULT_USER_ID}
+        currentUserId={user?.id || MOCK_USER_ID}
         mode={selectedIncident ? "edit" : "create"}
       />
 
