@@ -52,7 +52,14 @@ const MainLayout = () => {
     <div className="min-h-screen flex w-full">
       <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm">
         <div className="border-b p-4">
-          <h2 className="text-lg font-semibold">School ERP</h2>
+          <div className="flex items-center gap-2 mb-2">
+            <img 
+              src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
+              alt="SlateEd Logo" 
+              className="h-8 w-auto" 
+            />
+            <h2 className="text-lg font-semibold">SlateEd</h2>
+          </div>
           {user && (
             <div className="text-sm text-muted-foreground">
               {user.firstName} {user.lastName} ({user.role})
