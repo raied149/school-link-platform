@@ -1,12 +1,12 @@
-
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taskService, Task, DEFAULT_USER_ID } from "@/services/taskService";
 import { format } from "date-fns";
+import { UserRole } from "@/contexts/AuthContext";
 
 interface UseTaskManagementOptions {
   userId?: string;
-  userRole?: string;
+  userRole?: UserRole;
 }
 
 export function useTaskManagement({ userId, userRole }: UseTaskManagementOptions) {
@@ -29,7 +29,7 @@ export function useTaskManagement({ userId, userRole }: UseTaskManagementOptions
     queryFn: async () => {
       return taskService.getTasksForUser(
         userId || DEFAULT_USER_ID, 
-        userRole || "admin"
+        userRole as UserRole || "admin"
       );
     },
   });

@@ -1,27 +1,27 @@
+
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Task, CreateTaskInput, taskService, DEFAULT_USER_ID } from "@/services/taskService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Users } from "lucide-react";
 import { format } from "date-fns";
 import { academicYearService } from "@/services/academicYearService";
 import { TeacherSelectionDialog } from "../calendar/TeacherSelectionDialog";
+import { TaskFormHeader } from "./form/TaskFormHeader";
+import { TaskBasicFields } from "./form/TaskBasicFields";
+import { TaskDateTimePicker } from "./form/TaskDateTimePicker";
+import { AdminTaskFields } from "./form/AdminTaskFields";
+import { TeacherAssignmentFields } from "./form/TeacherAssignmentFields";
+import { TaskGoogleDriveLink } from "./form/TaskGoogleDriveLink";
+import { TaskFormFooter } from "./form/TaskFormFooter";
 
 interface TaskFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: Task; // For editing existing tasks
+  task?: Task;
 }
 
 export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps) {
@@ -47,7 +47,7 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     task?.assigned_to_user_id && task.type === 'admin_task' ? [task.assigned_to_user_id] : []
   );
   
-  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<{
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<{
     title: string;
     description: string;
   }>({
@@ -256,13 +256,6 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     }
   }, [selectedTeachers, taskType]);
   
-  // Determine available task types based on user role
-  const availableTaskTypes = user?.role === 'admin' 
-    ? ['admin_task']
-    : user?.role === 'teacher'
-      ? ['personal', 'assignment']
-      : ['personal'];
-
   const createTaskMutation = useMutation({
     mutationFn: taskService.createTask,
     onSuccess: () => {
@@ -291,7 +284,7 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
       type: taskType,
       google_drive_link: googleDriveLink || undefined,
       subject_id: selectedSubjectId,
-      created_by: user?.id || DEFAULT_USER_ID  // Always set created_by
+      created_by: user?.id || DEFAULT_USER_ID
     };
     
     // Set assignment target based on assignment type
@@ -340,16 +333,6 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
       createTaskMutation.mutate(taskInput);
     }
   });
-
-  const isValidURL = (str: string) => {
-    if (!str) return true;
-    try {
-      new URL(str);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
   
   // Handle teacher selection
   const handleTeacherSelect = (teacherIds: string[]) => {
@@ -365,277 +348,63 @@ export function TaskFormDialog({ open, onOpenChange, task }: TaskFormDialogProps
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{task ? "Edit Task" : "Create New Task"}</DialogTitle>
-            <DialogDescription>
-              {task 
-                ? "Update task details below." 
-                : "Create a new task or assignment by filling out the details below."}
-            </DialogDescription>
-          </DialogHeader>
+          <TaskFormHeader task={task} />
           
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
-                <Input
-                  id="title"
-                  placeholder="Enter task title"
-                  {...register("title", { required: "Title is required" })}
-                />
-                {errors.title && (
-                  <p className="text-sm text-red-500">{errors.title.message}</p>
-                )}
-              </div>
+              <TaskBasicFields
+                register={register}
+                errors={errors}
+                taskType={taskType}
+                setTaskType={setTaskType}
+                selectedSubjectId={selectedSubjectId}
+                setSelectedSubjectId={setSelectedSubjectId}
+                subjects={subjects}
+                userRole={user?.role}
+              />
               
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter task description (optional)"
-                  {...register("description")}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="taskType">Task Type <span className="text-red-500">*</span></Label>
-                  <Select value={taskType} onValueChange={(value: any) => setTaskType(value)}>
-                    <SelectTrigger id="taskType">
-                      <SelectValue placeholder="Select task type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTaskTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type === 'personal' ? 'Personal Task' : 
-                          type === 'assignment' ? 'Assignment' : 'Administrative Task'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject (Optional)</Label>
-                  <Select 
-                    value={selectedSubjectId || undefined} 
-                    onValueChange={setSelectedSubjectId}
-                  >
-                    <SelectTrigger id="subject">
-                      <SelectValue placeholder="Select a subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No subject</SelectItem>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Due Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="time">Due Time</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                  />
-                </div>
-              </div>
+              <TaskDateTimePicker
+                date={date}
+                setDate={setDate}
+                time={time}
+                setTime={setTime}
+              />
               
               {taskType === 'admin_task' && user?.role === 'admin' && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <Users className="h-4 w-4" /> Assign to Teacher
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1 justify-start"
-                      onClick={() => setTeacherSelectionOpen(true)}
-                    >
-                      {selectedTeachers.length > 0 
-                        ? `${selectedTeachers.length} teacher${selectedTeachers.length > 1 ? 's' : ''} selected` 
-                        : "Select teachers"}
-                    </Button>
-                    {selectedTeachers.length > 0 && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setSelectedTeachers([])}
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <AdminTaskFields
+                  selectedTeachers={selectedTeachers}
+                  setTeacherSelectionOpen={setTeacherSelectionOpen}
+                  setSelectedTeachers={setSelectedTeachers}
+                />
               )}
               
               {taskType === 'assignment' && user?.role === 'teacher' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Assignment Type</Label>
-                    <Select value={assignmentType} onValueChange={(value: any) => setAssignmentType(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select assignment type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Individual Student</SelectItem>
-                        <SelectItem value="section">Section</SelectItem>
-                        <SelectItem value="class">Entire Class</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {assignmentType === 'user' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="studentId">Assign to Student <span className="text-red-500">*</span></Label>
-                      <Select 
-                        value={selectedUserId || undefined} 
-                        onValueChange={setSelectedUserId}
-                      >
-                        <SelectTrigger id="studentId">
-                          <SelectValue placeholder="Select a student" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {students.map((student) => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.first_name} {student.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  
-                  {assignmentType === 'class' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="classId">Assign to Class <span className="text-red-500">*</span></Label>
-                      <Select 
-                        value={selectedClassId || undefined} 
-                        onValueChange={setSelectedClassId}
-                      >
-                        <SelectTrigger id="classId">
-                          <SelectValue placeholder="Select a class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {classes.map((cls) => (
-                            <SelectItem key={cls.id} value={cls.id}>
-                              {cls.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  
-                  {assignmentType === 'section' && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="sectionClassId">Class <span className="text-red-500">*</span></Label>
-                        <Select 
-                          value={selectedClassId || undefined} 
-                          onValueChange={setSelectedClassId}
-                        >
-                          <SelectTrigger id="sectionClassId">
-                            <SelectValue placeholder="Select a class first" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {classes.map((cls) => (
-                              <SelectItem key={cls.id} value={cls.id}>
-                                {cls.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="sectionId">Assign to Section <span className="text-red-500">*</span></Label>
-                        <Select 
-                          value={selectedSectionId || undefined} 
-                          onValueChange={setSelectedSectionId}
-                          disabled={!selectedClassId}
-                        >
-                          <SelectTrigger id="sectionId">
-                            <SelectValue placeholder={selectedClassId ? "Select a section" : "Select a class first"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {sections.map((section) => (
-                              <SelectItem key={section.id} value={section.id}>
-                                {section.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-                </>
+                <TeacherAssignmentFields
+                  assignmentType={assignmentType}
+                  setAssignmentType={setAssignmentType}
+                  selectedUserId={selectedUserId}
+                  setSelectedUserId={setSelectedUserId}
+                  selectedClassId={selectedClassId}
+                  setSelectedClassId={setSelectedClassId}
+                  selectedSectionId={selectedSectionId}
+                  setSelectedSectionId={setSelectedSectionId}
+                  students={students}
+                  classes={classes}
+                  sections={sections}
+                />
               )}
               
-              <div className="space-y-2">
-                <Label htmlFor="googleDriveLink">Google Drive Link (Optional)</Label>
-                <Input
-                  id="googleDriveLink"
-                  placeholder="https://drive.google.com/..."
-                  value={googleDriveLink}
-                  onChange={(e) => setGoogleDriveLink(e.target.value)}
-                />
-                {googleDriveLink && !isValidURL(googleDriveLink) && (
-                  <p className="text-sm text-red-500">Please enter a valid URL</p>
-                )}
-              </div>
+              <TaskGoogleDriveLink
+                googleDriveLink={googleDriveLink}
+                setGoogleDriveLink={setGoogleDriveLink}
+              />
             </div>
             
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createTaskMutation.isPending || updateTaskMutation.isPending}
-              >
-                {createTaskMutation.isPending || updateTaskMutation.isPending 
-                  ? "Saving..." 
-                  : task ? "Update Task" : "Create Task"}
-              </Button>
-            </DialogFooter>
+            <TaskFormFooter
+              onCancel={() => onOpenChange(false)}
+              isPending={createTaskMutation.isPending || updateTaskMutation.isPending}
+              isEdit={!!task}
+            />
           </form>
         </DialogContent>
       </Dialog>
