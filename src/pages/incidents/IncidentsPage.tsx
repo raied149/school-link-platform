@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PlusCircle, AlertCircle } from "lucide-react";
@@ -14,9 +13,9 @@ import {
   getIncidents, 
   createIncident, 
   updateIncident, 
-  deleteIncident
+  deleteIncident,
+  MOCK_USER_ID
 } from "@/services/incidentService";
-import { MOCK_USER_ID } from "@/services/incidentService/constants";
 import { Incident, User, IncidentStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
