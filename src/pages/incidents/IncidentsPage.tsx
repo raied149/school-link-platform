@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PlusCircle, AlertCircle } from "lucide-react";
@@ -29,9 +30,6 @@ const mockUsers: User[] = [
   { id: "623e4567-e89b-12d3-a456-426614174005", name: "Charlie Evans", email: "charlie.evans@school.edu", role: "student" },
   { id: "723e4567-e89b-12d3-a456-426614174006", name: "Diana Foster", email: "diana.foster@school.edu", role: "student" },
 ];
-
-// Default user ID from mock users to use when no authenticated user is available
-const MOCK_USER_ID = mockUsers[0].id; // Admin user from mock users
 
 export default function IncidentsPage() {
   const { toast } = useToast();
