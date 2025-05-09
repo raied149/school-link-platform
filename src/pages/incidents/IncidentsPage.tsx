@@ -14,9 +14,9 @@ import {
   getIncidents, 
   createIncident, 
   updateIncident, 
-  deleteIncident,
-  MOCK_USER_ID
+  deleteIncident
 } from "@/services/incidentService";
+import { MOCK_USER_ID } from "@/services/incidentService/constants";
 import { Incident, User, IncidentStatus } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
