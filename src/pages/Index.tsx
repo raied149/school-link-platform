@@ -11,12 +11,14 @@ export default function Index() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-blue-900">
       <div className="max-w-3xl w-full text-center">
         <div className="mb-8 flex flex-col items-center">
-          <img 
-            src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
-            alt="SlateEd Logo" 
-            className="h-28 w-auto mb-4" 
-          />
-          <h1 className="text-4xl font-bold mb-2">SlateEd</h1>
+          <div className="flex items-center gap-3 mb-4">
+            <img 
+              src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
+              alt="SlateEd Logo" 
+              className="h-24 w-auto" 
+            />
+            <h1 className="text-5xl font-bold">SlateEd</h1>
+          </div>
           <p className="text-muted-foreground text-lg mb-6">
             The complete school management platform
           </p>

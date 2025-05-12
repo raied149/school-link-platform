@@ -12,12 +12,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md space-y-8 p-8">
         <div className="flex flex-col items-center">
-          <img 
-            src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
-            alt="SlateEd Logo" 
-            className="h-16 w-auto mb-4" 
-          />
-          <h2 className="text-center text-3xl font-bold tracking-tight">
+          <div className="flex items-center gap-3 mb-4">
+            <img 
+              src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
+              alt="SlateEd Logo" 
+              className="h-16 w-auto" 
+            />
+            <h1 className="text-3xl font-bold">SlateEd</h1>
+          </div>
+          <h2 className="text-center text-2xl font-bold tracking-tight">
             Welcome to SlateEd
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
