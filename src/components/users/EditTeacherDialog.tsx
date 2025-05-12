@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import { Teacher } from "@/types";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BasicInfoSection } from "./teacher-form/BasicInfoSection";
 import { PersonalInfoSection } from "./teacher-form/PersonalInfoSection";
@@ -69,6 +70,45 @@ export function EditTeacherDialog({
       allergies: teacher.medicalInformation?.allergies?.join(', ') || '',
     },
   });
+
+  // Reset form when teacher changes
+  useEffect(() => {
+    if (teacher && open) {
+      form.reset({
+        // Basic Details
+        firstName: teacher.firstName,
+        lastName: teacher.lastName,
+        email: teacher.email,
+        // Personal Details
+        gender: teacher.gender,
+        dateOfBirth: teacher.dateOfBirth || '',
+        nationality: teacher.nationality || '',
+        religion: teacher.religion || '',
+        maritalStatus: teacher.maritalStatus || '',
+        bloodGroup: teacher.bloodGroup || '',
+        // Professional Details
+        employeeId: teacher.professionalDetails?.employeeId || '',
+        designation: teacher.professionalDetails?.designation || '',
+        department: teacher.professionalDetails?.department || '',
+        joiningDate: teacher.professionalDetails?.joiningDate || '',
+        employmentType: teacher.professionalDetails?.employmentType || 'Full-time',
+        // Contact Information
+        currentAddress: teacher.contactInformation?.currentAddress || '',
+        permanentAddress: teacher.contactInformation?.permanentAddress || '',
+        personalPhone: teacher.contactInformation?.personalPhone || '',
+        schoolPhone: teacher.contactInformation?.schoolPhone || '',
+        personalEmail: teacher.contactInformation?.personalEmail || '',
+        schoolEmail: teacher.contactInformation?.schoolEmail || '',
+        // Emergency Contact
+        emergencyContactName: teacher.emergency?.contactName || '',
+        emergencyRelationship: teacher.emergency?.relationship || '',
+        emergencyPhone: teacher.emergency?.phone || '',
+        // Medical Information
+        medicalConditions: teacher.medicalInformation?.conditions?.join(', ') || '',
+        allergies: teacher.medicalInformation?.allergies?.join(', ') || '',
+      });
+    }
+  }, [form, teacher, open]);
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
