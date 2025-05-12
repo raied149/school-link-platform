@@ -18,6 +18,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { EditStudentDialog } from "./EditStudentDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StudentTableProps {
   searchFilters: {
@@ -25,52 +26,130 @@ interface StudentTableProps {
     nameSearch: string;
     globalSearch: string;
   };
+  isTeacherView?: boolean;
 }
 
-export function StudentTable({ searchFilters }: StudentTableProps) {
+export function StudentTable({ searchFilters, isTeacherView = false }: StudentTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
 
   // Fetch all profiles with role 'student' and their details
   const { data: students = [], isLoading, error } = useQuery({
-    queryKey: ['students'],
+    queryKey: ['students', user?.id],
     queryFn: async () => {
       console.log("Fetching students from profiles table");
       
-      // Fetch student profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'student');
+      if (isTeacherView && user?.role === 'teacher') {
+        console.log("Teacher view: fetching only assigned students");
         
-      if (profilesError) {
-        console.error("Error fetching student profiles:", profilesError);
-        throw profilesError;
+        // First get teacher's assigned sections
+        const { data: teacherAssignments, error: assignmentError } = await supabase
+          .from('timetable')
+          .select('section_id')
+          .eq('teacher_id', user.id)
+          .distinct();
+        
+        if (assignmentError) {
+          console.error("Error fetching teacher assignments:", assignmentError);
+          throw assignmentError;
+        }
+        
+        if (!teacherAssignments?.length) {
+          console.log("No sections assigned to this teacher");
+          return [];
+        }
+        
+        const sectionIds = teacherAssignments.map(item => item.section_id);
+        console.log("Teacher is assigned to sections:", sectionIds);
+        
+        // Get students from those sections
+        const { data: studentSections, error: sectionError } = await supabase
+          .from('student_sections')
+          .select('student_id')
+          .in('section_id', sectionIds);
+        
+        if (sectionError) {
+          console.error("Error fetching student sections:", sectionError);
+          throw sectionError;
+        }
+        
+        if (!studentSections?.length) {
+          console.log("No students in teacher's sections");
+          return [];
+        }
+        
+        const studentIds = studentSections.map(item => item.student_id);
+        
+        // Get profiles for these students
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', studentIds)
+          .eq('role', 'student');
+          
+        if (profilesError) {
+          console.error("Error fetching student profiles:", profilesError);
+          throw profilesError;
+        }
+        
+        // Fetch student details
+        const { data: detailsData, error: detailsError } = await supabase
+          .from('student_details')
+          .select('*')
+          .in('id', studentIds);
+        
+        if (detailsError) {
+          console.error("Error fetching student details:", detailsError);
+          // Don't throw here, we may have profiles without details
+        }
+        
+        // Combine profiles and details
+        const studentsWithDetails = profilesData.map(profile => {
+          // Find corresponding details, if any
+          const details = detailsData?.find(d => d.id === profile.id);
+          return { ...profile, details };
+        });
+        
+        console.log("Retrieved students for teacher:", studentsWithDetails);
+        return studentsWithDetails || [];
+      } else {
+        // Admin view - fetch all students
+        // Fetch student profiles
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'student');
+          
+        if (profilesError) {
+          console.error("Error fetching student profiles:", profilesError);
+          throw profilesError;
+        }
+        
+        // Fetch student details
+        const { data: detailsData, error: detailsError } = await supabase
+          .from('student_details')
+          .select('*');
+        
+        if (detailsError) {
+          console.error("Error fetching student details:", detailsError);
+          // Don't throw here, we may have profiles without details
+        }
+        
+        // Combine profiles and details
+        const studentsWithDetails = profilesData.map(profile => {
+          // Find corresponding details, if any
+          const details = detailsData?.find(d => d.id === profile.id);
+          return { ...profile, details };
+        });
+        
+        console.log("Retrieved all students:", studentsWithDetails);
+        return studentsWithDetails || [];
       }
-      
-      // Fetch student details
-      const { data: detailsData, error: detailsError } = await supabase
-        .from('student_details')
-        .select('*');
-      
-      if (detailsError) {
-        console.error("Error fetching student details:", detailsError);
-        // Don't throw here, we may have profiles without details
-      }
-      
-      // Combine profiles and details
-      const studentsWithDetails = profilesData.map(profile => {
-        // Find corresponding details, if any
-        const details = detailsData?.find(d => d.id === profile.id);
-        return { ...profile, details };
-      });
-      
-      console.log("Retrieved students:", studentsWithDetails);
-      return studentsWithDetails || [];
     }
   });
 
@@ -149,7 +228,9 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
       <div className="text-center py-8 text-muted-foreground">
         {students.length > 0 
           ? "No students match your search criteria." 
-          : "No students found in the database. Please add students first."}
+          : isTeacherView 
+            ? "No students found in your assigned sections."
+            : "No students found in the database. Please add students first."}
       </div>
     );
   }
@@ -203,7 +284,7 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Details</TableHead>
-              <TableHead>Actions</TableHead>
+              {!isTeacherView && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -219,24 +300,26 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
                       <StudentDetails student={studentDetail} />
                     </Accordion>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(studentDetail)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(studentDetail)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isTeacherView && (
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(studentDetail)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(studentDetail)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -244,23 +327,27 @@ export function StudentTable({ searchFilters }: StudentTableProps) {
         </Table>
       </div>
 
-      <ConfirmationDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Student"
-        description="Are you sure you want to delete this student? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={confirmDelete}
-        isProcessing={isProcessing}
-      />
+      {!isTeacherView && (
+        <>
+          <ConfirmationDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            title="Delete Student"
+            description="Are you sure you want to delete this student? This action cannot be undone."
+            confirmText="Delete"
+            cancelText="Cancel"
+            onConfirm={confirmDelete}
+            isProcessing={isProcessing}
+          />
 
-      {selectedStudent && (
-        <EditStudentDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          student={selectedStudent}
-        />
+          {selectedStudent && (
+            <EditStudentDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              student={selectedStudent}
+            />
+          )}
+        </>
       )}
     </>
   );

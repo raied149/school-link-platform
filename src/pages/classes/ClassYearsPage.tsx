@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,12 +9,15 @@ import { AcademicYear } from "@/types/academic-year";
 import { AcademicYearTabs } from "@/components/classes/AcademicYearTabs";
 import { ClassesList } from "@/components/classes/ClassesList";
 import { Class } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ClassYearsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { yearId } = useParams<{ yearId: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isTeacher = user?.role === 'teacher';
 
   // Fetch academic years
   const { data: academicYears = [], isLoading: isLoadingYears } = useQuery({
@@ -48,37 +52,109 @@ export default function ClassYearsPage() {
 
   // Fetch classes for selected academic year
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
-    queryKey: ['classes', yearId],
+    queryKey: ['classes', yearId, user?.id, isTeacher],
     queryFn: async () => {
       if (!yearId) return [];
       
       console.log("Fetching classes for yearId:", yearId);
       
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .eq('year_id', yearId)
-        .order('name');
+      if (isTeacher && user) {
+        // If user is a teacher, only fetch classes they teach
+        console.log("Fetching classes where teacher is assigned");
         
-      if (error) {
-        console.error("Error fetching classes:", error);
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        return [];
+        // First get all sections where this teacher is assigned
+        const { data: teacherSections, error: sectionsError } = await supabase
+          .from('timetable')
+          .select('section_id')
+          .eq('teacher_id', user.id)
+          .distinct();
+          
+        if (sectionsError) {
+          console.error("Error fetching teacher sections:", sectionsError);
+          throw sectionsError;
+        }
+        
+        if (!teacherSections?.length) {
+          console.log("No sections assigned to this teacher");
+          return [];
+        }
+        
+        const sectionIds = teacherSections.map(item => item.section_id);
+        console.log("Teacher is assigned to sections:", sectionIds);
+        
+        // Get class IDs from these sections
+        const { data: sections, error: classError } = await supabase
+          .from('sections')
+          .select('class_id')
+          .in('id', sectionIds)
+          .distinct();
+          
+        if (classError) {
+          console.error("Error fetching class IDs:", classError);
+          throw classError;
+        }
+        
+        if (!sections?.length) {
+          console.log("No classes found for teacher's sections");
+          return [];
+        }
+        
+        const classIds = sections.map(item => item.class_id);
+        
+        // Get class data
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('year_id', yearId)
+          .in('id', classIds)
+          .order('name');
+        
+        if (error) {
+          console.error("Error fetching classes:", error);
+          throw error;
+        }
+        
+        console.log("Teacher's classes data:", data);
+        
+        return (
+          data?.map(row => ({
+            id: row.id,
+            name: row.name,
+            level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
+            description: "", 
+            academicYearId: row.year_id,
+            createdAt: row.created_at,
+            updatedAt: row.created_at,
+          })) ?? []
+        );
+      } else {
+        // For admin, fetch all classes
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('year_id', yearId)
+          .order('name');
+          
+        if (error) {
+          console.error("Error fetching classes:", error);
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return [];
+        }
+        
+        console.log("Classes data:", data);
+        
+        return (
+          data?.map(row => ({
+            id: row.id,
+            name: row.name,
+            level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
+            description: "", 
+            academicYearId: row.year_id,
+            createdAt: row.created_at,
+            updatedAt: row.created_at,
+          })) ?? []
+        );
       }
-      
-      console.log("Classes data:", data);
-      
-      return (
-        data?.map(row => ({
-          id: row.id,
-          name: row.name,
-          level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
-          description: "", 
-          academicYearId: row.year_id,
-          createdAt: row.created_at,
-          updatedAt: row.created_at,
-        })) ?? []
-      );
     },
     enabled: !!yearId
   });
@@ -292,6 +368,7 @@ export default function ClassYearsPage() {
         academicYears={academicYears} 
         selectedYearId={yearId} 
         onYearCreate={handleCreateYear}
+        isTeacherView={isTeacher}
       />
 
       {/* Classes list - shown when academic year is selected */}
@@ -303,7 +380,11 @@ export default function ClassYearsPage() {
         <Card className="p-6">
           <div className="text-center py-8">
             <h2 className="text-xl font-semibold mb-2">No Academic Years Found</h2>
-            <p className="text-muted-foreground mb-4">Create your first academic year to get started.</p>
+            <p className="text-muted-foreground mb-4">
+              {isTeacher 
+                ? "No academic years are currently available" 
+                : "Create your first academic year to get started"}
+            </p>
           </div>
         </Card>
       ) : isValidYearId ? (
@@ -315,6 +396,7 @@ export default function ClassYearsPage() {
             onCreateClass={handleCreateClass}
             onUpdateClass={handleUpdateClass}
             onDeleteClass={handleDeleteClass}
+            isTeacherView={isTeacher}
           />
         </Card>
       ) : (

@@ -4,6 +4,7 @@ import { TeacherPageHeader } from "@/components/teachers/TeacherPageHeader";
 import { TeacherTable } from "@/components/users/TeacherTable";
 import { useState } from "react";
 import { TeacherSearch } from "@/components/users/TeacherSearch";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TeacherDetailsPage = () => {
   const [searchFilters, setSearchFilters] = useState({
@@ -11,6 +12,9 @@ const TeacherDetailsPage = () => {
     nameSearch: "",
     globalSearch: ""
   });
+  
+  const { user } = useAuth();
+  const isTeacher = user?.role === 'teacher';
   
   const handleSearch = (filters: {
     idSearch: string;
@@ -22,12 +26,24 @@ const TeacherDetailsPage = () => {
 
   return (
     <div className="space-y-6">
-      <TeacherPageHeader />
+      {!isTeacher && <TeacherPageHeader />}
+      {isTeacher && (
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Teacher Information</h1>
+          <p className="text-muted-foreground">
+            View teacher information
+          </p>
+        </div>
+      )}
 
       <Card className="p-6">
         <div className="space-y-4">
           <TeacherSearch onSearch={handleSearch} />
-          <TeacherTable searchFilters={searchFilters} />
+          <TeacherTable 
+            searchFilters={searchFilters} 
+            isTeacherView={isTeacher}
+            currentUserId={user?.id}
+          />
         </div>
       </Card>
     </div>

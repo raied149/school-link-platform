@@ -26,23 +26,50 @@ const MainLayout = () => {
   const location = useLocation();
   const { logout, user } = useAuth();
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Users, label: 'Student Details', path: '/users' }, 
-    { icon: Users, label: 'Teacher Details', path: '/teachers/all' }, 
-    { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
-    { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
-    { icon: GraduationCap, label: 'Class Years', path: '/class-years' }, 
-    { icon: BookOpen, label: 'Subjects', path: '/subjects' },
-    { icon: Clock, label: 'Timetable', path: '/timetable' },
-    { icon: Video, label: 'Online Classes', path: '/online-classes' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar' },
-    { icon: Image, label: 'Gallery', path: '/gallery' },
-    { icon: FileText, label: 'Tests & Exams', path: '/exams' },
-    { icon: FileText, label: 'Notes', path: '/notes' },
-    { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
-    { icon: ListTodo, label: 'Tasks', path: '/tasks' },
-  ];
+  // Define menu items based on user role
+  const getMenuItems = () => {
+    const commonItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
+      { icon: Image, label: 'Gallery', path: '/gallery' },
+      { icon: FileText, label: 'Notes', path: '/notes' },
+      { icon: ListTodo, label: 'Tasks', path: '/tasks' },
+    ];
+
+    // Items only for admin and non-teacher roles
+    const adminItems = [
+      { icon: Users, label: 'Student Details', path: '/users' },
+      { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
+      { icon: GraduationCap, label: 'Class Years', path: '/class-years' },
+      { icon: BookOpen, label: 'Subjects', path: '/subjects' },
+      { icon: Clock, label: 'Timetable', path: '/timetable' },
+      { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
+    ];
+
+    // Items teachers can access but with limited functionality
+    const teacherItems = [
+      { icon: Users, label: 'Student Details', path: '/users' },
+      { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
+      { icon: GraduationCap, label: 'Class Years', path: '/class-years' },
+      { icon: BookOpen, label: 'Subjects', path: '/subjects' },
+    ];
+
+    // Items accessible by all roles
+    const attendanceItems = [
+      { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
+      { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
+      { icon: Video, label: 'Online Classes', path: '/online-classes' },
+      { icon: FileText, label: 'Tests & Exams', path: '/exams' },
+    ];
+
+    if (user?.role === 'teacher') {
+      return [...commonItems, ...teacherItems, ...attendanceItems];
+    }
+    
+    return [...commonItems, ...adminItems, ...attendanceItems];
+  };
+
+  const menuItems = getMenuItems();
 
   const handleLogout = () => {
     logout();

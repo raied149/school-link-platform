@@ -10,12 +10,14 @@ interface UserTabsProps {
   defaultTab: "students" | "teachers";
   showStudentsOnly?: boolean;
   showTeachersOnly?: boolean;
+  isTeacherView?: boolean;
 }
 
 export function UserTabs({ 
   defaultTab = "students",
   showStudentsOnly = false,
-  showTeachersOnly = false 
+  showTeachersOnly = false,
+  isTeacherView = false
 }: UserTabsProps) {
   const [searchFilters, setSearchFilters] = useState({
     idSearch: "",
@@ -48,14 +50,20 @@ export function UserTabs({
       {!showTeachersOnly && (
         <TabsContent value="students" className="space-y-4">
           <StudentSearch onSearch={handleSearch} />
-          <StudentTable searchFilters={searchFilters} />
+          <StudentTable 
+            searchFilters={searchFilters}
+            isTeacherView={isTeacherView}
+          />
         </TabsContent>
       )}
       
       {!showStudentsOnly && (
         <TabsContent value="teachers">
           <TeacherSearch onSearch={handleSearch} />
-          <TeacherTable searchFilters={searchFilters} />
+          <TeacherTable 
+            searchFilters={searchFilters}
+            isTeacherView={isTeacherView}
+          />
         </TabsContent>
       )}
     </Tabs>

@@ -6,27 +6,47 @@ import { supabase } from "@/integrations/supabase/client";
 import { TeacherAttendanceTable } from "@/components/attendance/TeacherAttendanceTable";
 import { TeacherAttendanceFilters } from "@/components/teachers/TeacherAttendanceFilters";
 import { DateSelector } from "@/components/attendance/DateSelector";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TeacherAttendancePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { user } = useAuth();
+  const isTeacher = user?.role === 'teacher';
 
   // Fetch teachers from Supabase
   const { data: teachers = [], isLoading } = useQuery({
-    queryKey: ['teachers-attendance'],
+    queryKey: ['teachers-attendance', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'teacher');
+      if (isTeacher && user) {
+        // If user is a teacher, only fetch their own record
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .eq('role', 'teacher');
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      return data?.map(teacher => ({
-        id: teacher.id,
-        name: `${teacher.first_name} ${teacher.last_name}`
-      })) || [];
+        return data?.map(teacher => ({
+          id: teacher.id,
+          name: `${teacher.first_name} ${teacher.last_name}`
+        })) || [];
+      } else {
+        // For admin, fetch all teachers
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'teacher');
+          
+        if (error) throw error;
+        
+        return data?.map(teacher => ({
+          id: teacher.id,
+          name: `${teacher.first_name} ${teacher.last_name}`
+        })) || [];
+      }
     }
   });
 
@@ -46,7 +66,9 @@ const TeacherAttendancePage = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Teacher Attendance</h1>
           <p className="text-muted-foreground">
-            Manage and track teacher attendance records
+            {isTeacher 
+              ? "View your attendance records" 
+              : "Manage and track teacher attendance records"}
           </p>
         </div>
       </div>
@@ -55,17 +77,20 @@ const TeacherAttendancePage = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <DateSelector date={selectedDate} onDateChange={setSelectedDate} />
-            <TeacherAttendanceFilters
-              searchTerm={searchTerm}
-              statusFilter={statusFilter}
-              onSearchChange={setSearchTerm}
-              onStatusChange={setStatusFilter}
-            />
+            {!isTeacher && (
+              <TeacherAttendanceFilters
+                searchTerm={searchTerm}
+                statusFilter={statusFilter}
+                onSearchChange={setSearchTerm}
+                onStatusChange={setStatusFilter}
+              />
+            )}
           </div>
           
           <TeacherAttendanceTable 
             selectedDate={selectedDate}
             teachers={filteredTeachers}
+            isTeacherView={isTeacher}
           />
         </div>
       </Card>

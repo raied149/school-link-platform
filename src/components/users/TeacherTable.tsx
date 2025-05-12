@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -10,15 +9,15 @@ import {
 import { Accordion } from "@/components/ui/accordion";
 import { TeacherDetails } from "./TeacherDetails";
 import { Teacher } from "@/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useState } from "react";
 import { EditTeacherDialog } from "./EditTeacherDialog";
+import { LimitedTeacherDetails } from "./teacher/LimitedTeacherDetails";
 
 interface TeacherTableProps {
   searchFilters?: {
@@ -26,6 +25,8 @@ interface TeacherTableProps {
     nameSearch: string;
     globalSearch: string;
   };
+  isTeacherView?: boolean;
+  currentUserId?: string;
 }
 
 // Define the structure for the professional info from the database
@@ -53,7 +54,7 @@ interface EmergencyContact {
   phone?: string;
 }
 
-export function TeacherTable({ searchFilters }: TeacherTableProps) {
+export function TeacherTable({ searchFilters, isTeacherView = false, currentUserId }: TeacherTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
@@ -329,61 +330,74 @@ export function TeacherTable({ searchFilters }: TeacherTableProps) {
               <TableHead>Name</TableHead>
               <TableHead>Designation</TableHead>
               <TableHead>Details</TableHead>
-              <TableHead>Actions</TableHead>
+              {!isTeacherView && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTeachers.map((teacher) => (
-              <TableRow key={teacher.id}>
-                <TableCell>{teacher.professionalDetails?.employeeId || 'Not set'}</TableCell>
-                <TableCell>{teacher.name}</TableCell>
-                <TableCell>{teacher.professionalDetails?.designation || 'Not set'}</TableCell>
-                <TableCell className="w-1/2">
-                  <Accordion type="single" collapsible>
-                    <TeacherDetails teacher={teacher} />
-                  </Accordion>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(teacher)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(teacher)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredTeachers.map((teacher) => {
+              const isCurrentUser = teacher.id === currentUserId;
+              return (
+                <TableRow key={teacher.id}>
+                  <TableCell>{teacher.professionalDetails?.employeeId || 'Not set'}</TableCell>
+                  <TableCell>{teacher.name}</TableCell>
+                  <TableCell>{teacher.professionalDetails?.designation || 'Not set'}</TableCell>
+                  <TableCell className="w-1/2">
+                    <Accordion type="single" collapsible>
+                      {isTeacherView && !isCurrentUser ? (
+                        <LimitedTeacherDetails teacher={teacher} />
+                      ) : (
+                        <TeacherDetails teacher={teacher} />
+                      )}
+                    </Accordion>
+                  </TableCell>
+                  {!isTeacherView && (
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(teacher)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(teacher)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
-      <ConfirmationDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Teacher"
-        description="Are you sure you want to delete this teacher? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={confirmDelete}
-        isProcessing={isProcessing}
-      />
+      {!isTeacherView && (
+        <>
+          <ConfirmationDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            title="Delete Teacher"
+            description="Are you sure you want to delete this teacher? This action cannot be undone."
+            confirmText="Delete"
+            cancelText="Cancel"
+            onConfirm={confirmDelete}
+            isProcessing={isProcessing}
+          />
 
-      {selectedTeacher && (
-        <EditTeacherDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          teacher={selectedTeacher}
-        />
+          {selectedTeacher && (
+            <EditTeacherDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              teacher={selectedTeacher}
+            />
+          )}
+        </>
       )}
     </>
   );

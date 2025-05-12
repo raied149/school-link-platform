@@ -1,60 +1,92 @@
 
 import { useNavigate } from "react-router-dom";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AcademicYear } from "@/types/academic-year";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Plus } from "lucide-react";
+import { Fragment, useState } from "react";
 import { AcademicYearFormDialog } from "@/components/academic/AcademicYearFormDialog";
 
 interface AcademicYearTabsProps {
   academicYears: AcademicYear[];
   selectedYearId?: string;
-  onYearCreate: (yearData: Partial<AcademicYear>) => Promise<void>;
+  onYearCreate: (year: Partial<AcademicYear>) => Promise<void>;
+  isTeacherView?: boolean;
 }
 
-export function AcademicYearTabs({ academicYears, selectedYearId, onYearCreate }: AcademicYearTabsProps) {
+export function AcademicYearTabs({
+  academicYears,
+  selectedYearId,
+  onYearCreate,
+  isTeacherView = false,
+}: AcademicYearTabsProps) {
   const navigate = useNavigate();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreatingYear, setIsCreatingYear] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4 mb-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Class Management</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Academic Year
-        </Button>
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center gap-2">
+        <Calendar className="hidden sm:inline h-5 w-5 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Academic Years</h2>
       </div>
-      
-      <Tabs
-        value={selectedYearId || ""}
-        className="w-full"
-        onValueChange={value => navigate(`/classes/${value}`)}
-      >
-        <TabsList className="w-full flex gap-2 justify-start">
-          {academicYears.map((year) => (
-            <TabsTrigger
-              key={year.id}
-              value={year.id}
-              className="min-w-[150px]"
-            >
-              {year.name}
-              {year.isActive && (
-                <span className="ml-1 text-xs text-green-600">(Active)</span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      
-      <AcademicYearFormDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSave={onYearCreate}
-        mode="create"
-        existingYears={academicYears}
-      />
+
+      <div className="flex items-center gap-4">
+        <Tabs value={selectedYearId} className="w-full">
+          <TabsList className="w-full overflow-x-auto flex flex-nowrap max-w-2xl">
+            {academicYears.length === 0 ? (
+              <TabsTrigger
+                value="no-years"
+                className="flex-1 opacity-50 cursor-not-allowed"
+                disabled
+              >
+                No Academic Years
+              </TabsTrigger>
+            ) : (
+              <Fragment>
+                {academicYears.map((year) => (
+                  <TabsTrigger
+                    key={year.id}
+                    value={year.id}
+                    onClick={() => navigate(`/class-years/${year.id}`)}
+                    className={
+                      year.isActive
+                        ? "border-2 border-primary text-primary font-medium"
+                        : ""
+                    }
+                  >
+                    {year.name}
+                    {year.isActive && (
+                      <span className="ml-1 text-[0.65rem] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        Current
+                      </span>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </Fragment>
+            )}
+          </TabsList>
+        </Tabs>
+
+        {!isTeacherView && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="whitespace-nowrap"
+            onClick={() => setIsCreatingYear(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Year
+          </Button>
+        )}
+      </div>
+
+      {!isTeacherView && (
+        <AcademicYearFormDialog
+          open={isCreatingYear}
+          onOpenChange={setIsCreatingYear}
+          onSubmit={onYearCreate}
+        />
+      )}
     </div>
   );
 }
