@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import { StudentDetail } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -91,6 +92,35 @@ export function EditStudentDialog({
       emergencyContactRelationship: student.medical.emergencyContact?.relationship || '',
     },
   });
+  
+  // Reset form when student changes
+  useEffect(() => {
+    if (student && open) {
+      const [firstName, lastName] = student.name.split(' ');
+      
+      form.reset({
+        firstName,
+        lastName,
+        email: student.email,
+        admissionNumber: student.admissionNumber || '',
+        dateOfBirth: student.dateOfBirth,
+        gender: student.gender,
+        nationality: student.nationality,
+        language: student.language,
+        guardianName: student.guardian.name,
+        guardianEmail: student.guardian.email,
+        guardianPhone: student.guardian.phone,
+        guardianRelationship: student.guardian.relationship,
+        bloodGroup: student.medical.bloodGroup || '',
+        medicalHistory: student.medical.medicalHistory || '',
+        allergies: student.medical.allergies?.join(', ') || '',
+        medications: student.medical.medications?.join(', ') || '',
+        emergencyContactName: student.medical.emergencyContact?.name || '',
+        emergencyContactPhone: student.medical.emergencyContact?.phone || '',
+        emergencyContactRelationship: student.medical.emergencyContact?.relationship || '',
+      });
+    }
+  }, [form, student, open]);
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
