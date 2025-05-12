@@ -51,20 +51,21 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
         const { data: teacherAssignments, error: assignmentError } = await supabase
           .from('timetable')
           .select('section_id')
-          .eq('teacher_id', user.id)
-          .distinct();
+          .eq('teacher_id', user.id);
         
         if (assignmentError) {
           console.error("Error fetching teacher assignments:", assignmentError);
           throw assignmentError;
         }
         
-        if (!teacherAssignments?.length) {
+        // Get distinct section IDs
+        const sectionIds = [...new Set(teacherAssignments?.map(item => item.section_id) || [])];
+        
+        if (!sectionIds.length) {
           console.log("No sections assigned to this teacher");
           return [];
         }
         
-        const sectionIds = teacherAssignments.map(item => item.section_id);
         console.log("Teacher is assigned to sections:", sectionIds);
         
         // Get students from those sections
@@ -83,7 +84,8 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
           return [];
         }
         
-        const studentIds = studentSections.map(item => item.student_id);
+        // Get distinct student IDs
+        const studentIds = [...new Set(studentSections.map(item => item.student_id))];
         
         // Get profiles for these students
         const { data: profilesData, error: profilesError } = await supabase

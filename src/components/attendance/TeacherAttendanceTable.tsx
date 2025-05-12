@@ -16,9 +16,14 @@ import { TeacherAttendanceRecord } from "@/components/teachers/TeacherAttendance
 interface TeacherAttendanceTableProps {
   selectedDate: Date;
   teachers: any[];
+  isTeacherView?: boolean;
 }
 
-export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttendanceTableProps) {
+export function TeacherAttendanceTable({ 
+  selectedDate, 
+  teachers,
+  isTeacherView = false
+}: TeacherAttendanceTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -101,6 +106,8 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
   });
 
   const handleCheckIn = async (teacherId: string) => {
+    if (isTeacherView) return; // Prevent teachers from marking other teachers
+    
     const now = new Date();
     const checkInTime = format(now, 'HH:mm:ss');
     
@@ -121,6 +128,8 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
   };
 
   const handleCheckOut = async (teacherId: string) => {
+    if (isTeacherView) return; // Prevent teachers from marking other teachers
+    
     const now = new Date();
     const checkOutTime = format(now, 'HH:mm:ss');
     
@@ -141,6 +150,8 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
   };
 
   const handleMarkAbsent = async (teacherId: string) => {
+    if (isTeacherView) return; // Prevent teachers from marking other teachers
+    
     try {
       await markAttendanceMutation.mutateAsync({
         teacherId,
@@ -194,6 +205,7 @@ export function TeacherAttendanceTable({ selectedDate, teachers }: TeacherAttend
                 onCheckIn={handleCheckIn}
                 onCheckOut={handleCheckOut}
                 onMarkAbsent={handleMarkAbsent}
+                isReadOnly={isTeacherView}
               />
             );
           })}

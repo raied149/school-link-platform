@@ -84,7 +84,8 @@ export function AcademicYearTabs({
         <AcademicYearFormDialog
           open={isCreatingYear}
           onOpenChange={setIsCreatingYear}
-          onSubmit={onYearCreate}
+          onSave={onYearCreate}
+          existingYears={academicYears}
         />
       )}
     </div>

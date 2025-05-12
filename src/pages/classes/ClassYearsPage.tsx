@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -66,40 +65,41 @@ export default function ClassYearsPage() {
         const { data: teacherSections, error: sectionsError } = await supabase
           .from('timetable')
           .select('section_id')
-          .eq('teacher_id', user.id)
-          .distinct();
+          .eq('teacher_id', user.id);
           
         if (sectionsError) {
           console.error("Error fetching teacher sections:", sectionsError);
           throw sectionsError;
         }
         
-        if (!teacherSections?.length) {
+        // Get unique section IDs
+        const sectionIds = [...new Set(teacherSections?.map(item => item.section_id) || [])];
+        
+        if (!sectionIds.length) {
           console.log("No sections assigned to this teacher");
           return [];
         }
         
-        const sectionIds = teacherSections.map(item => item.section_id);
         console.log("Teacher is assigned to sections:", sectionIds);
         
         // Get class IDs from these sections
         const { data: sections, error: classError } = await supabase
           .from('sections')
           .select('class_id')
-          .in('id', sectionIds)
-          .distinct();
+          .in('id', sectionIds);
           
         if (classError) {
           console.error("Error fetching class IDs:", classError);
           throw classError;
         }
         
-        if (!sections?.length) {
+        // Get unique class IDs
+        const classIds = [...new Set(sections?.map(item => item.class_id) || [])];
+        
+        if (!classIds.length) {
           console.log("No classes found for teacher's sections");
           return [];
         }
-        
-        const classIds = sections.map(item => item.class_id);
         
         // Get class data
         const { data, error } = await supabase

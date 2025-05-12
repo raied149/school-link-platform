@@ -96,6 +96,6 @@ const TeacherAttendancePage = () => {
       </Card>
     </div>
   );
-};
+}
 
 export default TeacherAttendancePage;

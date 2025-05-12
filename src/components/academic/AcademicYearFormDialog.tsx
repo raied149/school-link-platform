@@ -14,8 +14,8 @@ interface AcademicYearFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (yearData: Partial<AcademicYear>) => Promise<void>;
   yearData?: AcademicYear;
-  mode: 'create' | 'edit';
-  existingYears: AcademicYear[];
+  mode?: 'create' | 'edit';
+  existingYears?: AcademicYear[];
 }
 
 export function AcademicYearFormDialog({ 
@@ -23,8 +23,8 @@ export function AcademicYearFormDialog({
   onOpenChange, 
   onSave, 
   yearData, 
-  mode,
-  existingYears
+  mode = 'create',
+  existingYears = []
 }: AcademicYearFormDialogProps) {
   const [formData, setFormData] = useState<Partial<AcademicYear>>(
     yearData || { 

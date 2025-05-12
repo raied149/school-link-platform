@@ -167,14 +167,14 @@ export function ClassesList({
           <ClassFormDialog
             open={isCreateOpen}
             onOpenChange={setIsCreateOpen}
-            onSubmit={handleCreateClass}
+            onSave={handleCreateClass}
             isSubmitting={isSubmitting}
           />
           {selectedClass && (
             <ClassFormDialog
               open={isEditOpen}
               onOpenChange={setIsEditOpen}
-              onSubmit={handleUpdateClass}
+              onSave={handleUpdateClass}
               isSubmitting={isSubmitting}
               existingClass={selectedClass}
             />

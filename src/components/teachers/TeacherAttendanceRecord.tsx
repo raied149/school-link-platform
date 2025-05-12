@@ -1,65 +1,123 @@
 
+import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LogIn, LogOut } from "lucide-react";
+import { Check, Clock, X } from "lucide-react";
+import { format } from "date-fns";
 
-interface TeacherAttendanceStatus {
-  status: 'present' | 'absent' | 'not-marked';
-  checkIn: string | null;
-  checkOut: string | null;
-}
-
-interface TeacherAttendanceRecordProps {
+interface TeacherAttendanceProps {
   teacherId: string;
   teacherName: string;
-  attendance: TeacherAttendanceStatus;
+  attendance: {
+    status: "present" | "absent" | "not-marked";
+    checkIn: string | null;
+    checkOut: string | null;
+  };
   onCheckIn: (teacherId: string) => void;
   onCheckOut: (teacherId: string) => void;
   onMarkAbsent: (teacherId: string) => void;
+  isReadOnly?: boolean;
 }
 
-export function TeacherAttendanceRecord({ 
-  teacherId, 
-  teacherName, 
-  attendance, 
-  onCheckIn, 
-  onCheckOut, 
-  onMarkAbsent 
-}: TeacherAttendanceRecordProps) {
+export function TeacherAttendanceRecord({
+  teacherId,
+  teacherName,
+  attendance,
+  onCheckIn,
+  onCheckOut,
+  onMarkAbsent,
+  isReadOnly = false
+}: TeacherAttendanceProps) {
+  const formatTime = (time: string | null) => {
+    if (!time) return "--:--";
+    try {
+      // Assuming time is in format HH:MM:SS
+      const [hours, minutes] = time.split(":");
+      return `${hours}:${minutes}`;
+    } catch (error) {
+      return time;
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (attendance.status) {
+      case "present":
+        return "bg-green-100 text-green-800";
+      case "absent":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusText = () => {
+    switch (attendance.status) {
+      case "present":
+        return "Present";
+      case "absent":
+        return "Absent";
+      default:
+        return "Not Marked";
+    }
+  };
+
   return (
-    <tr className="border-b">
-      <td className="p-4">{teacherName}</td>
-      <td className="p-4">
-        {attendance.status === 'present' ? (
-          <Badge variant="outline" className="bg-green-50 text-green-600">Present</Badge>
-        ) : attendance.status === 'absent' ? (
-          <Badge variant="outline" className="bg-red-50 text-red-600">Absent</Badge>
+    <TableRow>
+      <TableCell className="font-medium">{teacherName}</TableCell>
+      <TableCell>
+        <span
+          className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor()}`}
+        >
+          {getStatusText()}
+        </span>
+      </TableCell>
+      <TableCell>
+        {attendance.checkIn
+          ? format(new Date(`2000-01-01T${attendance.checkIn}`), "h:mm a")
+          : "--"}
+      </TableCell>
+      <TableCell>
+        {attendance.checkOut
+          ? format(new Date(`2000-01-01T${attendance.checkOut}`), "h:mm a")
+          : "--"}
+      </TableCell>
+      <TableCell>
+        {isReadOnly ? (
+          <span className="text-xs text-muted-foreground">No actions available</span>
         ) : (
-          <Badge variant="outline" className="bg-gray-50 text-gray-600">Not marked</Badge>
+          <div className="flex space-x-2">
+            <Button
+              size="sm"
+              variant={attendance.status === "present" ? "default" : "outline"}
+              onClick={() => onCheckIn(teacherId)}
+              className="flex items-center"
+              disabled={attendance.checkIn !== null}
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              In
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onCheckOut(teacherId)}
+              className="flex items-center"
+              disabled={
+                attendance.status !== "present" || attendance.checkIn === null
+              }
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              Out
+            </Button>
+            <Button
+              size="sm"
+              variant={attendance.status === "absent" ? "destructive" : "outline"}
+              onClick={() => onMarkAbsent(teacherId)}
+              className="flex items-center"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         )}
-      </td>
-      <td className="p-4">{attendance.checkIn ? new Date(`2000-01-01T${attendance.checkIn}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}</td>
-      <td className="p-4">{attendance.checkOut ? new Date(`2000-01-01T${attendance.checkOut}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}</td>
-      <td className="p-4">
-        <div className="flex gap-2">
-          {attendance.status !== 'present' ? (
-            <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700" onClick={() => onCheckIn(teacherId)}>
-              <LogIn className="mr-2 h-4 w-4" />
-              Check In
-            </Button>
-          ) : !attendance.checkOut ? (
-            <Button size="sm" variant="outline" className="text-purple-600 hover:text-purple-700" onClick={() => onCheckOut(teacherId)}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Check Out
-            </Button>
-          ) : null}
-          {attendance.status !== 'absent' && (
-            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => onMarkAbsent(teacherId)}>
-              Absent
-            </Button>
-          )}
-        </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

@@ -35,16 +35,17 @@ interface ClassFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (classData: Partial<Class>) => Promise<void>;
-  classData?: Class;
-  mode: 'create' | 'edit';
+  isSubmitting?: boolean;
+  existingClass?: Class;
 }
 
-export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }: ClassFormDialogProps) {
+export function ClassFormDialog({ open, onOpenChange, onSave, isSubmitting = false, existingClass }: ClassFormDialogProps) {
   const [formData, setFormData] = useState<Partial<Class>>(
-    classData || { name: '', level: 1 }
+    existingClass || { name: '', level: 1 }
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
+  const mode = existingClass ? 'edit' : 'create';
 
   const handleGradeChange = (value: string) => {
     const level = value === 'LKG' ? 0 : value === 'UKG' ? 0.5 : parseInt(value);
@@ -69,7 +70,6 @@ export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }:
     }
     
     try {
-      setIsSubmitting(true);
       await onSave(formData);
       toast({
         title: `Class ${mode === 'create' ? 'Created' : 'Updated'}`,
@@ -82,8 +82,6 @@ export function ClassFormDialog({ open, onOpenChange, onSave, classData, mode }:
         description: `Failed to ${mode} class. Please try again.`,
         variant: "destructive"
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
