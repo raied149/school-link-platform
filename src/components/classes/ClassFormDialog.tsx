@@ -37,15 +37,29 @@ interface ClassFormDialogProps {
   onSave: (classData: Partial<Class>) => Promise<void>;
   isSubmitting?: boolean;
   existingClass?: Class;
+  mode?: 'create' | 'edit'; // Added mode prop
+  classData?: Class; // Added classData prop for compatibility
 }
 
-export function ClassFormDialog({ open, onOpenChange, onSave, isSubmitting = false, existingClass }: ClassFormDialogProps) {
+export function ClassFormDialog({ 
+  open, 
+  onOpenChange, 
+  onSave, 
+  isSubmitting = false, 
+  existingClass, 
+  mode: propMode,
+  classData 
+}: ClassFormDialogProps) {
+  // Use either explicitly provided class data or existingClass
+  const classToEdit = classData || existingClass;
+  
   const [formData, setFormData] = useState<Partial<Class>>(
-    existingClass || { name: '', level: 1 }
+    classToEdit || { name: '', level: 1 }
   );
   const { toast } = useToast();
   
-  const mode = existingClass ? 'edit' : 'create';
+  // Determine mode from props or based on whether we have existing data
+  const mode = propMode || (classToEdit ? 'edit' : 'create');
 
   const handleGradeChange = (value: string) => {
     const level = value === 'LKG' ? 0 : value === 'UKG' ? 0.5 : parseInt(value);

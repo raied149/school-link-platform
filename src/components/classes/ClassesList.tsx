@@ -1,4 +1,3 @@
-
 import { Class } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash, EyeIcon, School } from "lucide-react";

@@ -322,7 +322,7 @@ const ClassesPage = () => {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSave={handleCreateClass}
-        mode="create"
+        isSubmitting={createMutation.isPending}
       />
       
       {selectedClass && (
@@ -330,8 +330,8 @@ const ClassesPage = () => {
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           onSave={handleUpdateClass}
-          classData={selectedClass}
-          mode="edit"
+          existingClass={selectedClass}
+          isSubmitting={updateMutation.isPending}
         />
       )}
       
