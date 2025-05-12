@@ -54,7 +54,7 @@ const MainLayout = () => {
         <div className="border-b p-4">
           <div className="flex items-center gap-2 mb-2">
             <img 
-              src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
+              src="/lovable-uploads/4567f9ca-ee69-4eae-8105-c08313459a06.png" 
               alt="SlateEd Logo" 
               className="h-10 w-auto" 
             />

@@ -14,7 +14,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-3 mb-4">
             <img 
-              src="/lovable-uploads/9811b7b8-6807-4171-b356-47e999d902e9.png" 
+              src="/lovable-uploads/4567f9ca-ee69-4eae-8105-c08313459a06.png" 
               alt="SlateEd Logo" 
               className="h-16 w-auto" 
             />
