@@ -1,148 +1,60 @@
 
-import { useState, useEffect } from 'react';
+import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
 import { AcademicYear } from "@/types/academic-year";
-import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-interface AcademicYearFormDialogProps {
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  isActive: z.boolean().optional()
+});
+
+export interface AcademicYearFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (yearData: Partial<AcademicYear>) => Promise<void>;
-  yearData?: AcademicYear;
-  mode?: 'create' | 'edit';
+  onSave: (year: Partial<AcademicYear>) => Promise<void>;
   existingYears?: AcademicYear[];
 }
 
-export function AcademicYearFormDialog({ 
-  open, 
-  onOpenChange, 
-  onSave, 
-  yearData, 
-  mode = 'create',
+export function AcademicYearFormDialog({
+  open,
+  onOpenChange,
+  onSave,
   existingYears = []
 }: AcademicYearFormDialogProps) {
-  const [formData, setFormData] = useState<Partial<AcademicYear>>(
-    yearData || { 
-      name: '', 
-      startDate: format(new Date(), 'yyyy-MM-dd'),
-      endDate: format(new Date(new Date().getFullYear(), 11, 31), 'yyyy-MM-dd'),
-      isActive: false 
-    }
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
-  // Reset form when dialog opens/closes or yearData changes
-  useEffect(() => {
-    if (open && yearData && mode === 'edit') {
-      setFormData({
-        ...yearData,
-        startDate: yearData.startDate.substring(0, 10),
-        endDate: yearData.endDate.substring(0, 10)
-      });
-    } else if (open && mode === 'create') {
-      setFormData({ 
-        name: '', 
-        startDate: format(new Date(), 'yyyy-MM-dd'),
-        endDate: format(new Date(new Date().getFullYear(), 11, 31), 'yyyy-MM-dd'),
-        isActive: false 
-      });
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
+      isActive: existingYears.length === 0 ? true : false
     }
-  }, [open, yearData, mode]);
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      isActive: checked
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.name) {
-      toast({
-        title: "Validation Error",
-        description: "Academic year name is required",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    if (!formData.startDate) {
-      toast({
-        title: "Validation Error",
-        description: "Start date is required",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    if (!formData.endDate) {
-      toast({
-        title: "Validation Error",
-        description: "End date is required",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    if (new Date(formData.startDate) >= new Date(formData.endDate)) {
-      toast({
-        title: "Validation Error",
-        description: "Start date must be before end date",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    // Check for name collision
-    const nameExists = existingYears.some(
-      year => year.name === formData.name && year.id !== (yearData?.id ?? '')
-    );
-    
-    if (nameExists) {
-      toast({
-        title: "Validation Error",
-        description: "An academic year with this name already exists",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await onSave(formData);
-      toast({
-        title: `Academic Year ${mode === 'create' ? 'Created' : 'Updated'}`,
-        description: `${formData.name} has been ${mode === 'create' ? 'added' : 'updated'} successfully.`
+      await onSave({
+        name: values.name,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        isActive: values.isActive || false
       });
+      form.reset();
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to ${mode} academic year. Please try again.`,
-        variant: "destructive"
-      });
+      console.error("Failed to save academic year:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -152,69 +64,80 @@ export function AcademicYearFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Add New Academic Year' : 'Edit Academic Year'}</DialogTitle>
+          <DialogTitle>Add Academic Year</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Academic Year Name *</Label>
-            <Input
-              id="name"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
               name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="e.g., 2023-2024"
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="2025-2026" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date *</Label>
-            <Input
-              id="startDate"
+            <FormField
+              control={form.control}
               name="startDate"
-              type="date"
-              value={formData.startDate}
-              onChange={handleChange}
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="endDate">End Date *</Label>
-            <Input
-              id="endDate"
+            <FormField
+              control={form.control}
               name="endDate"
-              type="date"
-              value={formData.endDate}
-              onChange={handleChange}
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="isActive" 
-              checked={formData.isActive} 
-              onCheckedChange={handleSwitchChange}
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Set as Active Year</FormLabel>
+                  </div>
+                </FormItem>
+              )}
             />
-            <Label htmlFor="isActive">Set as Active Academic Year</Label>
-          </div>
-          
-          {formData.isActive && existingYears.some(y => y.isActive && y.id !== (yearData?.id ?? '')) && (
-            <p className="text-sm text-amber-500">
-              Note: Setting this as active will deactivate the current active academic year.
-            </p>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Year' : 'Update Year'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

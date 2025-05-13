@@ -1,165 +1,233 @@
 
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getStudentsInSection, saveStudentExamResult, bulkSaveStudentExamResults } from "@/services/examService";
 import { useToast } from "@/hooks/use-toast";
-import { getStudentExamResults, bulkSaveStudentExamResults } from "@/services/examService";
 
-interface Stats {
+// Stats interface
+export interface Stats {
+  min: number;
+  max: number;
   avg: number;
-  highest: number;
-  lowest: number;
-  pass: number;
+  passCount: number;
+  failCount: number;
+  passPercentage: number;
 }
 
-export function useMarkEntry(
-  examId: string, 
-  sectionId: string, 
-  maxMarks: number,
-  onMarksUpdated?: () => void
-) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [students, setStudents] = useState<any[]>([]);
+export function useMarkEntry(examId: string) {
+  const [selectedSection, setSelectedSection] = useState<string>("");
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [originalMarks, setOriginalMarks] = useState<Record<string, number>>({});
+  const [originalFeedback, setOriginalFeedback] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
-
+  const { toast } = useToast();
+  
+  const {
+    data: students = [],
+    isLoading,
+    refetch
+  } = useQuery({
+    queryKey: ['students', examId, selectedSection],
+    queryFn: () => selectedSection ? getStudentsInSection(examId, selectedSection) : Promise.resolve([]),
+    enabled: !!selectedSection
+  });
+  
+  // Initialize marks and feedback when students data changes
   useEffect(() => {
-    const fetchStudentResults = async () => {
-      setIsLoading(true);
-      try {
-        // Don't fetch if sectionId is "all-sections"
-        if (sectionId === "all-sections") {
-          setStudents([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        const data = await getStudentExamResults(examId, sectionId);
-        setStudents(data);
-        
-        // Initialize marks and feedback from existing data
-        const initialMarks: Record<string, number> = {};
-        const initialFeedback: Record<string, string> = {};
-        
-        data.forEach((item) => {
-          if (item.result) {
-            initialMarks[item.student.id] = item.result.marks_obtained;
-            initialFeedback[item.student.id] = item.result.feedback || '';
-          } else {
-            initialMarks[item.student.id] = 0;
-            initialFeedback[item.student.id] = '';
-          }
-        });
-        
-        setMarks(initialMarks);
-        setFeedback(initialFeedback);
-      } catch (error) {
-        console.error("Error fetching student results:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load student list. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (examId && sectionId) {
-      fetchStudentResults();
-    }
-  }, [examId, sectionId, toast]);
-
-  const handleMarkChange = (studentId: string, value: string) => {
-    const numValue = Number(value);
-    // Validate the input
-    if (numValue < 0) {
-      setMarks({...marks, [studentId]: 0});
-    } else if (numValue > maxMarks) {
-      setMarks({...marks, [studentId]: maxMarks});
-    } else {
-      setMarks({...marks, [studentId]: numValue});
-    }
-    setHasChanges(true);
-    setSaveSuccess(false);
-  };
-
-  const handleFeedbackChange = (studentId: string, value: string) => {
-    setFeedback({...feedback, [studentId]: value});
-    setHasChanges(true);
-    setSaveSuccess(false);
-  };
-
-  const handleSave = async () => {
-    if (!hasChanges) return;
-
-    setIsSaving(true);
-    
-    try {
-      // Prepare data for bulk save
-      const resultsToSave = students.map((student) => ({
-        exam_id: examId,
-        student_id: student.student.id,
-        marks_obtained: marks[student.student.id] || 0,
-        feedback: feedback[student.student.id] || undefined
-      }));
-
-      await bulkSaveStudentExamResults(resultsToSave);
+    if (students && students.length > 0) {
+      const newMarks: Record<string, number> = {};
+      const newFeedback: Record<string, string> = {};
       
-      toast({
-        title: "Success",
-        description: "Student marks have been saved successfully.",
+      students.forEach((student: any) => {
+        const result = student.result || {};
+        newMarks[student.student.id] = result.marks_obtained || 0;
+        newFeedback[student.student.id] = result.feedback || '';
       });
       
-      setHasChanges(false);
-      setSaveSuccess(true);
-      
-      if (onMarksUpdated) {
-        onMarksUpdated();
-      }
-    } catch (error) {
-      console.error("Error saving student marks:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save student marks. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      setMarks(newMarks);
+      setFeedback(newFeedback);
+      setOriginalMarks({...newMarks});
+      setOriginalFeedback({...newFeedback});
+      setSaveSuccess(false);
     }
-  };
+  }, [students]);
+
+  // Check if changes have been made
+  const hasChanges = JSON.stringify(marks) !== JSON.stringify(originalMarks) || 
+                    JSON.stringify(feedback) !== JSON.stringify(originalFeedback);
 
   // Calculate stats
   const calculateStats = (): Stats => {
-    if (!students.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
+    if (!students || students.length === 0) {
+      return {
+        min: 0,
+        max: 0,
+        avg: 0,
+        passCount: 0,
+        failCount: 0,
+        passPercentage: 0
+      };
+    }
     
-    const markValues = Object.values(marks).filter(mark => mark > 0);
-    if (!markValues.length) return { avg: 0, highest: 0, lowest: 0, pass: 0 };
+    const allMarks = Object.values(marks);
+    if (allMarks.length === 0) return { min: 0, max: 0, avg: 0, passCount: 0, failCount: 0, passPercentage: 0 };
     
-    const avg = markValues.reduce((sum, mark) => sum + mark, 0) / markValues.length;
-    const highest = Math.max(...markValues);
-    const lowest = Math.min(...markValues);
-    const passPercentage = 40; // Pass threshold percentage
-    const passThreshold = (maxMarks * passPercentage) / 100;
-    const passCount = markValues.filter(mark => mark >= passThreshold).length;
-    const pass = markValues.length ? (passCount / markValues.length) * 100 : 0;
+    // Get the maximum possible score from the first student's exam
+    const maxScore = students[0].exam?.max_score || 100;
+    const passMark = maxScore * 0.4; // Assume 40% is passing mark
     
-    return { avg, highest, lowest, pass };
+    const min = Math.min(...allMarks);
+    const max = Math.max(...allMarks);
+    const sum = allMarks.reduce((a, b) => a + b, 0);
+    const avg = allMarks.length > 0 ? sum / allMarks.length : 0;
+    
+    const passCount = allMarks.filter(mark => mark >= passMark).length;
+    const failCount = allMarks.filter(mark => mark < passMark).length;
+    const passPercentage = allMarks.length > 0 ? (passCount / allMarks.length) * 100 : 0;
+    
+    return {
+      min,
+      max,
+      avg,
+      passCount,
+      failCount,
+      passPercentage
+    };
+  };
+  
+  const stats = calculateStats();
+  
+  // Handle mark changes
+  const handleMarkChange = (studentId: string, value: string) => {
+    const numValue = parseFloat(value);
+    const newMarks = { ...marks };
+    
+    if (!isNaN(numValue)) {
+      newMarks[studentId] = numValue;
+    } else {
+      newMarks[studentId] = 0;
+    }
+    
+    setMarks(newMarks);
+    setSaveSuccess(false);
+  };
+
+  // Handle feedback changes
+  const handleFeedbackChange = (studentId: string, value: string) => {
+    const newFeedback = { ...feedback };
+    newFeedback[studentId] = value;
+    setFeedback(newFeedback);
+    setSaveSuccess(false);
+  };
+  
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: { studentId: string; mark: number; feedback: string }) => {
+      return saveStudentExamResult(examId, data.studentId, data.mark, data.feedback);
+    }
+  });
+
+  // Bulk save mutation
+  const bulkSaveMutation = useMutation({
+    mutationFn: async (data: { 
+      examId: string; 
+      results: { studentId: string; mark: number; feedback: string }[] 
+    }) => {
+      return bulkSaveStudentExamResults(data.examId, data.results);
+    }
+  });
+
+  // Handle saving marks and feedback
+  const handleSave = async () => {
+    if (!hasChanges) return;
+    
+    try {
+      // Prepare data for bulk save
+      const results = Object.keys(marks).map(studentId => ({
+        studentId,
+        mark: marks[studentId],
+        feedback: feedback[studentId] || ''
+      }));
+      
+      await bulkSaveMutation.mutateAsync({ examId, results });
+      
+      // Update original values to match current values
+      setOriginalMarks({...marks});
+      setOriginalFeedback({...feedback});
+      setSaveSuccess(true);
+      
+      // Show success toast
+      toast({
+        title: "Success",
+        description: "Marks saved successfully",
+      });
+      
+      // Call callback
+      onMarksUpdated();
+      
+    } catch (error) {
+      console.error("Error saving marks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save marks. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Function to update a single student's mark
+  const updateSingleMark = async (studentId: string, mark: number, studentFeedback: string) => {
+    try {
+      await saveMutation.mutateAsync({ 
+        studentId, 
+        mark, 
+        feedback: studentFeedback 
+      });
+      
+      // Update original values
+      setOriginalMarks((prev) => ({...prev, [studentId]: mark}));
+      setOriginalFeedback((prev) => ({...prev, [studentId]: studentFeedback}));
+      
+      toast({
+        title: "Success",
+        description: "Mark updated successfully",
+      });
+      
+      // Call callback
+      onMarksUpdated();
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating mark:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update mark. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+  
+  const onMarksUpdated = () => {
+    refetch();
   };
 
   return {
     isLoading,
-    isSaving,
+    isSaving: saveMutation.isPending || bulkSaveMutation.isPending,
     students,
     marks,
     feedback,
     hasChanges,
     saveSuccess,
-    stats: calculateStats(),
+    stats,
     handleMarkChange,
     handleFeedbackChange,
-    handleSave
+    handleSave,
+    updateSingleMark,
+    selectedSection,
+    setSelectedSection,
+    onMarksUpdated
   };
 }

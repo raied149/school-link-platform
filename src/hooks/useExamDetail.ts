@@ -21,7 +21,12 @@ export function useExamDetail(examId: string | undefined) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const { data: exam, isLoading: isLoadingExam, refetch: refetchExam } = useQuery({
+  const { 
+    data: exam, 
+    isLoading, 
+    refetch: refetchExam,
+    error 
+  } = useQuery({
     queryKey: ['exam', examId],
     queryFn: () => examId ? getExamById(examId) : null,
     enabled: !!examId
@@ -80,7 +85,7 @@ export function useExamDetail(examId: string | undefined) {
       })) : [];
 
   // Handle successful mark entry
-  const handleMarksUpdated = () => {
+  const onMarksUpdated = () => {
     refetchResults();
     toast({
       title: "Marks Updated",
@@ -89,6 +94,11 @@ export function useExamDetail(examId: string | undefined) {
   };
 
   // Handle successful exam edit
+  const onEditExam = () => {
+    setEditDialogOpen(true);
+  };
+
+  // Handle exam update
   const handleExamUpdated = () => {
     refetchExam();
     refetchAssignments();
@@ -178,11 +188,13 @@ export function useExamDetail(examId: string | undefined) {
     deleteDialogOpen,
     setDeleteDialogOpen,
     isDeleting,
-    isLoadingExam,
+    isLoading,
     isLoadingAssignments,
     isLoadingResults,
     assignmentsError,
-    handleMarksUpdated,
+    error,
+    onMarksUpdated,
+    onEditExam,
     handleExamUpdated,
     handleDeleteExam,
     exportResultsAsCSV,

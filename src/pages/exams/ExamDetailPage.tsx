@@ -17,20 +17,9 @@ const ExamDetailPage = () => {
   const { user } = useAuth();
   const isStudentView = user?.role === 'student';
   
-  const {
-    exam,
-    isLoading,
-    error,
-    availableSections,
-    onEditExam
-  } = useExamDetail(examId!);
-
-  const {
-    selectedSection,
-    setSelectedSection,
-    onMarksUpdated
-  } = useMarkEntry(examId!);
-
+  const examDetail = useExamDetail(examId!);
+  const markEntry = useMarkEntry(examId!);
+  
   // If student view, fetch only the student's results for this exam
   const { data: studentResults = [], isLoading: resultsLoading } = useQuery({
     queryKey: ['student-exam-results', examId, user?.id],
@@ -66,21 +55,21 @@ const ExamDetailPage = () => {
     enabled: isStudentView && !!user?.id && !!examId
   });
 
-  if (isLoading) {
+  if (examDetail.isLoading) {
     return <div className="p-8 text-center">Loading exam details...</div>;
   }
 
-  if (error || !exam) {
+  if (examDetail.error || !examDetail.exam) {
     return (
       <div className="p-8 text-center text-destructive">
-        Error loading exam details: {error instanceof Error ? error.message : 'Unknown error'}
+        Error loading exam details: {examDetail.error instanceof Error ? examDetail.error.message : 'Unknown error'}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <ExamHeader exam={exam} onEditClick={onEditExam} isStudentView={isStudentView} />
+      <ExamHeader exam={examDetail.exam} onEditClick={examDetail.onEditExam} isStudentView={isStudentView} />
       
       <Card className="p-6">
         {isStudentView ? (
@@ -97,19 +86,19 @@ const ExamDetailPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Exam</h3>
-                    <p className="text-lg font-semibold">{exam.name}</p>
+                    <p className="text-lg font-semibold">{examDetail.exam.name}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Subject</h3>
-                    <p className="text-lg">{exam.subjects?.name || 'Not specified'}</p>
+                    <p className="text-lg">{examDetail.exam.subjects?.name || 'Not specified'}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Date</h3>
-                    <p className="text-lg">{format(new Date(exam.date), 'MMMM d, yyyy')}</p>
+                    <p className="text-lg">{format(new Date(examDetail.exam.date), 'MMMM d, yyyy')}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Max Score</h3>
-                    <p className="text-lg">{exam.max_score}</p>
+                    <p className="text-lg">{examDetail.exam.max_score}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Your Score</h3>
@@ -119,7 +108,7 @@ const ExamDetailPage = () => {
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Percentage</h3>
                     <p className="text-lg">
                       {studentResults[0]?.marks_obtained
-                        ? `${Math.round((studentResults[0].marks_obtained / exam.max_score) * 100)}%`
+                        ? `${Math.round((studentResults[0].marks_obtained / examDetail.exam.max_score) * 100)}%`
                         : 'Not graded yet'}
                     </p>
                   </div>
@@ -148,12 +137,12 @@ const ExamDetailPage = () => {
             <TabsContent value="mark-entry">
               <MarkEntrySection 
                 examId={examId!}
-                exam={exam}
-                availableSections={availableSections}
-                selectedSection={selectedSection}
-                setSelectedSection={setSelectedSection}
-                onMarksUpdated={onMarksUpdated}
-                onEditClick={onEditExam}
+                exam={examDetail.exam}
+                availableSections={examDetail.availableSections}
+                selectedSection={markEntry.selectedSection}
+                setSelectedSection={markEntry.setSelectedSection}
+                onMarksUpdated={markEntry.onMarksUpdated}
+                onEditClick={examDetail.onEditExam}
               />
             </TabsContent>
           </Tabs>

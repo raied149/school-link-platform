@@ -26,7 +26,7 @@ interface TeacherTableProps {
     globalSearch: string;
   };
   isTeacherView?: boolean;
-  currentUserId?: string;
+  isStudentView?: boolean;
 }
 
 // Define the structure for the professional info from the database
@@ -54,7 +54,19 @@ interface EmergencyContact {
   phone?: string;
 }
 
-export function TeacherTable({ searchFilters, isTeacherView = false, currentUserId }: TeacherTableProps) {
+export function TeacherTable({
+  searchFilters,
+  isTeacherView = false,
+  isStudentView = false
+}: {
+  searchFilters: {
+    idSearch: string;
+    nameSearch: string;
+    globalSearch: string;
+  };
+  isTeacherView?: boolean;
+  isStudentView?: boolean;
+}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
