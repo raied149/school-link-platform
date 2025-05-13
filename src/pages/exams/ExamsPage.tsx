@@ -9,10 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 import { getAllExams } from "@/services/exam/examApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 const ExamsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [examDialogOpen, setExamDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isStudent = user?.role === 'student';
 
   // Fetch exams
   const { data: exams = [], isLoading } = useQuery({
@@ -31,16 +36,26 @@ const ExamsPage = () => {
 
   const handleDialogOpenChange = (success: boolean) => {
     setExamDialogOpen(false);
+    
+    // Show success message if exam was created successfully
+    if (success) {
+      toast({
+        title: "Success",
+        description: "Exam was created successfully",
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Exams</h1>
-        <Button onClick={() => setExamDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Exam
-        </Button>
+        {!isStudent && (
+          <Button onClick={() => setExamDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Exam
+          </Button>
+        )}
       </div>
 
       <Card className="p-6">
@@ -114,11 +129,13 @@ const ExamsPage = () => {
         )}
       </Card>
       
-      {/* Form Dialogs */}
-      <TestExamFormDialog
-        open={examDialogOpen}
-        onOpenChange={(success) => handleDialogOpenChange(success)}
-      />
+      {/* Form Dialogs - Only render if user is not a student */}
+      {!isStudent && (
+        <TestExamFormDialog
+          open={examDialogOpen}
+          onOpenChange={(success) => handleDialogOpenChange(success)}
+        />
+      )}
     </div>
   );
 };
