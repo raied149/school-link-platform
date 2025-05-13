@@ -1,6 +1,6 @@
 
-// Re-export from more focused modules
-export {
+// Import all functions from their respective modules
+import {
   getAllExams,
   getExamById,
   createExam,
@@ -8,19 +8,36 @@ export {
   deleteExam
 } from './exam/examApi';
 
-export {
+import {
   assignExamToSections,
   getExamAssignments,
   getExamsForSection
 } from './exam/assignmentApi';
 
-export {
+import {
   getStudentExams,
   getStudentsInSection,
   getStudentExamResults,
   saveStudentExamResult,
   bulkSaveStudentExamResults
 } from './exam/resultApi';
+
+// Re-export the individual functions
+export {
+  getAllExams,
+  getExamById,
+  createExam,
+  updateExam,
+  deleteExam,
+  assignExamToSections,
+  getExamAssignments,
+  getExamsForSection,
+  getStudentExams,
+  getStudentsInSection,
+  getStudentExamResults,
+  saveStudentExamResult,
+  bulkSaveStudentExamResults
+};
 
 // Create examService object for backwards compatibility
 const examService = {
