@@ -422,76 +422,94 @@ export type Database = {
           },
         ]
       }
-      incident_involved: {
+      incident_involved_persons: {
         Row: {
+          id: string
           incident_id: string
-          profile_id: string
+          role: string
+          user_id: string
         }
         Insert: {
+          id?: string
           incident_id: string
-          profile_id: string
+          role: string
+          user_id: string
         }
         Update: {
+          id?: string
           incident_id?: string
-          profile_id?: string
+          role?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "incident_involved_incident_id_fkey"
+            foreignKeyName: "incident_involved_persons_incident_id_fkey"
             columns: ["incident_id"]
             isOneToOne: false
             referencedRelation: "incidents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "incident_involved_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
       incidents: {
         Row: {
+          assigned_to: string | null
           created_at: string
           date: string
-          description: string | null
+          description: string
           id: string
-          reported_by: string | null
-          severity: string | null
-          status: string | null
+          investigation_notes: string | null
+          location: string
+          reported_by: string
+          resolution_date: string | null
+          resolution_details: string | null
+          severity: string
+          status: string
+          sub_type: string | null
+          time: string
           title: string
+          type: string
+          updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           created_at?: string
           date: string
-          description?: string | null
+          description: string
           id?: string
-          reported_by?: string | null
-          severity?: string | null
-          status?: string | null
+          investigation_notes?: string | null
+          location: string
+          reported_by: string
+          resolution_date?: string | null
+          resolution_details?: string | null
+          severity: string
+          status: string
+          sub_type?: string | null
+          time: string
           title: string
+          type: string
+          updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           created_at?: string
           date?: string
-          description?: string | null
+          description?: string
           id?: string
-          reported_by?: string | null
-          severity?: string | null
-          status?: string | null
+          investigation_notes?: string | null
+          location?: string
+          reported_by?: string
+          resolution_date?: string | null
+          resolution_details?: string | null
+          severity?: string
+          status?: string
+          sub_type?: string | null
+          time?: string
           title?: string
+          type?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "incidents_reported_by_fkey"
-            columns: ["reported_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       note_classes: {
         Row: {
@@ -689,92 +707,6 @@ export type Database = {
           id?: string
           last_name?: string
           role?: Database["public"]["Enums"]["user_role"]
-        }
-        Relationships: []
-      }
-      school_incident_involved: {
-        Row: {
-          incident_id: string
-          role: string
-          user_id: string
-        }
-        Insert: {
-          incident_id: string
-          role: string
-          user_id: string
-        }
-        Update: {
-          incident_id?: string
-          role?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "school_incident_involved_incident_id_fkey"
-            columns: ["incident_id"]
-            isOneToOne: false
-            referencedRelation: "school_incidents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      school_incidents: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          date: string
-          description: string
-          id: string
-          investigation_notes: string | null
-          location: string
-          reported_by: string | null
-          resolution_date: string | null
-          resolution_details: string | null
-          severity: string
-          status: string
-          sub_type: string | null
-          time: string
-          title: string
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          date: string
-          description: string
-          id?: string
-          investigation_notes?: string | null
-          location: string
-          reported_by?: string | null
-          resolution_date?: string | null
-          resolution_details?: string | null
-          severity: string
-          status: string
-          sub_type?: string | null
-          time: string
-          title: string
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          date?: string
-          description?: string
-          id?: string
-          investigation_notes?: string | null
-          location?: string
-          reported_by?: string | null
-          resolution_date?: string | null
-          resolution_details?: string | null
-          severity?: string
-          status?: string
-          sub_type?: string | null
-          time?: string
-          title?: string
-          type?: string
-          updated_at?: string
         }
         Relationships: []
       }

@@ -1,3 +1,4 @@
+
 import { Incident, IncidentStatus, IncidentType, IncidentSeverity } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
@@ -13,59 +14,71 @@ const isValidUUID = (id: string): boolean => {
 export { MOCK_USER_ID };
 
 // Map database records to Incident objects
-const mapDbToIncident = (incident: any): Incident => ({
-  id: incident.id,
-  title: incident.title,
-  date: incident.date,
-  time: incident.time,
-  location: incident.location,
-  type: incident.type as IncidentType,
-  subType: incident.sub_type || undefined,
-  description: incident.description,
-  severity: incident.severity as IncidentSeverity,
-  status: incident.status as IncidentStatus,
-  reportedBy: incident.reported_by || undefined,
-  assignedTo: incident.assigned_to || undefined,
-  investigationNotes: incident.investigation_notes || undefined,
-  resolutionDetails: incident.resolution_details || undefined,
-  resolutionDate: incident.resolution_date || undefined,
-  involvedPersons: (incident.school_incident_involved || []).map(person => ({
-    userId: person.user_id,
-    role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
-  })),
-  createdAt: incident.created_at,
-  updatedAt: incident.updated_at,
-});
+const mapDbToIncident = (incident: any): Incident => {
+  return {
+    id: incident.id,
+    title: incident.title,
+    date: incident.date,
+    time: incident.time,
+    location: incident.location,
+    type: incident.type as IncidentType,
+    subType: incident.sub_type || undefined,
+    description: incident.description,
+    severity: incident.severity as IncidentSeverity,
+    status: incident.status as IncidentStatus,
+    reportedBy: incident.reported_by,
+    assignedTo: incident.assigned_to || undefined,
+    investigationNotes: incident.investigation_notes || undefined,
+    resolutionDetails: incident.resolution_details || undefined,
+    resolutionDate: incident.resolution_date || undefined,
+    involvedPersons: incident.involved_persons ? incident.involved_persons.map((person: any) => ({
+      userId: person.user_id,
+      role: person.role as "student" | "teacher" | "staff" | "visitor" | "other"
+    })) : [],
+    createdAt: incident.created_at,
+    updatedAt: incident.updated_at,
+  };
+};
 
 // Get all incidents
 export const getIncidents = async (): Promise<Incident[]> => {
   try {
     console.log("Fetching incidents from Supabase");
+    
+    // First get all incidents
     const { data: incidentsData, error } = await supabase
-      .from('school_incidents')
-      .select(`
-        *,
-        school_incident_involved (
-          user_id,
-          role
-        )
-      `);
+      .from('incidents')
+      .select('*');
 
     if (error) {
       console.error("Error fetching incidents:", error);
-      return []; // Return empty array if there's an error
+      return [];
     }
 
     if (!incidentsData || incidentsData.length === 0) {
       console.log("No incidents found in database");
-      return []; // Return empty array if no data
+      return [];
     }
 
-    console.log("Received incidents data:", incidentsData);
-    return incidentsData.map(mapDbToIncident);
+    // For each incident, get the involved persons
+    const incidentsWithInvolved = await Promise.all(incidentsData.map(async (incident) => {
+      const { data: involvedPersons, error: involvedError } = await supabase
+        .from('incident_involved_persons')
+        .select('*')
+        .eq('incident_id', incident.id);
+      
+      return {
+        ...incident,
+        involved_persons: involvedError ? [] : involvedPersons
+      };
+    }));
+
+    console.log("Received incidents data with involved persons:", incidentsWithInvolved);
+    
+    return incidentsWithInvolved.map(mapDbToIncident);
   } catch (error) {
     console.error("Error in getIncidents:", error);
-    return []; // Return empty array on any error
+    return [];
   }
 };
 
@@ -78,15 +91,10 @@ export const getIncidentById = async (id: string): Promise<Incident | undefined>
       return undefined;
     }
     
+    // Get the incident
     const { data: incident, error } = await supabase
-      .from('school_incidents')
-      .select(`
-        *,
-        school_incident_involved (
-          user_id,
-          role
-        )
-      `)
+      .from('incidents')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -95,11 +103,22 @@ export const getIncidentById = async (id: string): Promise<Incident | undefined>
       return undefined;
     }
 
-    if (!incident) {
-      return undefined;
+    // Get involved persons
+    const { data: involvedPersons, error: involvedError } = await supabase
+      .from('incident_involved_persons')
+      .select('*')
+      .eq('incident_id', id);
+
+    if (involvedError) {
+      console.error("Error fetching involved persons:", involvedError);
     }
 
-    return mapDbToIncident(incident);
+    const completeIncident = {
+      ...incident,
+      involved_persons: involvedError ? [] : involvedPersons
+    };
+
+    return mapDbToIncident(completeIncident);
   } catch (error) {
     console.error("Error in getIncidentById:", error);
     return undefined;
@@ -122,26 +141,16 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
       description: incidentData.description,
       severity: incidentData.severity,
       status: incidentData.status,
+      reported_by: incidentData.reportedBy || MOCK_USER_ID,
       assigned_to: incidentData.assignedTo || null,
       investigation_notes: incidentData.investigationNotes,
       resolution_details: incidentData.resolutionDetails,
       resolution_date: incidentData.resolutionDate,
     };
 
-    // Use a valid user ID for reported_by, using the MOCK_USER_ID as fallback
-    let validReportedBy = MOCK_USER_ID;
-    if (incidentData.reportedBy && 
-        incidentData.reportedBy !== "00000000-0000-4000-a000-000000000000" && 
-        isValidUUID(incidentData.reportedBy)) {
-      validReportedBy = incidentData.reportedBy;
-    }
-    
-    // Add reported_by to the insert data
-    // @ts-ignore - We're dynamically adding this field
-    insertData.reported_by = validReportedBy;
-
+    // Insert the incident
     const { data: incident, error: incidentError } = await supabase
-      .from('school_incidents')
+      .from('incidents')
       .insert(insertData)
       .select()
       .single();
@@ -151,6 +160,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
       throw new Error(`Failed to create incident: ${incidentError.message}`);
     }
 
+    // Add involved persons if any
     if (incidentData.involvedPersons && incidentData.involvedPersons.length > 0) {
       const involvedPersonsData = incidentData.involvedPersons.map(person => ({
         incident_id: incident.id,
@@ -159,7 +169,7 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
       }));
       
       const { error: involvedError } = await supabase
-        .from('school_incident_involved')
+        .from('incident_involved_persons')
         .insert(involvedPersonsData);
 
       if (involvedError) {
@@ -167,8 +177,8 @@ export const createIncident = async (incidentData: Omit<Incident, "id" | "create
       }
     }
 
-    // Return the created incident
-    return mapDbToIncident(incident);
+    // Return the created incident with involved persons
+    return await getIncidentById(incident.id) as Incident;
   } catch (error) {
     console.error("Error in createIncident:", error);
     throw error;
@@ -210,7 +220,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
 
     // Update the incident in Supabase
     const { data: updatedIncident, error: incidentError } = await supabase
-      .from('school_incidents')
+      .from('incidents')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -226,7 +236,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
       try {
         // Delete existing involved persons
         const { error: deleteError } = await supabase
-          .from('school_incident_involved')
+          .from('incident_involved_persons')
           .delete()
           .eq('incident_id', id);
 
@@ -234,7 +244,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
           console.error("Error deleting involved persons:", deleteError);
         }
 
-        // Insert new involved persons with the correct field mappings
+        // Insert new involved persons
         if (incidentData.involvedPersons.length > 0) {
           const involvedPersonsData = incidentData.involvedPersons.map(person => ({
             incident_id: id,
@@ -243,7 +253,7 @@ export const updateIncident = async (id: string, incidentData: Partial<Omit<Inci
           }));
           
           const { error: involvedError } = await supabase
-            .from('school_incident_involved')
+            .from('incident_involved_persons')
             .insert(involvedPersonsData);
 
           if (involvedError) {
@@ -272,9 +282,9 @@ export const deleteIncident = async (id: string): Promise<boolean> => {
       throw new Error("Invalid incident ID format");
     }
     
-    // Delete the incident from Supabase
+    // Delete the incident from Supabase - cascade will take care of involved persons
     const { error } = await supabase
-      .from('school_incidents')
+      .from('incidents')
       .delete()
       .eq('id', id);
 
@@ -293,15 +303,9 @@ export const deleteIncident = async (id: string): Promise<boolean> => {
 // Filter incidents by status
 export const filterIncidentsByStatus = async (status: IncidentStatus): Promise<Incident[]> => {
   try {
-    const { data, error } = await supabase
-      .from('school_incidents')
-      .select(`
-        *,
-        school_incident_involved (
-          user_id,
-          role
-        )
-      `)
+    const { data: incidentsData, error } = await supabase
+      .from('incidents')
+      .select('*')
       .eq('status', status);
       
     if (error) {
@@ -309,11 +313,24 @@ export const filterIncidentsByStatus = async (status: IncidentStatus): Promise<I
       return [];
     }
     
-    if (!data || data.length === 0) {
+    if (!incidentsData || incidentsData.length === 0) {
       return [];
     }
     
-    return data.map(mapDbToIncident);
+    // For each incident, get the involved persons
+    const incidentsWithInvolved = await Promise.all(incidentsData.map(async (incident) => {
+      const { data: involvedPersons, error: involvedError } = await supabase
+        .from('incident_involved_persons')
+        .select('*')
+        .eq('incident_id', incident.id);
+      
+      return {
+        ...incident,
+        involved_persons: involvedError ? [] : involvedPersons
+      };
+    }));
+    
+    return incidentsWithInvolved.map(mapDbToIncident);
   } catch (error) {
     console.error("Error in filterIncidentsByStatus:", error);
     return [];
@@ -323,15 +340,9 @@ export const filterIncidentsByStatus = async (status: IncidentStatus): Promise<I
 // Filter incidents by type
 export const filterIncidentsByType = async (type: IncidentType): Promise<Incident[]> => {
   try {
-    const { data, error } = await supabase
-      .from('school_incidents')
-      .select(`
-        *,
-        school_incident_involved (
-          user_id,
-          role
-        )
-      `)
+    const { data: incidentsData, error } = await supabase
+      .from('incidents')
+      .select('*')
       .eq('type', type);
       
     if (error) {
@@ -339,11 +350,24 @@ export const filterIncidentsByType = async (type: IncidentType): Promise<Inciden
       return [];
     }
     
-    if (!data || data.length === 0) {
+    if (!incidentsData || incidentsData.length === 0) {
       return [];
     }
     
-    return data.map(mapDbToIncident);
+    // For each incident, get the involved persons
+    const incidentsWithInvolved = await Promise.all(incidentsData.map(async (incident) => {
+      const { data: involvedPersons, error: involvedError } = await supabase
+        .from('incident_involved_persons')
+        .select('*')
+        .eq('incident_id', incident.id);
+      
+      return {
+        ...incident,
+        involved_persons: involvedError ? [] : involvedPersons
+      };
+    }));
+    
+    return incidentsWithInvolved.map(mapDbToIncident);
   } catch (error) {
     console.error("Error in filterIncidentsByType:", error);
     return [];
@@ -353,15 +377,9 @@ export const filterIncidentsByType = async (type: IncidentType): Promise<Inciden
 // Filter incidents by severity
 export const filterIncidentsBySeverity = async (severity: IncidentSeverity): Promise<Incident[]> => {
   try {
-    const { data, error } = await supabase
-      .from('school_incidents')
-      .select(`
-        *,
-        school_incident_involved (
-          user_id,
-          role
-        )
-      `)
+    const { data: incidentsData, error } = await supabase
+      .from('incidents')
+      .select('*')
       .eq('severity', severity);
       
     if (error) {
@@ -369,11 +387,24 @@ export const filterIncidentsBySeverity = async (severity: IncidentSeverity): Pro
       return [];
     }
     
-    if (!data || data.length === 0) {
+    if (!incidentsData || incidentsData.length === 0) {
       return [];
     }
     
-    return data.map(mapDbToIncident);
+    // For each incident, get the involved persons
+    const incidentsWithInvolved = await Promise.all(incidentsData.map(async (incident) => {
+      const { data: involvedPersons, error: involvedError } = await supabase
+        .from('incident_involved_persons')
+        .select('*')
+        .eq('incident_id', incident.id);
+      
+      return {
+        ...incident,
+        involved_persons: involvedError ? [] : involvedPersons
+      };
+    }));
+    
+    return incidentsWithInvolved.map(mapDbToIncident);
   } catch (error) {
     console.error("Error in filterIncidentsBySeverity:", error);
     return [];
