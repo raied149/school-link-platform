@@ -47,6 +47,19 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
     queryFn: async () => {
       if (!selectedSection) return [];
       
+      // First get the student IDs in this section
+      const { data: enrollments, error: enrollmentError } = await supabase
+        .from('student_sections')
+        .select('student_id')
+        .eq('section_id', selectedSection);
+        
+      if (enrollmentError) throw enrollmentError;
+      
+      const studentIds = enrollments.map(e => e.student_id);
+      
+      if (studentIds.length === 0) return [];
+      
+      // Then get results with student profiles
       const { data, error } = await supabase
         .from('student_exam_results')
         .select(`
@@ -54,7 +67,7 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
           marks_obtained,
           feedback,
           student_id,
-          profiles:student_id (
+          student:student_id (
             id,
             first_name,
             last_name,
@@ -67,20 +80,11 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
           )
         `)
         .eq('exam_id', examId)
+        .in('student_id', studentIds)
         .order('marks_obtained', { ascending: false });
         
       if (error) throw error;
-      
-      // Now filter by student enrollment in section
-      const { data: enrollments, error: enrollmentError } = await supabase
-        .from('student_sections')
-        .select('student_id')
-        .eq('section_id', selectedSection);
-        
-      if (enrollmentError) throw enrollmentError;
-      
-      const studentIds = enrollments.map(e => e.student_id);
-      return data.filter(r => studentIds.includes(r.student_id));
+      return data || [];
     },
     enabled: !!selectedSection
   });
@@ -142,7 +146,7 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
                 </TableCell>
               </TableRow>
             ) : (
-              results.map((result) => {
+              results.map((result: any) => {
                 const maxScore = result.exams?.max_score || 100;
                 const percentage = maxScore > 0 ? Math.round((result.marks_obtained / maxScore) * 100) : 0;
                 
@@ -151,10 +155,10 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {result.profiles?.first_name} {result.profiles?.last_name}
+                          {result.student?.first_name} {result.student?.last_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {result.profiles?.student_details?.admission_number || result.student_id.substring(0, 8)}
+                          {result.student?.student_details?.admission_number || result.student_id.substring(0, 8)}
                         </p>
                       </div>
                     </TableCell>

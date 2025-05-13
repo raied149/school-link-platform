@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -14,11 +15,13 @@ interface TeacherTableProps {
     globalSearch: string;
   };
   isTeacherView?: boolean;
+  isStudentView?: boolean;
 }
 
 const TeacherTable: React.FC<TeacherTableProps> = ({
   searchFilters,
-  isTeacherView = false
+  isTeacherView = false,
+  isStudentView = false
 }) => {
   const navigate = useNavigate();
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);

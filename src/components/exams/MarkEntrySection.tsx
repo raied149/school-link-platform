@@ -57,7 +57,7 @@ export const MarkEntrySection = ({
         <MarkEntryTable 
           examId={examId} 
           sectionId={selectedSection} 
-          maxMarks={exam.max_score}
+          maxScore={exam.max_score}
           onMarksUpdated={onMarksUpdated}
         />
       )}

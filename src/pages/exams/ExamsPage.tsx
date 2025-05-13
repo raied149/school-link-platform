@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
-import { examService } from "@/services/examService";
+import { getAllExams } from "@/services/exam/examApi";
 
 const ExamsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,11 +17,11 @@ const ExamsPage = () => {
   // Fetch exams
   const { data: exams = [], isLoading } = useQuery({
     queryKey: ['exams'],
-    queryFn: examService.getExams
+    queryFn: getAllExams
   });
 
   // Filter exams based on search term
-  const filteredExams = exams ? exams.filter((exam: any) =>
+  const filteredExams = exams && Array.isArray(exams) ? exams.filter((exam: any) =>
     exam.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 

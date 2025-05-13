@@ -23,7 +23,7 @@ export {
 } from './exam/resultApi';
 
 // Create examService object for backwards compatibility
-export const examService = {
+const examService = {
   getExams: getAllExams,
   getExamById,
   createExam,
@@ -38,3 +38,5 @@ export const examService = {
   saveStudentExamResult,
   bulkSaveStudentExamResults
 };
+
+export { examService };

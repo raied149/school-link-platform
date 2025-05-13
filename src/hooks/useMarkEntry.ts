@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getStudentsInSection, saveStudentExamResult, bulkSaveStudentExamResults } from "@/services/examService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // Stats interface
@@ -14,6 +13,101 @@ export interface Stats {
   passPercentage: number;
 }
 
+// Function to get students in section with their exam results
+const getStudentsInSection = async (examId: string, sectionId: string) => {
+  const { data, error } = await supabase
+    .from('student_sections')
+    .select(`
+      student_id,
+      student:profiles!student_id (
+        id,
+        first_name,
+        last_name,
+        student_details (
+          admission_number
+        )
+      )
+    `)
+    .eq('section_id', sectionId);
+    
+  if (error) throw error;
+  
+  // Get exam data once
+  const { data: examData, error: examError } = await supabase
+    .from('exams')
+    .select('*')
+    .eq('id', examId)
+    .single();
+  
+  if (examError) throw examError;
+  
+  // Get results for students in this section
+  const studentIds = data.map(item => item.student_id);
+  
+  const { data: resultsData, error: resultsError } = await supabase
+    .from('student_exam_results')
+    .select('*')
+    .eq('exam_id', examId)
+    .in('student_id', studentIds);
+    
+  if (resultsError) throw resultsError;
+  
+  // Map results to students
+  return data.map(item => ({
+    student: item.student,
+    exam: examData,
+    result: resultsData.find(r => r.student_id === item.student_id)
+  }));
+};
+
+// Function to save a single student exam result
+const saveStudentExamResult = async (params: {
+  exam_id: string;
+  student_id: string;
+  marks_obtained: number;
+  feedback?: string;
+}) => {
+  const { data, error } = await supabase
+    .from('student_exam_results')
+    .upsert({
+      exam_id: params.exam_id,
+      student_id: params.student_id,
+      marks_obtained: params.marks_obtained,
+      feedback: params.feedback || '',
+      updated_at: new Date().toISOString()
+    })
+    .select();
+    
+  if (error) throw error;
+  return data;
+};
+
+// Function to bulk save student exam results
+const bulkSaveStudentExamResults = async (params: {
+  exam_id: string;
+  results: {
+    student_id: string;
+    mark: number;
+    feedback: string;
+  }[];
+}) => {
+  const dataToInsert = params.results.map(result => ({
+    exam_id: params.exam_id,
+    student_id: result.student_id,
+    marks_obtained: result.mark,
+    feedback: result.feedback || '',
+    updated_at: new Date().toISOString()
+  }));
+  
+  const { data, error } = await supabase
+    .from('student_exam_results')
+    .upsert(dataToInsert)
+    .select();
+    
+  if (error) throw error;
+  return data;
+};
+
 export function useMarkEntry(examId: string) {
   const [selectedSection, setSelectedSection] = useState<string>("");
   const [marks, setMarks] = useState<Record<string, number>>({});
@@ -22,6 +116,7 @@ export function useMarkEntry(examId: string) {
   const [originalFeedback, setOriginalFeedback] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const {
     data: students = [],
@@ -123,11 +218,11 @@ export function useMarkEntry(examId: string) {
   
   // Save mutation
   const saveMutation = useMutation({
-    mutationFn: async (data: { studentId: string; mark: number; feedback: string }) => {
+    mutationFn: async (data: { student_id: string; mark: number; feedback: string }) => {
       return saveStudentExamResult({
-        examId,
-        studentId: data.studentId,
-        marks: data.mark,
+        exam_id: examId,
+        student_id: data.student_id,
+        marks_obtained: data.mark,
         feedback: data.feedback
       });
     }
@@ -136,10 +231,10 @@ export function useMarkEntry(examId: string) {
   // Bulk save mutation
   const bulkSaveMutation = useMutation({
     mutationFn: async (data: { 
-      results: { studentId: string; mark: number; feedback: string }[] 
+      results: { student_id: string; mark: number; feedback: string }[] 
     }) => {
       return bulkSaveStudentExamResults({
-        examId,
+        exam_id: examId,
         results: data.results
       });
     }
@@ -152,7 +247,7 @@ export function useMarkEntry(examId: string) {
     try {
       // Prepare data for bulk save
       const results = Object.keys(marks).map(studentId => ({
-        studentId,
+        student_id: studentId,
         mark: marks[studentId],
         feedback: feedback[studentId] || ''
       }));
@@ -187,7 +282,7 @@ export function useMarkEntry(examId: string) {
   const updateSingleMark = async (studentId: string, mark: number, studentFeedback: string) => {
     try {
       await saveMutation.mutateAsync({ 
-        studentId, 
+        student_id: studentId, 
         mark, 
         feedback: studentFeedback 
       });
