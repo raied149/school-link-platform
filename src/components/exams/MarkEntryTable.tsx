@@ -1,118 +1,149 @@
 
-import { useState, useEffect } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { getStudentExamResults, bulkSaveStudentExamResults } from "@/services/examService";
-import { Loader2, Save, CheckCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ExamStatsDisplay } from "./marks/ExamStatsDisplay";
-import { StudentMarkRow } from "./marks/StudentMarkRow";
-import { useMarkEntry } from "@/hooks/useMarkEntry";
+import { Stats } from "@/hooks/useMarkEntry";
+import { Card } from "@/components/ui/card";
 
 interface MarkEntryTableProps {
-  examId: string;
-  sectionId: string;
-  maxMarks: number;
-  onMarksUpdated?: () => void;
+  students: any[];
+  marks: Record<string, number>;
+  feedback: Record<string, string>;
+  handleMarkChange: (studentId: string, value: string) => void;
+  handleFeedbackChange: (studentId: string, value: string) => void;
+  updateSingleMark?: (studentId: string, mark: number, feedback: string) => Promise<boolean>;
+  maxScore: number;
+  stats: Stats;
+  isLoading: boolean;
+  isUpdating?: boolean;
 }
 
-export function MarkEntryTable({ examId, sectionId, maxMarks, onMarksUpdated }: MarkEntryTableProps) {
-  const {
-    isLoading,
-    isSaving,
-    students,
-    marks,
-    feedback,
-    hasChanges,
-    saveSuccess,
-    stats,
-    handleMarkChange,
-    handleFeedbackChange,
-    handleSave
-  } = useMarkEntry(examId, sectionId, maxMarks, onMarksUpdated);
-
+export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
+  students,
+  marks,
+  feedback,
+  handleMarkChange,
+  handleFeedbackChange,
+  updateSingleMark,
+  maxScore,
+  stats,
+  isLoading,
+  isUpdating = false,
+}) => {
+  const [editingStudent, setEditingStudent] = useState<string | null>(null);
+  
+  // Handle inline editing for a student mark
+  const handleSaveStudentMark = async (studentId: string) => {
+    if (!updateSingleMark) return;
+    
+    const success = await updateSingleMark(
+      studentId,
+      marks[studentId],
+      feedback[studentId]
+    );
+    
+    if (success) {
+      setEditingStudent(null);
+    }
+  };
+  
+  // Calculate percentage from marks
+  const calculatePercentage = (mark: number) => {
+    return maxScore > 0 ? Math.round((mark / maxScore) * 100) : 0;
+  };
+  
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="animate-spin h-8 w-8 text-primary" />
-        <span className="ml-2">Loading students...</span>
-      </div>
-    );
+    return <div className="text-center py-8">Loading student data...</div>;
   }
-
-  if (!students.length) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No students found in this section.</p>
-      </div>
-    );
+  
+  if (!students || students.length === 0) {
+    return <div className="text-center py-8">No students found in this section.</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-medium">Mark Entry</h3>
-          <p className="text-sm text-muted-foreground">
-            Enter marks for each student (max: {maxMarks})
-          </p>
-        </div>
-        
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving || !hasChanges}
-          className="flex items-center gap-2"
-        >
-          {isSaving ? (
-            <Loader2 className="animate-spin h-4 w-4" />
-          ) : saveSuccess ? (
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          {saveSuccess ? "Saved" : "Save Marks"}
-        </Button>
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <h4 className="text-sm font-medium text-muted-foreground">Average</h4>
+          <p className="text-2xl font-bold">{stats.avg.toFixed(1)}</p>
+        </Card>
+        <Card className="p-4">
+          <h4 className="text-sm font-medium text-muted-foreground">Highest</h4>
+          <p className="text-2xl font-bold">{stats.max}</p>
+        </Card>
+        <Card className="p-4">
+          <h4 className="text-sm font-medium text-muted-foreground">Lowest</h4>
+          <p className="text-2xl font-bold">{stats.min}</p>
+        </Card>
+        <Card className="p-4">
+          <h4 className="text-sm font-medium text-muted-foreground">Pass Rate</h4>
+          <p className="text-2xl font-bold">{stats.passPercentage.toFixed(1)}%</p>
+        </Card>
       </div>
-      
-      <ExamStatsDisplay stats={stats} maxMarks={maxMarks} />
-      
+
+      {/* Marks Entry Table */}
       <div className="border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student ID</TableHead>
-              <TableHead>Student Name</TableHead>
-              <TableHead>Marks (/{maxMarks})</TableHead>
-              <TableHead>Percentage</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Feedback (Optional)</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Marks (max: {maxScore})</TableHead>
+              <TableHead className="hidden md:table-cell">Percentage</TableHead>
+              <TableHead className="hidden md:table-cell">Feedback</TableHead>
+              {updateSingleMark && <TableHead className="text-right">Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((item) => (
-              <StudentMarkRow
-                key={item.student.id}
-                student={item.student}
-                mark={marks[item.student.id] || 0}
-                feedback={feedback[item.student.id] || ''}
-                maxMarks={maxMarks}
-                onMarkChange={handleMarkChange}
-                onFeedbackChange={handleFeedbackChange}
-              />
+            {students.map((student) => (
+              <TableRow key={student.student.id}>
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{student.student.first_name} {student.student.last_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {student.student.student_details?.admission_number || student.student.id.substring(0, 8)}
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={maxScore}
+                    value={marks[student.student.id] || 0}
+                    onChange={(e) => handleMarkChange(student.student.id, e.target.value)}
+                    className="w-24"
+                  />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {calculatePercentage(marks[student.student.id] || 0)}%
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Textarea
+                    value={feedback[student.student.id] || ''}
+                    onChange={(e) => handleFeedbackChange(student.student.id, e.target.value)}
+                    placeholder="Optional feedback..."
+                    className="min-h-[80px] resize-none"
+                  />
+                </TableCell>
+                {updateSingleMark && (
+                  <TableCell className="text-right">
+                    <Button
+                      onClick={() => handleSaveStudentMark(student.student.id)}
+                      size="sm"
+                      disabled={editingStudent === student.student.id && isUpdating}
+                    >
+                      {editingStudent === student.student.id && isUpdating ? 'Saving...' : 'Save'}
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
     </div>
   );
-}
+};

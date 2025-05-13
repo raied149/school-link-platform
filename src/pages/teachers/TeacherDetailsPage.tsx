@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { TeacherPageHeader } from "@/components/teachers/TeacherPageHeader";
 import { TeacherTable } from "@/components/users/TeacherTable";
@@ -40,9 +39,12 @@ const TeacherDetailsPage = () => {
         <div className="space-y-4">
           <TeacherSearch onSearch={handleSearch} />
           <TeacherTable 
-            searchFilters={searchFilters} 
-            isTeacherView={isTeacher}
-            currentUserId={user?.id}
+            searchFilters={{
+              idSearch: "",
+              nameSearch: "",
+              globalSearch: ""
+            }} 
+            isTeacherView={true}
           />
         </div>
       </Card>
