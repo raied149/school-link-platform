@@ -12,13 +12,17 @@ const UsersPage = () => {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const { user } = useAuth();
+  
   const isTeacher = user?.role === 'teacher';
+  const isStudent = user?.role === 'student';
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Student Management</h1>
-        {!isTeacher && (
+        <h1 className="text-3xl font-bold tracking-tight">
+          {isStudent ? "My Profile" : "Student Management"}
+        </h1>
+        {!isTeacher && !isStudent && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Import className="mr-2 h-4 w-4" />
@@ -34,11 +38,15 @@ const UsersPage = () => {
 
       <Card className="p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold">Student Details</h2>
+          <h2 className="text-xl font-semibold">
+            {isStudent ? "My Details" : "Student Details"}
+          </h2>
           <p className="text-muted-foreground">
-            {isTeacher 
-              ? "View student information and records" 
-              : "Manage student information and records"}
+            {isStudent 
+              ? "View your information and records" 
+              : isTeacher 
+                ? "View student information and records" 
+                : "Manage student information and records"}
           </p>
         </div>
 
@@ -46,10 +54,11 @@ const UsersPage = () => {
           defaultTab="students" 
           showStudentsOnly={true} 
           isTeacherView={isTeacher}
+          isStudentView={isStudent}
         />
       </Card>
 
-      {!isTeacher && (
+      {!isTeacher && !isStudent && (
         <>
           <AddStudentDialog 
             open={isAddStudentOpen}

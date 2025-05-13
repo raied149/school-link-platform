@@ -10,402 +10,430 @@ import { ClassesList } from "@/components/classes/ClassesList";
 import { Class } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function ClassYearsPage() {
+const ClassYearsPage = () => {
+  const params = useParams();
+  const yearId = params.yearId;
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { yearId } = useParams<{ yearId: string }>();
-  const { toast } = useToast();
   const { user } = useAuth();
-  const isTeacher = user?.role === 'teacher';
-
-  // Fetch academic years
-  const { data: academicYears = [], isLoading: isLoadingYears } = useQuery({
-    queryKey: ['academicYears'],
+  const isTeacherView = user?.role === 'teacher';
+  const isStudentView = user?.role === 'student';
+  
+  // Fetch active academic year if no yearId is provided
+  const { data: activeYear, isLoading: activeYearLoading } = useQuery({
+    queryKey: ['activeAcademicYear'],
     queryFn: async () => {
-      console.log("Fetching academic years");
       const { data, error } = await supabase
         .from('academic_years')
         .select('*')
-        .order('start_date', { ascending: false });
-
-      if (error) {
-        console.error("Error fetching academic years:", error);
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        return [];
-      }
-      
-      console.log("Academic years data:", data);
-      return (
-        data?.map((year: any) => ({
-          id: year.id,
-          name: year.name,
-          startDate: year.start_date,
-          endDate: year.end_date,
-          isActive: year.is_active,
-          createdAt: year.created_at,
-          updatedAt: year.updated_at || year.created_at,
-        })) ?? []
-      ) as AcademicYear[];
-    }
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !yearId
   });
 
-  // Fetch classes for selected academic year
-  const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
-    queryKey: ['classes', yearId, user?.id, isTeacher],
+  // Fetch all academic years
+  const { data: academicYears = [], isLoading: academicYearsLoading } = useQuery({
+    queryKey: ['academicYears'],
     queryFn: async () => {
-      if (!yearId) return [];
-      
-      console.log("Fetching classes for yearId:", yearId);
-      
-      if (isTeacher && user) {
-        // If user is a teacher, only fetch classes they teach
-        console.log("Fetching classes where teacher is assigned");
+      if (isStudentView) {
+        // For students, get their assigned class and its academic year
+        const studentId = user?.id;
         
-        // First get all sections where this teacher is assigned
-        const { data: teacherSections, error: sectionsError } = await supabase
+        // First get the student's section
+        const { data: sectionData, error: sectionError } = await supabase
+          .from('student_sections')
+          .select('section_id')
+          .eq('student_id', studentId)
+          .limit(1)
+          .maybeSingle();
+          
+        if (sectionError) throw sectionError;
+        if (!sectionData) return [];
+        
+        // Now get section details to get the class
+        const { data: section, error: sectionDetailsError } = await supabase
+          .from('sections')
+          .select('class_id')
+          .eq('id', sectionData.section_id)
+          .limit(1)
+          .maybeSingle();
+          
+        if (sectionDetailsError) throw sectionDetailsError;
+        if (!section) return [];
+        
+        // Now get class details to get the academic year
+        const { data: classData, error: classError } = await supabase
+          .from('classes')
+          .select('year_id')
+          .eq('id', section.class_id)
+          .limit(1)
+          .maybeSingle();
+          
+        if (classError) throw classError;
+        if (!classData) return [];
+        
+        // Finally get the academic year
+        const { data: years, error: yearsError } = await supabase
+          .from('academic_years')
+          .select('*')
+          .eq('id', classData.year_id);
+          
+        if (yearsError) throw yearsError;
+        return years;
+      } 
+      else if (isTeacherView) {
+        // For teachers, get academic years for classes they teach
+        const teacherId = user?.id;
+        
+        // Get teacher's assigned sections from timetable
+        const { data: timetableData, error: timetableError } = await supabase
           .from('timetable')
           .select('section_id')
-          .eq('teacher_id', user.id);
+          .eq('teacher_id', teacherId);
           
-        if (sectionsError) {
-          console.error("Error fetching teacher sections:", sectionsError);
-          throw sectionsError;
-        }
+        if (timetableError) throw timetableError;
+        if (!timetableData?.length) return [];
         
         // Get unique section IDs
-        const sectionIds = [...new Set(teacherSections?.map(item => item.section_id) || [])];
+        const sectionIds = [...new Set(timetableData.map(item => item.section_id))];
         
-        if (!sectionIds.length) {
-          console.log("No sections assigned to this teacher");
-          return [];
-        }
-        
-        console.log("Teacher is assigned to sections:", sectionIds);
-        
-        // Get class IDs from these sections
-        const { data: sections, error: classError } = await supabase
+        // Get classes for these sections
+        const { data: sectionsData, error: sectionsError } = await supabase
           .from('sections')
           .select('class_id')
           .in('id', sectionIds);
           
-        if (classError) {
-          console.error("Error fetching class IDs:", classError);
-          throw classError;
-        }
+        if (sectionsError) throw sectionsError;
+        if (!sectionsData?.length) return [];
         
         // Get unique class IDs
-        const classIds = [...new Set(sections?.map(item => item.class_id) || [])];
+        const classIds = [...new Set(sectionsData.map(item => item.class_id))];
         
-        if (!classIds.length) {
-          console.log("No classes found for teacher's sections");
-          return [];
-        }
-        
-        // Get class data
-        const { data, error } = await supabase
+        // Get academic years for these classes
+        const { data: classesData, error: classesError } = await supabase
           .from('classes')
-          .select('*')
-          .eq('year_id', yearId)
-          .in('id', classIds)
-          .order('name');
-        
-        if (error) {
-          console.error("Error fetching classes:", error);
-          throw error;
-        }
-        
-        console.log("Teacher's classes data:", data);
-        
-        return (
-          data?.map(row => ({
-            id: row.id,
-            name: row.name,
-            level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
-            description: "", 
-            academicYearId: row.year_id,
-            createdAt: row.created_at,
-            updatedAt: row.created_at,
-          })) ?? []
-        );
-      } else {
-        // For admin, fetch all classes
-        const { data, error } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('year_id', yearId)
-          .order('name');
+          .select('year_id')
+          .in('id', classIds);
           
-        if (error) {
-          console.error("Error fetching classes:", error);
-          toast({ title: "Error", description: error.message, variant: "destructive" });
-          return [];
-        }
+        if (classesError) throw classesError;
+        if (!classesData?.length) return [];
         
-        console.log("Classes data:", data);
+        // Get unique academic year IDs
+        const yearIds = [...new Set(classesData.map(item => item.year_id))];
         
-        return (
-          data?.map(row => ({
-            id: row.id,
-            name: row.name,
-            level: Number(typeof row.name === "string" && row.name.match(/\d+/) ? row.name.match(/\d+/)![0] : 1),
-            description: "", 
-            academicYearId: row.year_id,
-            createdAt: row.created_at,
-            updatedAt: row.created_at,
-          })) ?? []
-        );
-      }
-    },
-    enabled: !!yearId
-  });
-
-  const createYearMutation = useMutation({
-    mutationFn: async (yearData: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">) => {
-      const { name, startDate, endDate, isActive } = yearData;
-      if (isActive) {
-        const { error } = await supabase
+        // Get the academic years
+        const { data: years, error: yearsError } = await supabase
           .from('academic_years')
-          .update({ is_active: false })
-          .neq('id', null);
+          .select('*')
+          .in('id', yearIds)
+          .order('start_date', { ascending: false });
+          
+        if (yearsError) throw yearsError;
+        return years;
+      } else {
+        // For admins, get all academic years
+        const { data, error } = await supabase
+          .from('academic_years')
+          .select('*')
+          .order('start_date', { ascending: false });
+          
         if (error) throw error;
+        return data;
       }
-
-      const { data, error } = await supabase
-        .from('academic_years')
-        .insert({
-          name,
-          start_date: startDate,
-          end_date: endDate,
-          is_active: isActive
-        })
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) throw new Error("No academic year returned after insert.");
-
-      return {
-        id: data.id,
-        name: data.name,
-        startDate: data.start_date,
-        endDate: data.end_date,
-        isActive: data.is_active,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at || data.created_at
-      } as AcademicYear;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
-      // Navigate to the newly created year
-      navigate(`/classes/${data.id}`);
     }
   });
 
-  const createClassMutation = useMutation({
-    mutationFn: async (classData: Omit<Class, "id" | "createdAt" | "updatedAt">) => {
-      const { name, academicYearId } = classData;
+  // Fetch classes for the selected academic year
+  const { data: classes = [], isLoading: classesLoading } = useQuery({
+    queryKey: ['classes', yearId || (activeYear?.id)],
+    queryFn: async () => {
+      const selectedYearId = yearId || activeYear?.id;
+      if (!selectedYearId) return [];
       
-      if (!academicYearId) throw new Error("Academic year ID missing");
-      
-      console.log("Creating class with data:", { name, year_id: academicYearId });
-      
+      if (isStudentView) {
+        // For students, get only their assigned class
+        const studentId = user?.id;
+        
+        // Get student's section
+        const { data: sectionData, error: sectionError } = await supabase
+          .from('student_sections')
+          .select('section_id')
+          .eq('student_id', studentId)
+          .limit(1)
+          .maybeSingle();
+          
+        if (sectionError) throw sectionError;
+        if (!sectionData) return [];
+        
+        // Get section details to get the class
+        const { data: section, error: sectionDetailsError } = await supabase
+          .from('sections')
+          .select('class_id')
+          .eq('id', sectionData.section_id)
+          .limit(1)
+          .maybeSingle();
+          
+        if (sectionDetailsError) throw sectionDetailsError;
+        if (!section) return [];
+        
+        // Get the class details
+        const { data: classData, error: classError } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('id', section.class_id)
+          .eq('year_id', selectedYearId);
+          
+        if (classError) throw classError;
+        return classData || [];
+      }
+      else if (isTeacherView) {
+        // For teachers, get classes they teach in the selected academic year
+        const teacherId = user?.id;
+        
+        // Get teacher's assigned sections from timetable
+        const { data: timetableData, error: timetableError } = await supabase
+          .from('timetable')
+          .select('section_id')
+          .eq('teacher_id', teacherId);
+          
+        if (timetableError) throw timetableError;
+        if (!timetableData?.length) return [];
+        
+        // Get unique section IDs
+        const sectionIds = [...new Set(timetableData.map(item => item.section_id))];
+        
+        // Get classes for these sections
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from('sections')
+          .select('class_id')
+          .in('id', sectionIds);
+          
+        if (sectionsError) throw sectionsError;
+        if (!sectionsData?.length) return [];
+        
+        // Get unique class IDs
+        const classIds = [...new Set(sectionsData.map(item => item.class_id))];
+        
+        // Get classes for the selected academic year
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .in('id', classIds)
+          .eq('year_id', selectedYearId);
+          
+        if (error) throw error;
+        return data;
+      } else {
+        // For admins, get all classes for the selected academic year
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('year_id', selectedYearId);
+          
+        if (error) throw error;
+        return data;
+      }
+    },
+    enabled: !!yearId || !!activeYear?.id
+  });
+
+  // Create academic year mutation
+  const createYearMutation = useMutation({
+    mutationFn: async (yearData: Partial<AcademicYear>) => {
       const { data, error } = await supabase
-        .from("classes")
-        .insert({ name, year_id: academicYearId })
+        .from('academic_years')
+        .insert([yearData])
         .select()
         .single();
         
-      if (error) {
-        console.error("Error creating class:", error);
-        throw error;
-      }
-      
-      console.log("Created class:", data);
-      
-      return {
-        id: data.id,
-        name: data.name,
-        level: classData.level,
-        description: "", 
-        academicYearId: data.year_id,
-        createdAt: data.created_at,
-        updatedAt: data.created_at,
-      } as Class;
+      if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
+    onSuccess: (data) => {
+      toast.success('Academic year created successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to create academic year: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
+  // Create class mutation
+  const createClassMutation = useMutation({
+    mutationFn: async (classData: Partial<Class>) => {
+      const { data, error } = await supabase
+        .from('classes')
+        .insert([classData])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success('Class created successfully');
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to create class: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
+
+  // Update class mutation
   const updateClassMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Class> }) => {
-      const updates: any = {};
-      if (data.name) updates.name = data.name;
-      const { error } = await supabase
-        .from("classes")
-        .update(updates)
-        .eq("id", id);
+      const { data: updatedData, error } = await supabase
+        .from('classes')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+        
       if (error) throw error;
-      return { id, ...updates };
+      return updatedData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
+    onSuccess: (data) => {
+      toast.success('Class updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to update class: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
+  // Delete class mutation
   const deleteClassMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("classes")
+        .from('classes')
         .delete()
-        .eq("id", id);
+        .eq('id', id);
+        
       if (error) throw error;
-      return true;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classes', yearId] });
+    onSuccess: (id) => {
+      toast.success('Class deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete class: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
-  // Find the active academic year or default to the latest
-  const activeYear = academicYears.find(year => year.isActive);
-  const mostRecentYear = academicYears[0];
-  const defaultYearId = activeYear?.id || mostRecentYear?.id;
+  // Handle navigating to academic year if none is selected
+  useEffect(() => {
+    if (!yearId && !activeYearLoading && activeYear) {
+      navigate(`/class-years/${activeYear.id}`);
+    }
+  }, [yearId, activeYear, activeYearLoading, navigate]);
 
-  const isValidYearId = yearId && academicYears.some(year => year.id === yearId);
-
-  // Create handlers for the components
+  // Handle creating academic year
   const handleCreateYear = async (yearData: Partial<AcademicYear>) => {
     try {
-      await createYearMutation.mutateAsync(yearData as Omit<AcademicYear, "id" | "createdAt" | "updatedAt">);
-      toast({
-        title: "Academic Year Created",
-        description: `${yearData.name} has been created successfully.`
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create academic year",
-        variant: "destructive"
-      });
+      const newYear = await createYearMutation.mutateAsync(yearData);
+      queryClient.invalidateQueries({ queryKey: ['academicYears'] });
+      navigate(`/class-years/${newYear.id}`);
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
     }
   };
 
+  // Handle creating class
   const handleCreateClass = async (classData: Partial<Class>) => {
-    try {
-      await createClassMutation.mutateAsync({
-        ...classData,
-        academicYearId: yearId || ""
-      } as Omit<Class, "id" | "createdAt" | "updatedAt">);
-      
-      toast({
-        title: "Class Created",
-        description: `${classData.name} has been created successfully.`
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create class",
-        variant: "destructive"
-      });
-    }
+    return createClassMutation.mutateAsync(classData);
   };
 
+  // Handle updating class
   const handleUpdateClass = async (id: string, classData: Partial<Class>) => {
-    try {
-      await updateClassMutation.mutateAsync({ id, data: classData });
-      toast({
-        title: "Class Updated",
-        description: `${classData.name} has been updated successfully.`
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update class",
-        variant: "destructive"
-      });
-    }
+    return updateClassMutation.mutateAsync({ id, data: classData });
   };
 
+  // Handle deleting class
   const handleDeleteClass = async (id: string) => {
-    try {
-      await deleteClassMutation.mutateAsync(id);
-      toast({
-        title: "Class Deleted",
-        description: "Class has been deleted successfully."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete class",
-        variant: "destructive"
-      });
-    }
+    return deleteClassMutation.mutateAsync(id);
   };
 
-  // Redirect logic in useEffect to fix navigation issues
-  useEffect(() => {
-    if (!isLoadingYears && academicYears.length > 0) {
-      if (!yearId && defaultYearId) {
-        console.log("Redirecting to default year:", defaultYearId);
-        navigate(`/classes/${defaultYearId}`, { replace: true });
-      }
-      else if (yearId && !academicYears.some(year => year.id === yearId) && defaultYearId) {
-        console.log("Year ID not found, redirecting to default year:", defaultYearId);
-        navigate(`/classes/${defaultYearId}`, { replace: true });
-      }
-    }
-  }, [yearId, isLoadingYears, academicYears, defaultYearId, navigate]);
+  const isLoading = activeYearLoading || academicYearsLoading;
 
-  console.log("Rendering ClassYearsPage with yearId:", yearId);
-  console.log("Academic years:", academicYears);
-  console.log("Is valid year ID:", isValidYearId);
+  if (isLoading && !yearId) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Academic year tabs - always visible */}
-      <AcademicYearTabs 
-        academicYears={academicYears} 
-        selectedYearId={yearId} 
-        onYearCreate={handleCreateYear}
-        isTeacherView={isTeacher}
-      />
-
-      {/* Classes list - shown when academic year is selected */}
-      {isLoadingYears ? (
-        <Card className="p-6">
-          <div className="h-8 bg-muted animate-pulse rounded"></div>
-        </Card>
-      ) : academicYears.length === 0 ? (
+  if ((!activeYear && !yearId) || (!academicYears || academicYears.length === 0)) {
+    return (
+      <div className="space-y-6">
         <Card className="p-6">
           <div className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">No Academic Years Found</h2>
-            <p className="text-muted-foreground mb-4">
-              {isTeacher 
-                ? "No academic years are currently available" 
-                : "Create your first academic year to get started"}
-            </p>
+            <h2 className="text-xl font-semibold mb-4">No Academic Years Found</h2>
+            {isStudentView ? (
+              <p className="text-muted-foreground">
+                You are not assigned to any class yet. Please contact your administrator.
+              </p>
+            ) : isTeacherView ? (
+              <p className="text-muted-foreground">
+                You are not assigned to any classes yet. Please contact your administrator.
+              </p>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-4">
+                  No academic years have been added yet. Please create one to get started.
+                </p>
+                <Button onClick={() => handleCreateYear({ name: 'New Academic Year', startDate: new Date().toISOString().split('T')[0], endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], isActive: true })}>
+                  Create Academic Year
+                </Button>
+              </>
+            )}
           </div>
         </Card>
-      ) : isValidYearId ? (
-        <Card className="p-6">
-          <ClassesList 
-            classes={classes}
-            yearId={yearId!}
-            isLoading={isLoadingClasses}
-            onCreateClass={handleCreateClass}
-            onUpdateClass={handleUpdateClass}
-            onDeleteClass={handleDeleteClass}
-            isTeacherView={isTeacher}
-          />
-        </Card>
-      ) : (
-        <Card className="p-6">
-          <div className="text-center py-12 text-muted-foreground">
-            Please select an academic year above to view and manage classes.
-          </div>
-        </Card>
-      )}
+      </div>
+    );
+  }
+
+  const selectedYear = yearId 
+    ? academicYears.find(year => year.id === yearId) 
+    : activeYear;
+
+  if (!selectedYear) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <p>Selected academic year not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <AcademicYearTabs 
+          academicYears={academicYears} 
+          selectedYearId={selectedYear.id} 
+          onYearCreate={handleCreateYear}
+          isTeacherView={isTeacherView || isStudentView}
+        />
+      </div>
+
+      <Card className="p-6">
+        <ClassesList 
+          classes={classes} 
+          yearId={selectedYear.id} 
+          isLoading={classesLoading} 
+          onCreateClass={handleCreateClass}
+          onUpdateClass={handleUpdateClass}
+          onDeleteClass={handleDeleteClass}
+          isTeacherView={isTeacherView || isStudentView}
+        />
+      </Card>
     </div>
   );
-}
+};
+
+export default ClassYearsPage;

@@ -1,78 +1,183 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { OnlineClassWithDetails } from "./types";
-import { UserRole } from "@/contexts/AuthContext";
+import { OnlineClass } from "./types";
 
-export const getOnlineClassesForUser = async (): Promise<OnlineClassWithDetails[]> => {
-  try {
-    console.log("Getting online classes");
-    
-    let query = supabase
-      .from('online_classes')
-      .select(`
-        *,
-        classes(name),
-        sections(name),
-        subjects(name),
-        profiles!online_classes_created_by_fkey(first_name, last_name)
-      `);
-    
-    const { data, error } = await query.order('date', { ascending: true });
-
-    if (error) {
-      console.error("Error fetching online classes:", error);
-      toast.error("Failed to load online classes");
-      return [];
-    }
-
-    console.log("Fetched online classes:", data);
-    
-    return (data as any[]).map(item => ({
-      ...item,
-      class_name: item.classes?.name,
-      section_name: item.sections?.name,
-      subject_name: item.subjects?.name,
-      teacher_name: `${item.profiles?.first_name || 'Unknown'} ${item.profiles?.last_name || 'Teacher'}`
-    }));
-  } catch (error) {
-    console.error("Exception fetching online classes:", error);
-    toast.error("An unexpected error occurred");
-    return [];
-  }
-};
-
-export const getOnlineClassesByDateSection = async (date: string, sectionId: string): Promise<OnlineClassWithDetails[]> => {
+// Fetch all online classes with related data
+export const getAllClasses = async (): Promise<OnlineClass[]> => {
   try {
     const { data, error } = await supabase
       .from('online_classes')
       .select(`
         *,
-        classes(name),
-        sections(name),
-        subjects(name),
-        profiles!online_classes_created_by_fkey(first_name, last_name)
+        classes (
+          id,
+          name
+        ),
+        sections (
+          id,
+          name
+        ),
+        subjects (
+          id,
+          name
+        ),
+        profiles:created_by (
+          id,
+          first_name,
+          last_name
+        )
       `)
-      .eq('date', date)
-      .eq('section_id', sectionId)
-      .order('start_time', { ascending: true });
+      .order('date', { ascending: true });
 
     if (error) {
-      console.error("Error fetching online classes by date/section:", error);
-      toast.error("Failed to load online classes");
+      console.error("Error fetching online classes:", error);
+      throw error;
+    }
+
+    console.log("Fetched online classes:", data);
+    return data || [];
+  } catch (error) {
+    console.error("Error in getAllClasses:", error);
+    throw error;
+  }
+};
+
+// Fetch online classes for a specific teacher
+export const getClassesForTeacher = async (teacherId: string): Promise<OnlineClass[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('online_classes')
+      .select(`
+        *,
+        classes (
+          id,
+          name
+        ),
+        sections (
+          id,
+          name
+        ),
+        subjects (
+          id,
+          name
+        ),
+        profiles:created_by (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('created_by', teacherId)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching teacher's online classes:", error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error in getClassesForTeacher:", error);
+    throw error;
+  }
+};
+
+// Fetch online classes for a specific student
+export const getClassesForStudent = async (studentId: string): Promise<OnlineClass[]> => {
+  try {
+    // First get the sections the student is enrolled in
+    const { data: sectionData, error: sectionError } = await supabase
+      .from('student_sections')
+      .select('section_id')
+      .eq('student_id', studentId);
+
+    if (sectionError) {
+      console.error("Error fetching student's sections:", sectionError);
+      throw sectionError;
+    }
+
+    // If no sections found, return empty array
+    if (!sectionData || sectionData.length === 0) {
       return [];
     }
 
-    return (data as any[]).map(item => ({
-      ...item,
-      class_name: item.classes?.name,
-      section_name: item.sections?.name,
-      subject_name: item.subjects?.name,
-      teacher_name: `${item.profiles?.first_name} ${item.profiles?.last_name}`
-    }));
+    // Extract section IDs
+    const sectionIds = sectionData.map(item => item.section_id);
+
+    // Now get classes for these sections
+    const { data, error } = await supabase
+      .from('online_classes')
+      .select(`
+        *,
+        classes (
+          id,
+          name
+        ),
+        sections (
+          id,
+          name
+        ),
+        subjects (
+          id,
+          name
+        ),
+        profiles:created_by (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .in('section_id', sectionIds)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching student's online classes:", error);
+      throw error;
+    }
+
+    return data || [];
   } catch (error) {
-    console.error("Exception fetching online classes by date/section:", error);
-    toast.error("An unexpected error occurred");
-    return [];
+    console.error("Error in getClassesForStudent:", error);
+    throw error;
+  }
+};
+
+// Fetch a single online class by ID
+export const getClassById = async (classId: string): Promise<OnlineClass | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('online_classes')
+      .select(`
+        *,
+        classes (
+          id,
+          name
+        ),
+        sections (
+          id,
+          name
+        ),
+        subjects (
+          id,
+          name
+        ),
+        profiles:created_by (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('id', classId)
+      .single();
+
+    if (error) {
+      console.error(`Error fetching online class with ID ${classId}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in getClassById:", error);
+    throw error;
   }
 };

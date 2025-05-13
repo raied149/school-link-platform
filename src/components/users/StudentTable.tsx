@@ -27,9 +27,14 @@ interface StudentTableProps {
     globalSearch: string;
   };
   isTeacherView?: boolean;
+  isStudentView?: boolean;
 }
 
-export function StudentTable({ searchFilters, isTeacherView = false }: StudentTableProps) {
+export function StudentTable({ 
+  searchFilters, 
+  isTeacherView = false, 
+  isStudentView = false 
+}: StudentTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedStudent, setSelectedStudent] = useState<StudentDetail | null>(null);
@@ -40,11 +45,48 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
 
   // Fetch all profiles with role 'student' and their details
   const { data: students = [], isLoading, error } = useQuery({
-    queryKey: ['students', user?.id],
+    queryKey: ['students', user?.id, isStudentView],
     queryFn: async () => {
-      console.log("Fetching students from profiles table");
+      console.log("Fetching students");
       
-      if (isTeacherView && user?.role === 'teacher') {
+      if (isStudentView && user?.role === 'student') {
+        console.log("Student view: fetching only current student profile");
+        
+        // Fetch only the current student's profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .eq('role', 'student')
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching student profile:", profileError);
+          throw profileError;
+        }
+        
+        // Fetch student details for this profile
+        const { data: detailsData, error: detailsError } = await supabase
+          .from('student_details')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (detailsError) {
+          console.error("Error fetching student details:", detailsError);
+          // Don't throw here, we may have a profile without details
+        }
+        
+        // Combine profile and details
+        const studentWithDetails = {
+          ...profileData,
+          details: detailsData || null
+        };
+        
+        console.log("Retrieved student profile:", studentWithDetails);
+        return [studentWithDetails];
+      }
+      else if (isTeacherView && user?.role === 'teacher') {
         console.log("Teacher view: fetching only assigned students");
         
         // First get teacher's assigned sections
@@ -58,7 +100,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
           throw assignmentError;
         }
         
-        // Get distinct section IDs
+        // Get unique section IDs
         const sectionIds = [...new Set(teacherAssignments?.map(item => item.section_id) || [])];
         
         if (!sectionIds.length) {
@@ -84,7 +126,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
           return [];
         }
         
-        // Get distinct student IDs
+        // Get unique student IDs
         const studentIds = [...new Set(studentSections.map(item => item.student_id))];
         
         // Get profiles for these students
@@ -156,6 +198,11 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
   });
 
   const filteredStudents = useMemo(() => {
+    if (isStudentView) {
+      // In student view, we only show the current student - no need to filter
+      return students;
+    }
+    
     return students.filter((student) => {
       if (searchFilters.idSearch && !student.id.toLowerCase().includes(searchFilters.idSearch.toLowerCase())) {
         return false;
@@ -174,7 +221,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
       
       return true;
     });
-  }, [students, searchFilters]);
+  }, [students, searchFilters, isStudentView]);
 
   const handleDelete = async (student: StudentDetail) => {
     setSelectedStudent(student);
@@ -286,7 +333,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Details</TableHead>
-              {!isTeacherView && <TableHead>Actions</TableHead>}
+              {!isTeacherView && !isStudentView && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -302,7 +349,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
                       <StudentDetails student={studentDetail} />
                     </Accordion>
                   </TableCell>
-                  {!isTeacherView && (
+                  {!isTeacherView && !isStudentView && (
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -329,7 +376,7 @@ export function StudentTable({ searchFilters, isTeacherView = false }: StudentTa
         </Table>
       </div>
 
-      {!isTeacherView && (
+      {!isTeacherView && !isStudentView && (
         <>
           <ConfirmationDialog
             open={showDeleteDialog}

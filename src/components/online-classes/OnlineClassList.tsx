@@ -1,184 +1,206 @@
 
-import { useAuth } from "@/contexts/AuthContext";
-import { OnlineClassWithDetails } from "@/services/online-classes";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Users, Link, Video, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { useState } from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { format, parseISO, isPast, isFuture } from "date-fns";
+import { toast } from "sonner";
+import { Video, ExternalLink, Trash2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { onlineClassService } from "@/services/online-classes";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OnlineClassListProps {
-  classes: OnlineClassWithDetails[];
+  classes: any[];
   isLoading: boolean;
-  onDelete?: (id: string) => void;
+  onRefresh: () => void;
+  isStudentView?: boolean;
 }
 
-export function OnlineClassList({ classes, isLoading, onDelete }: OnlineClassListProps) {
+export function OnlineClassList({ 
+  classes = [], 
+  isLoading, 
+  onRefresh,
+  isStudentView = false
+}: OnlineClassListProps) {
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { user } = useAuth();
-  const [classToDelete, setClassToDelete] = useState<string | null>(null);
 
-  const handleDelete = (id: string) => {
-    if (onDelete) {
-      onDelete(id);
-      setClassToDelete(null);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => onlineClassService.deleteOnlineClass(id),
+    onSuccess: () => {
+      toast.success("Online class deleted successfully");
+      onRefresh();
+    },
+    onError: (error) => {
+      console.error("Error deleting class:", error);
+      toast.error("Failed to delete online class");
+    },
+  });
+
+  const handleDeleteClick = (classItem: any) => {
+    setSelectedClass(classItem);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedClass) {
+      deleteMutation.mutate(selectedClass.id);
+      setConfirmDialogOpen(false);
     }
   };
 
-  const groupedByDate = classes.reduce(
-    (acc, cls) => {
-      const date = cls.date;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(cls);
-      return acc;
-    },
-    {} as Record<string, OnlineClassWithDetails[]>
-  );
-
-  const sortedDates = Object.keys(groupedByDate).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime()
-  );
+  const handleJoinClass = (meetLink: string) => {
+    window.open(meetLink, "_blank", "noopener,noreferrer");
+  };
 
   if (isLoading) {
+    return <div className="py-8 text-center">Loading classes...</div>;
+  }
+
+  if (!classes || classes.length === 0) {
     return (
-      <div className="flex justify-center items-center py-10">
-        <p>Loading online classes...</p>
+      <div className="py-8 text-center text-muted-foreground">
+        No online classes scheduled
       </div>
     );
   }
 
-  if (classes.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 text-center">
-        <Video className="h-10 w-10 text-muted-foreground mb-2" />
-        <h3 className="text-lg font-medium">No online classes found</h3>
-        <p className="text-muted-foreground">
-          There are no scheduled online classes yet.
-        </p>
-      </div>
-    );
-  }
+  // Sort classes by date and time
+  const sortedClasses = [...classes].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.start_time}`);
+    const dateB = new Date(`${b.date}T${b.start_time}`);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  // Group classes by date for better organization
+  const classGroups = sortedClasses.reduce((groups: any, item: any) => {
+    const date = item.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(item);
+    return groups;
+  }, {});
 
   return (
     <div className="space-y-8">
-      {sortedDates.map((date) => (
+      {Object.entries(classGroups).map(([date, dateClasses]: [string, any]) => (
         <div key={date} className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">
-              {format(new Date(date), "EEEE, MMMM d, yyyy")}
-            </h3>
-            <Badge>
-              {groupedByDate[date].length} {groupedByDate[date].length === 1 ? "class" : "classes"}
-            </Badge>
-          </div>
+          <h3 className="text-lg font-medium">
+            {format(parseISO(date), "EEEE, MMMM d, yyyy")}
+            {isPast(parseISO(date)) ? (
+              <Badge variant="outline" className="ml-2 bg-muted">
+                Past
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="ml-2 bg-primary/10 text-primary">
+                Upcoming
+              </Badge>
+            )}
+          </h3>
 
-          <div className="space-y-4">
-            {groupedByDate[date]
-              .sort(
-                (a, b) =>
-                  new Date(`2000-01-01T${a.start_time}`).getTime() -
-                  new Date(`2000-01-01T${b.start_time}`).getTime()
-              )
-              .map((cls) => (
-                <div
-                  key={cls.id}
-                  className="border rounded-lg p-4 hover:bg-accent/10"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">
-                          {cls.title || `${cls.subject_name} - ${cls.section_name}`}
-                        </h4>
-                        <Badge variant="outline" className="text-xs">
-                          {cls.subject_name}
-                        </Badge>
-                      </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Teacher</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(dateClasses as any[]).map((classItem) => {
+                  const classDate = parseISO(classItem.date);
+                  const startTime = classItem.start_time;
+                  const endTime = classItem.end_time;
+                  const isUpcoming = isFuture(
+                    new Date(`${classItem.date}T${classItem.start_time}`)
+                  );
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            {format(new Date(`2000-01-01T${cls.start_time}`), "h:mm a")}
-                            {cls.end_time &&
-                              ` - ${format(
-                                new Date(`2000-01-01T${cls.end_time}`),
-                                "h:mm a"
-                              )}`}
-                          </span>
+                  // Get subject, class and teacher info
+                  const subjectName = classItem.subjects?.name || "Unknown Subject";
+                  const className = classItem.classes?.name || "Unknown Class";
+                  const sectionName = classItem.sections?.name || "";
+                  const teacherName = 
+                    classItem.profiles?.first_name && classItem.profiles?.last_name
+                      ? `${classItem.profiles.first_name} ${classItem.profiles.last_name}`
+                      : "Unknown Teacher";
+
+                  return (
+                    <TableRow key={classItem.id}>
+                      <TableCell className="font-medium">{subjectName}</TableCell>
+                      <TableCell>
+                        {className} {sectionName && `- ${sectionName}`}
+                      </TableCell>
+                      <TableCell>
+                        {startTime && endTime
+                          ? `${startTime} - ${endTime}`
+                          : startTime || "Not specified"}
+                      </TableCell>
+                      <TableCell>{teacherName}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleJoinClass(classItem.google_meet_link)}
+                            disabled={!isUpcoming}
+                          >
+                            {isUpcoming ? (
+                              <>
+                                <Video className="mr-2 h-4 w-4" />
+                                Join
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View Link
+                              </>
+                            )}
+                          </Button>
+                          
+                          {!isStudentView && user?.role !== 'student' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(classItem)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>
-                            {cls.class_name} - {cls.section_name}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-sm text-muted-foreground">
-                        Created by {cls.teacher_name || "Unknown Teacher"}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => window.open(cls.google_meet_link, "_blank")}
-                      >
-                        <Video className="mr-2 h-4 w-4" />
-                        Join Class
-                      </Button>
-                      
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setClassToDelete(cls.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </div>
       ))}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog 
-        open={!!classToDelete} 
-        onOpenChange={(open) => !open && setClassToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Online Class</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this online class? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => classToDelete && handleDelete(classToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        title="Delete Online Class"
+        description="Are you sure you want to delete this online class? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        isProcessing={deleteMutation.isPending}
+      />
     </div>
   );
 }

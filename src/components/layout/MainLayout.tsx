@@ -30,13 +30,12 @@ const MainLayout = () => {
   const getMenuItems = () => {
     const commonItems = [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-      { icon: Calendar, label: 'Calendar', path: '/calendar' },
-      { icon: Image, label: 'Gallery', path: '/gallery' },
-      { icon: FileText, label: 'Notes', path: '/notes' },
       { icon: ListTodo, label: 'Tasks', path: '/tasks' },
+      { icon: FileText, label: 'Notes', path: '/notes' },
+      { icon: Image, label: 'Gallery', path: '/gallery' },
     ];
 
-    // Items only for admin and non-teacher roles
+    // Items only for admin and teacher roles
     const adminItems = [
       { icon: Users, label: 'Student Details', path: '/users' },
       { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
@@ -44,29 +43,43 @@ const MainLayout = () => {
       { icon: BookOpen, label: 'Subjects', path: '/subjects' },
       { icon: Clock, label: 'Timetable', path: '/timetable' },
       { icon: AlertTriangle, label: 'Incidents', path: '/incidents' },
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
+      { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
+      { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
     ];
 
-    // Items teachers can access but with limited functionality
+    // Items accesssible by teachers but not students
     const teacherItems = [
       { icon: Users, label: 'Student Details', path: '/users' },
       { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
       { icon: GraduationCap, label: 'Class Years', path: '/class-years' },
       { icon: BookOpen, label: 'Subjects', path: '/subjects' },
-    ];
-
-    // Items accessible by all roles
-    const attendanceItems = [
+      { icon: Calendar, label: 'Calendar', path: '/calendar' },
       { icon: CalendarCheck, label: 'Student Attendance', path: '/student-attendance' },
       { icon: CalendarCheck, label: 'Teacher Attendance', path: '/teacher-attendance' },
+    ];
+
+    // Items accessible by all roles including students
+    const sharedItems = [
       { icon: Video, label: 'Online Classes', path: '/online-classes' },
       { icon: FileText, label: 'Tests & Exams', path: '/exams' },
     ];
 
-    if (user?.role === 'teacher') {
-      return [...commonItems, ...teacherItems, ...attendanceItems];
+    // Student-specific items
+    const studentItems = [
+      { icon: Users, label: 'My Profile', path: '/users' },
+      { icon: GraduationCap, label: 'My Class', path: '/class-years' },
+    ];
+
+    if (user?.role === 'admin') {
+      return [...commonItems, ...adminItems, ...sharedItems];
+    } else if (user?.role === 'teacher') {
+      return [...commonItems, ...teacherItems, ...sharedItems];
+    } else if (user?.role === 'student') {
+      return [...commonItems, ...studentItems, ...sharedItems];
     }
     
-    return [...commonItems, ...adminItems, ...attendanceItems];
+    return commonItems;
   };
 
   const menuItems = getMenuItems();
