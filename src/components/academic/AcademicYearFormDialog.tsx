@@ -22,23 +22,27 @@ export interface AcademicYearFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (year: Partial<AcademicYear>) => Promise<void>;
   existingYears?: AcademicYear[];
+  mode?: 'create' | 'edit';
+  yearData?: AcademicYear;
 }
 
 export function AcademicYearFormDialog({
   open,
   onOpenChange,
   onSave,
-  existingYears = []
+  existingYears = [],
+  mode = 'create',
+  yearData
 }: AcademicYearFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
-      isActive: existingYears.length === 0 ? true : false
+      name: yearData?.name || "",
+      startDate: yearData?.startDate || new Date().toISOString().split("T")[0],
+      endDate: yearData?.endDate || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
+      isActive: yearData?.isActive || (existingYears.length === 0 ? true : false)
     }
   });
 
@@ -64,7 +68,7 @@ export function AcademicYearFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Academic Year</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Add Academic Year' : 'Edit Academic Year'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

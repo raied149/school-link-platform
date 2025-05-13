@@ -124,17 +124,24 @@ export function useMarkEntry(examId: string) {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: { studentId: string; mark: number; feedback: string }) => {
-      return saveStudentExamResult(examId, data.studentId, data.mark, data.feedback);
+      return saveStudentExamResult({
+        examId,
+        studentId: data.studentId,
+        marks: data.mark,
+        feedback: data.feedback
+      });
     }
   });
 
   // Bulk save mutation
   const bulkSaveMutation = useMutation({
     mutationFn: async (data: { 
-      examId: string; 
       results: { studentId: string; mark: number; feedback: string }[] 
     }) => {
-      return bulkSaveStudentExamResults(data.examId, data.results);
+      return bulkSaveStudentExamResults({
+        examId,
+        results: data.results
+      });
     }
   });
 
@@ -150,7 +157,7 @@ export function useMarkEntry(examId: string) {
         feedback: feedback[studentId] || ''
       }));
       
-      await bulkSaveMutation.mutateAsync({ examId, results });
+      await bulkSaveMutation.mutateAsync({ results });
       
       // Update original values to match current values
       setOriginalMarks({...marks});

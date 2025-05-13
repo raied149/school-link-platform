@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,9 @@ const ExamsPage = () => {
   });
 
   // Filter exams based on search term
-  const filteredExams = exams.filter(exam =>
+  const filteredExams = exams ? exams.filter((exam: any) =>
     exam.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');

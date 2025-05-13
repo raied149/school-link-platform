@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 
 interface StudentResultsListProps {
   examId: string;
@@ -152,10 +151,10 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {result.profiles.first_name} {result.profiles.last_name}
+                          {result.profiles?.first_name} {result.profiles?.last_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {result.profiles.student_details?.admission_number || result.student_id.substring(0, 8)}
+                          {result.profiles?.student_details?.admission_number || result.student_id.substring(0, 8)}
                         </p>
                       </div>
                     </TableCell>

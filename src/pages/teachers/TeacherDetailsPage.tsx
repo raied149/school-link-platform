@@ -1,6 +1,7 @@
+
 import { Card } from "@/components/ui/card";
 import { TeacherPageHeader } from "@/components/teachers/TeacherPageHeader";
-import { TeacherTable } from "@/components/users/TeacherTable";
+import TeacherTable from "@/components/users/TeacherTable";
 import { useState } from "react";
 import { TeacherSearch } from "@/components/users/TeacherSearch";
 import { useAuth } from "@/contexts/AuthContext";

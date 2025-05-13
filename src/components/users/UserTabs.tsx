@@ -2,7 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { StudentTable } from "./StudentTable";
-import { TeacherTable } from "./TeacherTable";
+import TeacherTable from "./TeacherTable";
 import { StudentSearch } from "./StudentSearch";
 import { TeacherSearch } from "./TeacherSearch";
 
@@ -66,7 +66,6 @@ export function UserTabs({
           <TeacherTable 
             searchFilters={searchFilters}
             isTeacherView={isTeacherView}
-            isStudentView={isStudentView}
           />
         </TabsContent>
       )}

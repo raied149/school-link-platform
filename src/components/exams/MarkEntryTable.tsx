@@ -6,32 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Stats } from "@/hooks/useMarkEntry";
 import { Card } from "@/components/ui/card";
+import { useMarkEntry } from "@/hooks/useMarkEntry";
 
 interface MarkEntryTableProps {
-  students: any[];
-  marks: Record<string, number>;
-  feedback: Record<string, string>;
-  handleMarkChange: (studentId: string, value: string) => void;
-  handleFeedbackChange: (studentId: string, value: string) => void;
-  updateSingleMark?: (studentId: string, mark: number, feedback: string) => Promise<boolean>;
+  examId: string;
+  sectionId: string;
   maxScore: number;
-  stats: Stats;
-  isLoading: boolean;
-  isUpdating?: boolean;
+  onMarksUpdated: () => void;
 }
 
 export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
-  students,
-  marks,
-  feedback,
-  handleMarkChange,
-  handleFeedbackChange,
-  updateSingleMark,
+  examId,
+  sectionId,
   maxScore,
-  stats,
-  isLoading,
-  isUpdating = false,
+  onMarksUpdated
 }) => {
+  const {
+    isLoading,
+    isSaving,
+    students,
+    marks,
+    feedback,
+    stats,
+    handleMarkChange,
+    handleFeedbackChange,
+    updateSingleMark
+  } = useMarkEntry(examId);
+  
   const [editingStudent, setEditingStudent] = useState<string | null>(null);
   
   // Handle inline editing for a student mark
@@ -46,6 +47,7 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
     
     if (success) {
       setEditingStudent(null);
+      onMarksUpdated();
     }
   };
   
@@ -133,9 +135,9 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
                     <Button
                       onClick={() => handleSaveStudentMark(student.student.id)}
                       size="sm"
-                      disabled={editingStudent === student.student.id && isUpdating}
+                      disabled={editingStudent === student.student.id && isSaving}
                     >
-                      {editingStudent === student.student.id && isUpdating ? 'Saving...' : 'Save'}
+                      {editingStudent === student.student.id && isSaving ? 'Saving...' : 'Save'}
                     </Button>
                   </TableCell>
                 )}

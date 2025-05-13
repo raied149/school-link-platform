@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from 'react';
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,12 @@ interface TeacherTableProps {
     globalSearch: string;
   };
   isTeacherView?: boolean;
-  isStudentView?: boolean;
 }
 
-const TeacherTable: React.FC<TeacherTableProps> = ({ searchFilters, isTeacherView = false, isStudentView = false }) => {
+const TeacherTable: React.FC<TeacherTableProps> = ({
+  searchFilters,
+  isTeacherView = false
+}) => {
   const navigate = useNavigate();
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -88,7 +90,7 @@ const TeacherTable: React.FC<TeacherTableProps> = ({ searchFilters, isTeacherVie
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
-            {!isStudentView && (
+            {!isTeacherView && (
               <TableHead className="text-right">Actions</TableHead>
             )}
           </TableRow>
@@ -104,7 +106,7 @@ const TeacherTable: React.FC<TeacherTableProps> = ({ searchFilters, isTeacherVie
                   {teacher.status}
                 </Badge>
               </TableCell>
-            {!isStudentView && (
+            {!isTeacherView && (
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   <Button
