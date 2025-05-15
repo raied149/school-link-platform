@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timetableService } from '@/services/timetableService';
@@ -11,9 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { TimeSlotForm } from './TimeSlotForm';
 import { TimeSlot, WeekDay, SlotType } from '@/types/timetable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, isValid, parse } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface TimetableManagementProps {
   classId: string;
@@ -25,6 +25,7 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState<WeekDay>('Monday');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
@@ -292,4 +293,3 @@ export function TimetableManagement({ classId, sectionId, academicYearId }: Time
     </div>
   );
 }
-

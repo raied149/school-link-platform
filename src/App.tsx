@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import MainLayout from "./components/layout/MainLayout";
@@ -47,21 +46,16 @@ function App() {
               <Route path="/" element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 
-                {/* Removed academic-years route */}
-                
                 <Route path="/classes" element={<ClassesPage />} />
                 <Route path="/classes/:yearId" element={<ClassesPage />} />
                 <Route path="/class/:classId" element={<ClassDetailsPage />} />
                 
-                {/* Routes for sections */}
                 <Route path="/sections/:classId" element={<SectionsPage />} />
                 <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
                 
-                {/* Class years navigation structure - fixed routing */}
                 <Route path="/class-years" element={<ClassYearsPage />} />
                 <Route path="/class-years/:yearId" element={<ClassYearsPage />} />
                 
-                {/* New route for sections accessed from class years */}
                 <Route path="/class-years/sections/:classId" element={<SectionsPage />} />
                 
                 <Route path="/users" element={<UsersPage />} />
@@ -70,7 +64,11 @@ function App() {
                 <Route path="/teachers/:teacherId" element={<TeacherDetailPage />} />
                 <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
                 <Route path="/student-attendance" element={<StudentAttendancePage />} />
+                
                 <Route path="/timetable" element={<TimetablePage />} />
+                <Route path="/timetable/:classId" element={<TimetablePage />} />
+                <Route path="/timetable/:classId/:sectionId" element={<TimetablePage />} />
+                
                 <Route path="/exams" element={<ExamsPage />} />
                 <Route path="/exams/:examId" element={<ExamDetailPage />} />
                 <Route path="/online-classes" element={<OnlineClassesPage />} />

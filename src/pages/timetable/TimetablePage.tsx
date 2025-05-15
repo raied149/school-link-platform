@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 
 export default function TimetablePage() {
@@ -28,7 +28,7 @@ export default function TimetablePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const params = useParams();
   const navigate = useNavigate();
 
   // Debug user role
@@ -37,22 +37,21 @@ export default function TimetablePage() {
 
   // Get classId and sectionId from URL parameters if available
   useEffect(() => {
-    const classIdParam = searchParams.get('classId');
-    const sectionIdParam = searchParams.get('sectionId');
+    const classIdParam = params.classId;
+    const sectionIdParam = params.sectionId;
     
     if (classIdParam) setSelectedClassId(classIdParam);
     if (classIdParam && sectionIdParam) setSelectedSectionId(sectionIdParam);
-  }, [searchParams]);
+  }, [params.classId, params.sectionId]);
 
   // Update URL parameters when selections change
   useEffect(() => {
-    if (selectedClassId || selectedSectionId) {
-      const params = new URLSearchParams();
-      if (selectedClassId) params.set('classId', selectedClassId);
-      if (selectedSectionId) params.set('sectionId', selectedSectionId);
-      setSearchParams(params);
+    if (selectedClassId && !selectedSectionId) {
+      navigate(`/timetable/${selectedClassId}`);
+    } else if (selectedClassId && selectedSectionId) {
+      navigate(`/timetable/${selectedClassId}/${selectedSectionId}`);
     }
-  }, [selectedClassId, selectedSectionId, setSearchParams]);
+  }, [selectedClassId, selectedSectionId, navigate]);
 
   const { data: classes = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes'],
