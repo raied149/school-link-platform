@@ -34,12 +34,6 @@ import TasksPage from './pages/TasksPage';
 import GalleryPage from './pages/gallery/GalleryPage';
 import GalleryEventDetailPage from './pages/gallery/GalleryEventDetailPage';
 
-// Redirect component for handling class-years with yearId to classes with yearId
-const ClassYearsRedirect = () => {
-  const { yearId } = useParams();
-  return <Navigate to={`/classes/${yearId ?? ''}`} replace />;
-};
-
 const queryClient = new QueryClient();
 
 function App() {
@@ -54,7 +48,7 @@ function App() {
               <Route path="/" element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/academic-years" element={<AcademicYearsPage />} />
-                <Route path="/classes" element={<ClassYearsPage />} />
+                <Route path="/classes" element={<ClassesPage />} />
                 <Route path="/classes/:yearId" element={<ClassesPage />} />
                 <Route path="/class/:classId" element={<ClassDetailsPage />} />
                 
@@ -64,7 +58,7 @@ function App() {
                 
                 {/* Class years navigation structure */}
                 <Route path="/class-years" element={<ClassYearsPage />} />
-                <Route path="/class-years/:yearId" element={<ClassesPage />} />
+                <Route path="/class-years/:yearId" element={<ClassYearsPage />} />
                 
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/subjects" element={<SubjectsPage />} />

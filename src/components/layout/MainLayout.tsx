@@ -139,6 +139,12 @@ const MainLayout = () => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  // Function to handle navigation
+  const handleNavigation = (path: string) => {
+    // Directly navigate to the path without any login logic
+    navigate(path);
+  };
+
   return (
     <div className={cn("min-h-screen flex w-full transition-colors duration-500", gradientClasses[currentGradient])}>
       <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm bg-white/90 backdrop-blur-sm">
@@ -165,7 +171,7 @@ const MainLayout = () => {
               className={`w-full justify-start text-left px-4 py-2 ${
                 isMenuItemActive(item.path) ? "bg-accent text-accent-foreground" : "hover:bg-accent"
               }`}
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigation(item.path)}
             >
               <item.icon className="mr-2 h-4 w-4" />
               {item.label}
