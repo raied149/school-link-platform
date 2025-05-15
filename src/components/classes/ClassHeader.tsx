@@ -1,21 +1,26 @@
 
-import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface ClassHeaderProps {
-  className?: string;
-  section?: string;
-  academicYear?: string;
+export interface ClassHeaderProps {
+  className: string;
+  academicYear: string;
+  loading?: boolean;
 }
 
-export function ClassHeader({ className, section, academicYear }: ClassHeaderProps) {
+export function ClassHeader({ className, academicYear, loading = false }: ClassHeaderProps) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-[200px]" />
+        <Skeleton className="h-4 w-[300px]" />
+      </div>
+    );
+  }
+  
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">
-        {className || 'Loading...'} - {section || 'Loading...'}
-      </h1>
-      <p className="text-muted-foreground">
-        Academic Year: {academicYear || 'Loading...'}
-      </p>
+      <h1 className="text-2xl font-bold tracking-tight">{className}</h1>
+      <p className="text-muted-foreground">{academicYear}</p>
     </div>
   );
 }

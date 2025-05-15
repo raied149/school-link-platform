@@ -316,9 +316,9 @@ const ClassDetailsPage = () => {
   return (
     <div className="space-y-6">
       <ClassHeader 
-        title={title}
-        subtitle={subtitle}
-        isLoading={isLoading}
+        className={title}
+        academicYear={subtitle}
+        loading={isLoading}
       />
 
       <Card>
@@ -329,7 +329,7 @@ const ClassDetailsPage = () => {
           </TabsList>
           <TabsContent value="students" className="p-4">
             <StudentList 
-              students={students} 
+              studentsList={students} 
               isLoading={isStudentsLoading}
               onEdit={isAdminOrTeacher ? handleEditStudent : undefined}
               onDelete={isAdminOrTeacher ? handleDeleteStudent : undefined}

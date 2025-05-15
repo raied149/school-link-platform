@@ -44,7 +44,6 @@ export function ClassesList({
   };
 
   const handleView = (classItem: Class) => {
-    // Updated to navigate to the sections page with proper parameters
     navigate(`/sections/${classItem.id}?yearId=${yearId}`);
   };
 

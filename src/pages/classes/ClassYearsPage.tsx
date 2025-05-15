@@ -22,23 +22,6 @@ const ClassYearsPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch active academic year if no yearId is provided
-  const { data: activeYear, isLoading: activeYearLoading } = useQuery({
-    queryKey: ['activeAcademicYear'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-        
-      if (error) throw error;
-      return data ? mapDatabaseYearToModel(data) : null;
-    },
-    enabled: !yearId
-  });
-
   // Helper function to map database year format to our model format
   const mapDatabaseYearToModel = (dbYear: any): AcademicYear => {
     return {
@@ -64,115 +47,35 @@ const ClassYearsPage = () => {
     };
   };
 
+  // Fetch active academic year if no yearId is provided
+  const { data: activeYear, isLoading: activeYearLoading } = useQuery({
+    queryKey: ['activeAcademicYear'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data ? mapDatabaseYearToModel(data) : null;
+    },
+    enabled: !yearId
+  });
+
   // Fetch all academic years
   const { data: academicYearsRaw = [], isLoading: academicYearsLoading } = useQuery({
     queryKey: ['academicYears'],
     queryFn: async () => {
-      if (isStudentView) {
-        // For students, get their assigned class and its academic year
-        const studentId = user?.id;
+      // For admins, get all academic years
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('*')
+        .order('start_date', { ascending: false });
         
-        // First get the student's section
-        const { data: sectionData, error: sectionError } = await supabase
-          .from('student_sections')
-          .select('section_id')
-          .eq('student_id', studentId)
-          .limit(1)
-          .maybeSingle();
-          
-        if (sectionError) throw sectionError;
-        if (!sectionData) return [];
-        
-        // Now get section details to get the class
-        const { data: section, error: sectionDetailsError } = await supabase
-          .from('sections')
-          .select('class_id')
-          .eq('id', sectionData.section_id)
-          .limit(1)
-          .maybeSingle();
-          
-        if (sectionDetailsError) throw sectionDetailsError;
-        if (!section) return [];
-        
-        // Now get class details to get the academic year
-        const { data: classData, error: classError } = await supabase
-          .from('classes')
-          .select('year_id')
-          .eq('id', section.class_id)
-          .limit(1)
-          .maybeSingle();
-          
-        if (classError) throw classError;
-        if (!classData) return [];
-        
-        // Finally get the academic year
-        const { data: years, error: yearsError } = await supabase
-          .from('academic_years')
-          .select('*')
-          .eq('id', classData.year_id);
-          
-        if (yearsError) throw yearsError;
-        return years || [];
-      } 
-      else if (isTeacherView) {
-        // For teachers, get academic years for classes they teach
-        const teacherId = user?.id;
-        
-        // Get teacher's assigned sections from timetable
-        const { data: timetableData, error: timetableError } = await supabase
-          .from('timetable')
-          .select('section_id')
-          .eq('teacher_id', teacherId);
-          
-        if (timetableError) throw timetableError;
-        if (!timetableData?.length) return [];
-        
-        // Get unique section IDs
-        const sectionIds = [...new Set(timetableData.map(item => item.section_id))];
-        
-        // Get classes for these sections
-        const { data: sectionsData, error: sectionsError } = await supabase
-          .from('sections')
-          .select('class_id')
-          .in('id', sectionIds);
-          
-        if (sectionsError) throw sectionsError;
-        if (!sectionsData?.length) return [];
-        
-        // Get unique class IDs
-        const classIds = [...new Set(sectionsData.map(item => item.class_id))];
-        
-        // Get academic years for these classes
-        const { data: classesData, error: classesError } = await supabase
-          .from('classes')
-          .select('year_id')
-          .in('id', classIds);
-          
-        if (classesError) throw classesError;
-        if (!classesData?.length) return [];
-        
-        // Get unique academic year IDs
-        const yearIds = [...new Set(classesData.map(item => item.year_id))];
-        
-        // Get the academic years
-        const { data: years, error: yearsError } = await supabase
-          .from('academic_years')
-          .select('*')
-          .in('id', yearIds)
-          .order('start_date', { ascending: false });
-          
-        if (yearsError) throw yearsError;
-        return years || [];
-      } else {
-        // For admins, get all academic years
-        const { data, error } = await supabase
-          .from('academic_years')
-          .select('*')
-          .order('start_date', { ascending: false });
-          
-        if (error) throw error;
-        return data || [];
-      }
+      if (error) throw error;
+      return data || [];
     }
   });
 
@@ -186,89 +89,14 @@ const ClassYearsPage = () => {
       const selectedYearId = yearId || activeYear?.id;
       if (!selectedYearId) return [];
       
-      if (isStudentView) {
-        // For students, get only their assigned class
-        const studentId = user?.id;
+      // For admins, get all classes for the selected academic year
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('year_id', selectedYearId);
         
-        // Get student's section
-        const { data: sectionData, error: sectionError } = await supabase
-          .from('student_sections')
-          .select('section_id')
-          .eq('student_id', studentId)
-          .limit(1)
-          .maybeSingle();
-          
-        if (sectionError) throw sectionError;
-        if (!sectionData) return [];
-        
-        // Get section details to get the class
-        const { data: section, error: sectionDetailsError } = await supabase
-          .from('sections')
-          .select('class_id')
-          .eq('id', sectionData.section_id)
-          .limit(1)
-          .maybeSingle();
-          
-        if (sectionDetailsError) throw sectionDetailsError;
-        if (!section) return [];
-        
-        // Get the class details
-        const { data: classData, error: classError } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('id', section.class_id)
-          .eq('year_id', selectedYearId);
-          
-        if (classError) throw classError;
-        return classData || [];
-      }
-      else if (isTeacherView) {
-        // For teachers, get classes they teach in the selected academic year
-        const teacherId = user?.id;
-        
-        // Get teacher's assigned sections from timetable
-        const { data: timetableData, error: timetableError } = await supabase
-          .from('timetable')
-          .select('section_id')
-          .eq('teacher_id', teacherId);
-          
-        if (timetableError) throw timetableError;
-        if (!timetableData?.length) return [];
-        
-        // Get unique section IDs
-        const sectionIds = [...new Set(timetableData.map(item => item.section_id))];
-        
-        // Get classes for these sections
-        const { data: sectionsData, error: sectionsError } = await supabase
-          .from('sections')
-          .select('class_id')
-          .in('id', sectionIds);
-          
-        if (sectionsError) throw sectionsError;
-        if (!sectionsData?.length) return [];
-        
-        // Get unique class IDs
-        const classIds = [...new Set(sectionsData.map(item => item.class_id))];
-        
-        // Get classes for the selected academic year
-        const { data, error } = await supabase
-          .from('classes')
-          .select('*')
-          .in('id', classIds)
-          .eq('year_id', selectedYearId);
-          
-        if (error) throw error;
-        return data || [];
-      } else {
-        // For admins, get all classes for the selected academic year
-        const { data, error } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('year_id', selectedYearId);
-          
-        if (error) throw error;
-        return data || [];
-      }
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!yearId || !!activeYear?.id
   });
@@ -432,6 +260,7 @@ const ClassYearsPage = () => {
     await deleteClassMutation.mutateAsync(id);
   };
 
+  // Loading state
   const isLoading = activeYearLoading || academicYearsLoading;
 
   if (isLoading && !yearId) {
@@ -448,24 +277,12 @@ const ClassYearsPage = () => {
         <Card className="p-6">
           <div className="text-center py-8">
             <h2 className="text-xl font-semibold mb-4">No Academic Years Found</h2>
-            {isStudentView ? (
-              <p className="text-muted-foreground">
-                You are not assigned to any class yet. Please contact your administrator.
-              </p>
-            ) : isTeacherView ? (
-              <p className="text-muted-foreground">
-                You are not assigned to any classes yet. Please contact your administrator.
-              </p>
-            ) : (
-              <>
-                <p className="text-muted-foreground mb-4">
-                  No academic years have been added yet. Please create one to get started.
-                </p>
-                <Button onClick={() => handleCreateYear({ name: 'New Academic Year', startDate: new Date().toISOString().split('T')[0], endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], isActive: true })}>
-                  Create Academic Year
-                </Button>
-              </>
-            )}
+            <p className="text-muted-foreground mb-4">
+              No academic years have been added yet. Please create one to get started.
+            </p>
+            <Button onClick={() => handleCreateYear({ name: 'New Academic Year', startDate: new Date().toISOString().split('T')[0], endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0], isActive: true })}>
+              Create Academic Year
+            </Button>
           </div>
         </Card>
       </div>
@@ -491,7 +308,7 @@ const ClassYearsPage = () => {
           academicYears={academicYears} 
           selectedYearId={selectedYear.id} 
           onYearCreate={handleCreateYear}
-          isTeacherView={isTeacherView || isStudentView}
+          isTeacherView={false}
         />
       </div>
 
@@ -503,7 +320,7 @@ const ClassYearsPage = () => {
           onCreateClass={handleCreateClass}
           onUpdateClass={handleUpdateClass}
           onDeleteClass={handleDeleteClass}
-          isTeacherView={isTeacherView || isStudentView}
+          isTeacherView={false}
         />
       </Card>
     </div>

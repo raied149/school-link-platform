@@ -34,7 +34,7 @@ export function AcademicYearTabs({
 
   return (
     <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:items-center justify-between mb-8">
-      <h1 className="text-2xl font-bold tracking-tight">Academic Years</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Class Years</h1>
       
       <div className="flex items-center space-x-2">
         {academicYears.length > 0 && (
