@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClassHeader } from "@/components/classes/ClassHeader";
@@ -9,6 +8,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrumb";
 
 interface StudentDetail {
   id: string;
@@ -332,6 +332,8 @@ const ClassDetailsPage = () => {
 
   return (
     <div className="space-y-6">
+      <ActiveClassBreadcrumb />
+      
       <ClassHeader 
         className={title}
         academicYear={subtitle}

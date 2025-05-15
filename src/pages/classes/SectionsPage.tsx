@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { useParams, useNavigate, useSearchParams, useLocation } from "react-rout
 import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrumb";
 
 function useTeacherMap() {
   return useQuery({
@@ -422,6 +422,8 @@ const SectionsPage = () => {
 
   return (
     <div className="space-y-6">
+      <ActiveClassBreadcrumb />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sections</h1>

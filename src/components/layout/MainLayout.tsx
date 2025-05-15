@@ -29,6 +29,13 @@ const MainLayout = () => {
   const { logout, user } = useAuth();
   const { currentGradient, setGradient } = useGradient();
 
+  // Check if the current path is related to class years, classes, or sections
+  const isClassYearsRelated = 
+    location.pathname.includes('/class-years') || 
+    location.pathname.includes('/classes') ||
+    location.pathname.includes('/class/') ||
+    location.pathname.includes('/sections/');
+
   // Update gradient based on current route
   useEffect(() => {
     if (location.pathname.includes('/dashboard')) {
@@ -43,6 +50,8 @@ const MainLayout = () => {
       setGradient('subjects');
     } else if (location.pathname.includes('/academic-years')) {
       setGradient('calendar');
+    } else if (location.pathname.includes('/class') || location.pathname.includes('/sections')) {
+      setGradient('classes');
     } else {
       setGradient('default');
     }
@@ -56,6 +65,7 @@ const MainLayout = () => {
     users: 'bg-gradient-to-br from-blue-300 via-blue-500 to-blue-700',
     calendar: 'bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-800',
     subjects: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-blue-700',
+    classes: 'bg-gradient-to-br from-blue-400 via-blue-600 to-blue-700',
   };
 
   // Define menu items based on user role
@@ -121,6 +131,14 @@ const MainLayout = () => {
     logout();
   };
 
+  // Function to determine if a menu item is active
+  const isMenuItemActive = (path: string) => {
+    if (path === '/class-years' && isClassYearsRelated) {
+      return true;
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
   return (
     <div className={cn("min-h-screen flex w-full transition-colors duration-500", gradientClasses[currentGradient])}>
       <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm bg-white/90 backdrop-blur-sm">
@@ -143,9 +161,9 @@ const MainLayout = () => {
           {menuItems.map((item) => (
             <Button
               key={item.path}
-              variant={location.pathname === item.path ? "default" : "ghost"}
+              variant={isMenuItemActive(item.path) ? "default" : "ghost"}
               className={`w-full justify-start text-left px-4 py-2 ${
-                location.pathname === item.path ? "bg-accent text-accent-foreground" : "hover:bg-accent"
+                isMenuItemActive(item.path) ? "bg-accent text-accent-foreground" : "hover:bg-accent"
               }`}
               onClick={() => navigate(item.path)}
             >
