@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 function useTeacherMap() {
   return useQuery({
@@ -60,14 +62,18 @@ const SectionsPage = () => {
   const [searchParams] = useSearchParams();
   const yearId = searchParams.get('yearId');
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
+
+  console.log("Current user role:", user?.role);
   
   // Fetch academic year details
   const { data: academicYear } = useQuery({
@@ -150,7 +156,7 @@ const SectionsPage = () => {
         id: section.id,
         name: section.name,
         classId: section.class_id,
-        academicYearId: classDetails?.academicYearId || "",
+        academicYearId: classDetails?.academicYearId || yearId || "",
         teacherId: section.teacher_id,
         createdAt: section.created_at,
         updatedAt: section.created_at
@@ -390,10 +396,14 @@ const SectionsPage = () => {
   
   // Fix the navigation function to include yearId
   const navigateToSectionDetails = (section: Section) => {
-    // Get the academic year ID from the class details
-    const academicYearId = classDetails?.academicYearId;
+    // Get the academic year ID from the class details or URL param
+    const academicYearId = classDetails?.academicYearId || yearId;
     navigate(`/class/${classId}/section/${section.id}`, { 
-      state: { yearId: academicYearId } 
+      state: { 
+        yearId: academicYearId,
+        sectionName: section.name,
+        className: classDetails?.name
+      } 
     });
   };
   
@@ -403,6 +413,12 @@ const SectionsPage = () => {
       navigate('/classes', { replace: true });
     }
   }, [classId, navigate]);
+
+  // Log the yearId for debugging
+  useEffect(() => {
+    console.log("Year ID from URL:", yearId);
+    console.log("Class ID from URL:", classId);
+  }, [yearId, classId]);
 
   return (
     <div className="space-y-6">
