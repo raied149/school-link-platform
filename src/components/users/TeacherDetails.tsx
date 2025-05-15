@@ -51,6 +51,28 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
         throw detailsError;
       }
       
+      // Parse JSON fields properly
+      const contactInfo = typeof teacherDetails?.contact_info === 'string' 
+        ? JSON.parse(teacherDetails.contact_info) 
+        : teacherDetails?.contact_info || {};
+        
+      const professionalInfo = typeof teacherDetails?.professional_info === 'string'
+        ? JSON.parse(teacherDetails.professional_info)
+        : teacherDetails?.professional_info || {};
+        
+      const emergencyContact = typeof teacherDetails?.emergency_contact === 'string'
+        ? JSON.parse(teacherDetails.emergency_contact)
+        : teacherDetails?.emergency_contact || {};
+        
+      const medicalInfo = typeof teacherDetails?.medical_info === 'string'
+        ? JSON.parse(teacherDetails.medical_info)
+        : teacherDetails?.medical_info || {};
+      
+      // Ensure gender is one of the allowed values
+      const gender = (teacherDetails?.gender === 'male' || teacherDetails?.gender === 'female')
+        ? teacherDetails.gender as 'male' | 'female'
+        : 'other';
+      
       // Map to our Teacher type
       return {
         id: profile.id,
@@ -59,42 +81,42 @@ export function TeacherDetails({ teacher }: TeacherDetailsProps) {
         lastName: profile.last_name,
         email: profile.email || '',
         role: profile.role,
-        gender: teacherDetails?.gender || 'other',
+        gender: gender,
         dateOfBirth: teacherDetails?.date_of_birth || '',
         nationality: teacherDetails?.nationality || '',
         contactInformation: {
-          currentAddress: teacherDetails?.contact_info?.currentAddress || '',
-          permanentAddress: teacherDetails?.contact_info?.permanentAddress || '',
-          personalPhone: teacherDetails?.contact_info?.personalPhone || '',
-          schoolPhone: teacherDetails?.contact_info?.schoolPhone || '',
-          personalEmail: teacherDetails?.contact_info?.personalEmail || '',
-          schoolEmail: teacherDetails?.contact_info?.schoolEmail || '',
+          currentAddress: contactInfo.currentAddress || '',
+          permanentAddress: contactInfo.permanentAddress || '',
+          personalPhone: contactInfo.personalPhone || '',
+          schoolPhone: contactInfo.schoolPhone || '',
+          personalEmail: contactInfo.personalEmail || '',
+          schoolEmail: contactInfo.schoolEmail || '',
         },
         professionalDetails: {
-          employeeId: teacherDetails?.professional_info?.employeeId || '',
-          designation: teacherDetails?.professional_info?.designation || '',
-          department: teacherDetails?.professional_info?.department || '',
-          subjects: teacherDetails?.professional_info?.subjects || [],
-          classesAssigned: teacherDetails?.professional_info?.classesAssigned || [],
-          joiningDate: teacherDetails?.professional_info?.joiningDate || '',
-          qualifications: teacherDetails?.professional_info?.qualifications || [],
-          employmentType: teacherDetails?.professional_info?.employmentType || 'Full-time',
+          employeeId: professionalInfo.employeeId || '',
+          designation: professionalInfo.designation || '',
+          department: professionalInfo.department || '',
+          subjects: professionalInfo.subjects || [],
+          classesAssigned: professionalInfo.classesAssigned || [],
+          joiningDate: professionalInfo.joiningDate || '',
+          qualifications: professionalInfo.qualifications || [],
+          employmentType: professionalInfo.employmentType || 'Full-time',
         },
         attendance: { present: 0, absent: 0, leave: 0 }, // Default values
         leaveBalance: { sick: 0, casual: 0, vacation: 0 }, // Default values
         performance: {},
         emergency: {
-          contactName: teacherDetails?.emergency_contact?.name || '',
-          relationship: teacherDetails?.emergency_contact?.relationship || '',
-          phone: teacherDetails?.emergency_contact?.phone || '',
+          contactName: emergencyContact.name || '',
+          relationship: emergencyContact.relationship || '',
+          phone: emergencyContact.phone || '',
         },
         medicalInformation: {
-          conditions: teacherDetails?.medical_info?.conditions || [],
-          allergies: teacherDetails?.medical_info?.allergies || [],
+          conditions: medicalInfo.conditions || [],
+          allergies: medicalInfo.allergies || [],
         },
         createdAt: profile.created_at,
         updatedAt: profile.created_at,
-      };
+      } as Teacher;
     },
     enabled: !!(teacherId || teacher?.id),
   });
