@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -20,11 +20,41 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGradient } from '@/contexts/GradientContext';
+import { cn } from '@/lib/utils';
 
 const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+  const { currentGradient, setGradient } = useGradient();
+
+  // Update gradient based on current route
+  useEffect(() => {
+    if (location.pathname.includes('/dashboard')) {
+      setGradient('dashboard');
+    } else if (location.pathname.includes('/tasks')) {
+      setGradient('tasks');
+    } else if (location.pathname.includes('/users') || location.pathname.includes('/teachers')) {
+      setGradient('users');
+    } else if (location.pathname.includes('/calendar')) {
+      setGradient('calendar');
+    } else if (location.pathname.includes('/subjects')) {
+      setGradient('subjects');
+    } else {
+      setGradient('default');
+    }
+  }, [location.pathname, setGradient]);
+
+  // Define gradient classes
+  const gradientClasses = {
+    default: 'bg-gradient-to-br from-blue-500 to-blue-700',
+    dashboard: 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700',
+    tasks: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800',
+    users: 'bg-gradient-to-br from-blue-300 via-blue-500 to-blue-700',
+    calendar: 'bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-800',
+    subjects: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-blue-700',
+  };
 
   // Define menu items based on user role
   const getMenuItems = () => {
@@ -89,8 +119,8 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="min-h-screen flex w-full">
-      <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm">
+    <div className={cn("min-h-screen flex w-full transition-colors duration-500", gradientClasses[currentGradient])}>
+      <div className="border-r p-4 max-w-[16rem] flex flex-col shadow-md z-10 text-xs sm:text-sm bg-white/90 backdrop-blur-sm">
         <div className="border-b p-4">
           <div className="flex items-center gap-2 mb-2">
             <img 
@@ -128,7 +158,7 @@ const MainLayout = () => {
           </Button>
         </div>
       </div>
-      <main className="flex-1 p-8 bg-background">
+      <main className="flex-1 p-8 bg-white/70 backdrop-blur-sm shadow-lg rounded-l-3xl">
         <Outlet />
       </main>
     </div>
