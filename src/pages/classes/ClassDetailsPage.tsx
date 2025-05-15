@@ -39,23 +39,35 @@ const ClassDetailsPage = () => {
     queryFn: async () => {
       if (!classId) return null;
       
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*, academic_years:year_id(*)')
-        .eq('id', classId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error("Error fetching class details:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*, academic_years:year_id(*)')
+          .eq('id', classId)
+          .maybeSingle();
+        
+        if (error) {
+          console.error("Error fetching class details:", error);
+          throw error;
+        }
+        
+        // Check if data exists and has the expected structure
+        if (data) {
+          const academicYearName = data.academic_years?.name || 'Unknown Year';
+          
+          return {
+            id: data.id,
+            name: data.name,
+            academicYear: academicYearName,
+            yearId: data.year_id
+          };
+        }
+        
+        return null;
+      } catch (error) {
+        console.error("Exception in class details query:", error);
+        return null;
       }
-      
-      return data ? {
-        id: data.id,
-        name: data.name,
-        academicYear: data.academic_years?.name || 'Unknown Year',
-        yearId: data.year_id
-      } : null;
     },
     enabled: !!classId && !sectionId
   });
@@ -111,7 +123,7 @@ const ClassDetailsPage = () => {
   const entityType = viewingSection ? 'section' : 'class';
   
   // Fetch students
-  const { data: students = [], isLoading: isStudentsLoading } = useQuery({
+  const { data: studentsList = [], isLoading: isStudentsLoading } = useQuery({
     queryKey: ['students', entityType, entityId],
     queryFn: async () => {
       if (!entityId) return [];
@@ -329,7 +341,7 @@ const ClassDetailsPage = () => {
           </TabsList>
           <TabsContent value="students" className="p-4">
             <StudentList 
-              studentsList={students} 
+              studentsList={studentsList} 
               isLoading={isStudentsLoading}
               onEdit={isAdminOrTeacher ? handleEditStudent : undefined}
               onDelete={isAdminOrTeacher ? handleDeleteStudent : undefined}
