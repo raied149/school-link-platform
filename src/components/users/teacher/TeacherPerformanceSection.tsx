@@ -7,6 +7,14 @@ interface TeacherPerformanceSectionProps {
 }
 
 export function TeacherPerformanceSection({ teacher }: TeacherPerformanceSectionProps) {
+  // Make sure performance is defined with default values if not available
+  const performance = teacher.performance || {
+    lastReviewDate: "N/A",
+    rating: 0,
+    feedback: "No feedback available",
+    awards: []
+  };
+
   return (
     <AccordionItem value="performance">
       <AccordionTrigger className="hover:no-underline">
@@ -23,24 +31,28 @@ export function TeacherPerformanceSection({ teacher }: TeacherPerformanceSection
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium">Last Review Date</p>
-              <p className="text-sm text-muted-foreground">{teacher.performance.lastReviewDate}</p>
+              <p className="text-sm text-muted-foreground">{performance.lastReviewDate || "N/A"}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Rating</p>
-              <p className="text-sm text-muted-foreground">{teacher.performance.rating}/5</p>
+              <p className="text-sm text-muted-foreground">{performance.rating ? `${performance.rating}/5` : "N/A"}</p>
             </div>
           </div>
           <div>
             <p className="text-sm font-medium">Feedback</p>
-            <p className="text-sm text-muted-foreground">{teacher.performance.feedback}</p>
+            <p className="text-sm text-muted-foreground">{performance.feedback || "No feedback available"}</p>
           </div>
           <div>
             <p className="text-sm font-medium">Awards & Recognition</p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground">
-              {teacher.performance.awards.map((award: string, index: number) => (
-                <li key={index}>{award}</li>
-              ))}
-            </ul>
+            {performance.awards && performance.awards.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {performance.awards.map((award: string, index: number) => (
+                  <li key={index}>{award}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No awards or recognitions</p>
+            )}
           </div>
         </div>
       </AccordionContent>
