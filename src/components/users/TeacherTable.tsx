@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -175,12 +176,17 @@ const TeacherTable: React.FC<TeacherTableProps> = ({
     }
   });
 
+  // Fix: Add proper null checks for search filtering
   const filteredTeachers = teachers.filter((teacher) => {
-    const idMatches = teacher.id.toLowerCase().includes(searchFilters.idSearch.toLowerCase());
-    const nameMatches = teacher.name.toLowerCase().includes(searchFilters.nameSearch.toLowerCase());
+    const idSearch = searchFilters.idSearch || '';
+    const nameSearch = searchFilters.nameSearch || '';
+    const globalSearch = searchFilters.globalSearch || '';
+    
+    const idMatches = teacher.id.toLowerCase().includes(idSearch.toLowerCase());
+    const nameMatches = teacher.name.toLowerCase().includes(nameSearch.toLowerCase());
     const globalMatches =
-      teacher.name.toLowerCase().includes(searchFilters.globalSearch.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchFilters.globalSearch.toLowerCase());
+      teacher.name.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      teacher.email.toLowerCase().includes(globalSearch.toLowerCase());
 
     return idMatches && nameMatches && globalMatches;
   });
