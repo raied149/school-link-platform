@@ -18,6 +18,7 @@ import ClassDetailsPage from './pages/classes/ClassDetailsPage';
 import UsersPage from './pages/users/UsersPage';
 import SubjectsPage from './pages/subjects/SubjectsPage';
 import TeacherDetailsPage from './pages/teachers/TeacherDetailsPage';
+import TeacherDetailPage from './pages/teachers/TeacherDetailPage';
 import TeacherAttendancePage from './pages/attendance/TeacherAttendancePage';
 import StudentAttendancePage from './pages/attendance/StudentAttendancePage';
 import TimetablePage from './pages/timetable/TimetablePage';
@@ -64,7 +65,7 @@ function App() {
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/subjects" element={<SubjectsPage />} />
                 <Route path="/teachers/all" element={<TeacherDetailsPage />} />
-                <Route path="/teachers/:teacherId" element={<TeacherDetailsPage />} />
+                <Route path="/teachers/:teacherId" element={<TeacherDetailPage />} />
                 <Route path="/teacher-attendance" element={<TeacherAttendancePage />} />
                 <Route path="/student-attendance" element={<StudentAttendancePage />} />
                 <Route path="/timetable" element={<TimetablePage />} />
