@@ -46,8 +46,6 @@ const MainLayout = () => {
       setGradient('calendar');
     } else if (location.pathname.includes('/subjects')) {
       setGradient('subjects');
-    } else if (location.pathname.includes('/academic-years')) {
-      setGradient('calendar');
     } else if (location.pathname.includes('/class') || location.pathname.includes('/sections')) {
       setGradient('classes');
     } else {
@@ -79,7 +77,6 @@ const MainLayout = () => {
     const adminItems = [
       { icon: Users, label: 'Student Details', path: '/users' },
       { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
-      { icon: Calendar, label: 'Academic Years', path: '/academic-years' },
       { icon: GraduationCap, label: 'Class Years', path: '/class-years' },
       { icon: BookOpen, label: 'Subjects', path: '/subjects' },
       { icon: Clock, label: 'Timetable', path: '/timetable' },
@@ -132,7 +129,10 @@ const MainLayout = () => {
   // Function to determine if a menu item is active
   const isMenuItemActive = (path: string) => {
     // Special case for class-years to handle nested routes
-    if (path === '/class-years' && isClassYearsRelated) {
+    if (path === '/class-years' && (
+      isClassYearsRelated || 
+      location.pathname.startsWith('/class-years/sections/')
+    )) {
       return true;
     }
     // Special case for classes to prevent class-years routes from triggering it

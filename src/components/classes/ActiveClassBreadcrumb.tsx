@@ -92,9 +92,9 @@ export function ActiveClassBreadcrumb() {
     return null;
   }
 
-  // Determine the root link based on context
-  const rootPath = isClassYearsContext ? "/class-years" : "/classes";
-  const rootLabel = isClassYearsContext ? "Class Years" : "Classes";
+  // Always use Class Years as the root for breadcrumbs for consistency
+  const rootPath = "/class-years";
+  const rootLabel = "Class Years";
 
   return (
     <Breadcrumb className="mb-4">
@@ -126,7 +126,7 @@ export function ActiveClassBreadcrumb() {
           </BreadcrumbSeparator>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`${isClassYearsContext ? '/class-years' : ''}/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}>
+              <Link to={`/class-years/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}>
                 {data.class.name}
               </Link>
             </BreadcrumbLink>

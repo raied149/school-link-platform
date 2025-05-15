@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
@@ -25,7 +25,6 @@ import TimetablePage from './pages/timetable/TimetablePage';
 import ExamsPage from './pages/exams/ExamsPage';
 import ExamDetailPage from './pages/exams/ExamDetailPage';
 import OnlineClassesPage from './pages/online-classes/OnlineClassesPage';
-import AcademicYearsPage from './pages/academic/AcademicYearsPage';
 import NotesPage from './pages/notes/NotesPage';
 import CalendarPage from './pages/CalendarPage';
 import IncidentDetailPage from './pages/incidents/IncidentDetailPage';
@@ -47,7 +46,9 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/academic-years" element={<AcademicYearsPage />} />
+                
+                {/* Removed academic-years route */}
+                
                 <Route path="/classes" element={<ClassesPage />} />
                 <Route path="/classes/:yearId" element={<ClassesPage />} />
                 <Route path="/class/:classId" element={<ClassDetailsPage />} />
@@ -56,9 +57,10 @@ function App() {
                 <Route path="/sections/:classId" element={<SectionsPage />} />
                 <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
                 
-                {/* Class years navigation structure */}
+                {/* Class years navigation structure - fixed routing */}
                 <Route path="/class-years" element={<ClassYearsPage />} />
                 <Route path="/class-years/:yearId" element={<ClassYearsPage />} />
+                
                 {/* New route for sections accessed from class years */}
                 <Route path="/class-years/sections/:classId" element={<SectionsPage />} />
                 

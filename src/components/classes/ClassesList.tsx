@@ -48,9 +48,9 @@ export function ClassesList({
   };
 
   const handleView = (classItem: Class) => {
-    // Use different navigation paths based on context
+    // Always use the class-years context path for navigation
     if (isClassYearsContext) {
-      navigate(`/class-years/sections/${classItem.id}?yearId=${yearId}`, {
+      navigate(`/class-years/sections/${classItem.id}`, {
         state: { yearId, fromClassYears: true }
       });
     } else {

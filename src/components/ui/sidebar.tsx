@@ -10,10 +10,10 @@ import {
   BookOpen,
   Calendar,
   Bell,
-  Languages,
   Video,
   FileText,
-  ListTodo
+  ListTodo,
+  Image
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,7 +26,6 @@ export function Sidebar() {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: School },
-    { name: "Academic Years", href: "/academic-years", icon: Calendar },
     { name: "Class Years", href: "/class-years", icon: GraduationCap },
     { name: "Calendar", href: "/calendar", icon: CalendarDays },
     { name: "Tasks", href: "/tasks", icon: ListTodo },
@@ -39,6 +38,7 @@ export function Sidebar() {
     { name: "Notes", href: "/notes", icon: FileText },
     { name: "Exams", href: "/exams", icon: BookOpen },
     { name: "Incidents", href: "/incidents", icon: Bell },
+    { name: "Gallery", href: "/gallery", icon: Image },
   ];
 
   return (
