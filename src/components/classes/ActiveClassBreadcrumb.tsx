@@ -15,8 +15,9 @@ export function ActiveClassBreadcrumb() {
   const { classId, sectionId } = useParams();
   const location = useLocation();
   
-  // Don't show breadcrumb on section details page
-  if (location.pathname.includes('/class/') && location.pathname.includes('/section/')) {
+  // Don't show breadcrumb on section details page or any class years pages
+  if (location.pathname.includes('/class/') && location.pathname.includes('/section/') ||
+      location.pathname.includes('/class-years')) {
     return null;
   }
   
