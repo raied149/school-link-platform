@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClassHeader } from "@/components/classes/ClassHeader";
@@ -9,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrumb";
+import { WeeklyTimetableView } from "@/components/timetable/WeeklyTimetableView"; 
+import { SubjectManagement } from "@/components/subjects/SubjectManagement";
+import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
+import { TimeSlot } from "@/types/timetable";
 
 interface StudentDetail {
   id: string;
@@ -211,6 +216,65 @@ const ClassDetailsPage = () => {
     enabled: !!entityId
   });
 
+  // Fetch timetable slots for the section/class
+  const { data: timeSlots = [], isLoading: isTimetableLoading } = useQuery({
+    queryKey: ['timetable', entityType, entityId],
+    queryFn: async () => {
+      if (!entityId) return [];
+      
+      let sectionIds: string[] = [];
+      
+      if (viewingSection) {
+        sectionIds = [entityId as string];
+      } else {
+        // For class, fetch all sections
+        const { data, error } = await supabase
+          .from('sections')
+          .select('id')
+          .eq('class_id', entityId);
+          
+        if (error) {
+          console.error("Error fetching sections for timetable:", error);
+          throw error;
+        }
+        
+        sectionIds = data.map(section => section.id);
+      }
+      
+      if (sectionIds.length === 0) return [];
+      
+      // Fetch timetable slots for these sections
+      const { data: timetableData, error: timetableError } = await supabase
+        .from('timetable')
+        .select(`
+          *,
+          subjects:subject_id (
+            id,
+            name,
+            code
+          )
+        `)
+        .in('section_id', sectionIds);
+        
+      if (timetableError) {
+        console.error("Error fetching timetable:", timetableError);
+        throw timetableError;
+      }
+      
+      return timetableData.map(slot => ({
+        id: slot.id,
+        day: slot.day_of_week,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        sectionId: slot.section_id,
+        subjectId: slot.subject_id,
+        teacherId: slot.teacher_id,
+        title: slot.subjects?.name || 'Unknown Subject'
+      })) as TimeSlot[];
+    },
+    enabled: !!entityId
+  });
+
   // Determine if current user can edit students
   const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
   console.log("User role:", user?.role);
@@ -317,6 +381,22 @@ const ClassDetailsPage = () => {
     }
   };
 
+  // Handlers for timetable actions
+  const handleEditTimeSlot = (timeSlot: TimeSlot) => {
+    console.log("Edit time slot:", timeSlot);
+    // Would normally open a dialog to edit the time slot
+  };
+
+  const handleDeleteTimeSlot = (id: string) => {
+    console.log("Delete time slot:", id);
+    // Would normally show a confirmation dialog and then delete
+  };
+
+  const handleAddTimeSlot = () => {
+    console.log("Add new time slot");
+    // Would normally open a dialog to add a new time slot
+  };
+
   // Determine loading state and details
   const isLoading = isClassLoading || isSectionLoading;
   const details = viewingSection ? sectionDetails : classDetails;
@@ -326,6 +406,11 @@ const ClassDetailsPage = () => {
   const subtitle = viewingSection
     ? `${className || sectionDetails?.className || "Class"} | ${sectionDetails?.academicYear || ""}`
     : classDetails?.academicYear || "";
+
+  // Get the academicYearId for subject management
+  const academicYearId = viewingSection 
+    ? sectionDetails?.classes?.year_id 
+    : classDetails?.yearId;
 
   console.log("onEdit function:", isAdminOrTeacher);
   console.log("onDelete function:", isAdminOrTeacher);
@@ -342,10 +427,13 @@ const ClassDetailsPage = () => {
 
       <Card>
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="timetable">Timetable</TabsTrigger>
+            <TabsTrigger value="subjects">Subjects</TabsTrigger>
+            <TabsTrigger value="attendance">Attendance</TabsTrigger>
           </TabsList>
+          
           <TabsContent value="students" className="p-4">
             <StudentList 
               studentsList={studentsList} 
@@ -354,10 +442,32 @@ const ClassDetailsPage = () => {
               onDelete={isAdminOrTeacher ? handleDeleteStudent : undefined}
             />
           </TabsContent>
+          
           <TabsContent value="timetable" className="p-4">
-            <p className="text-muted-foreground text-center py-8">
-              Timetable will be available soon.
-            </p>
+            <WeeklyTimetableView
+              timeSlots={timeSlots}
+              isLoading={isTimetableLoading}
+              onEdit={isAdminOrTeacher ? handleEditTimeSlot : undefined}
+              onDelete={isAdminOrTeacher ? handleDeleteTimeSlot : undefined}
+              onAdd={isAdminOrTeacher ? handleAddTimeSlot : undefined}
+              user={user}
+            />
+          </TabsContent>
+          
+          <TabsContent value="subjects" className="p-4">
+            <SubjectManagement 
+              classId={viewingSection ? sectionDetails?.classId : classId} 
+              sectionId={sectionId}
+              academicYearId={academicYearId}
+            />
+          </TabsContent>
+          
+          <TabsContent value="attendance" className="p-4">
+            <StudentAttendanceView 
+              classId={viewingSection ? sectionDetails?.classId : classId}
+              sectionId={sectionId}
+              studentId={undefined} // We're viewing all students in the section/class
+            />
           </TabsContent>
         </Tabs>
       </Card>
