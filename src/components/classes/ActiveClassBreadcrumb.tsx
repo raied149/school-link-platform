@@ -92,8 +92,8 @@ export function ActiveClassBreadcrumb() {
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbItem>
-        <BreadcrumbLink as={Link} to="/class-years">
-          Class Years
+        <BreadcrumbLink asChild>
+          <Link to="/class-years">Class Years</Link>
         </BreadcrumbLink>
       </BreadcrumbItem>
       
@@ -103,8 +103,10 @@ export function ActiveClassBreadcrumb() {
             <ChevronRight className="h-4 w-4" />
           </BreadcrumbSeparator>
           <BreadcrumbItem>
-            <BreadcrumbLink as={Link} to={`/class-years/${data.academicYear.id}`}>
-              {data.academicYear.name}
+            <BreadcrumbLink asChild>
+              <Link to={`/class-years/${data.academicYear.id}`}>
+                {data.academicYear.name}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
         </>
@@ -116,11 +118,10 @@ export function ActiveClassBreadcrumb() {
             <ChevronRight className="h-4 w-4" />
           </BreadcrumbSeparator>
           <BreadcrumbItem>
-            <BreadcrumbLink 
-              as={Link} 
-              to={`/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}
-            >
-              {data.class.name}
+            <BreadcrumbLink asChild>
+              <Link to={`/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}>
+                {data.class.name}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
         </>

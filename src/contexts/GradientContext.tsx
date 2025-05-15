@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
-type GradientType = 'default' | 'dashboard' | 'tasks' | 'users' | 'calendar' | 'subjects';
+type GradientType = 'default' | 'dashboard' | 'tasks' | 'users' | 'calendar' | 'subjects' | 'classes';
 
 type GradientContextType = {
   currentGradient: GradientType;
