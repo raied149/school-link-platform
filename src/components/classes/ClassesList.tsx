@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash, EyeIcon, School } from "lucide-react";
 import { useState } from "react";
 import { ClassFormDialog } from "./ClassFormDialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface ClassesListProps {
@@ -27,11 +27,15 @@ export function ClassesList({
   isTeacherView = false,
 }: ClassesListProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if we're in the class-years context
+  const isClassYearsContext = location.pathname.includes('/class-years');
 
   const handleEdit = (classItem: Class) => {
     setSelectedClass(classItem);
@@ -44,7 +48,14 @@ export function ClassesList({
   };
 
   const handleView = (classItem: Class) => {
-    navigate(`/sections/${classItem.id}?yearId=${yearId}`);
+    // Use different navigation paths based on context
+    if (isClassYearsContext) {
+      navigate(`/class-years/sections/${classItem.id}?yearId=${yearId}`, {
+        state: { yearId, fromClassYears: true }
+      });
+    } else {
+      navigate(`/sections/${classItem.id}?yearId=${yearId}`);
+    }
   };
 
   const handleCreateClass = async (data: Partial<Class>) => {

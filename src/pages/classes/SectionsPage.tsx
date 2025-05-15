@@ -67,6 +67,10 @@ const SectionsPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
+  // Check if we're coming from class-years context
+  const isClassYearsContext = location.pathname.includes('/class-years') || 
+                             (location.state as any)?.fromClassYears;
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -74,6 +78,7 @@ const SectionsPage = () => {
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
 
   console.log("Current user role:", user?.role);
+  console.log("Is Class Years Context:", isClassYearsContext);
   
   // Fetch academic year details
   const { data: academicYear } = useQuery({
@@ -394,17 +399,20 @@ const SectionsPage = () => {
     setIsDeleteDialogOpen(true);
   };
   
-  // Fix the navigation function to include yearId
+  // Fix the navigation function to include yearId and maintain context
   const navigateToSectionDetails = (section: Section) => {
     // Get the academic year ID from the class details or URL param
     const academicYearId = classDetails?.academicYearId || yearId;
-    navigate(`/class/${classId}/section/${section.id}`, { 
-      state: { 
-        yearId: academicYearId,
-        sectionName: section.name,
-        className: classDetails?.name
-      } 
-    });
+    
+    // Preserve the class years context in navigation if applicable
+    const state = { 
+      yearId: academicYearId,
+      sectionName: section.name,
+      className: classDetails?.name,
+      fromClassYears: isClassYearsContext
+    };
+    
+    navigate(`/class/${classId}/section/${section.id}`, { state });
   };
   
   // Redirect if params are missing
@@ -414,11 +422,12 @@ const SectionsPage = () => {
     }
   }, [classId, navigate]);
 
-  // Log the yearId for debugging
+  // Log the yearId and context for debugging
   useEffect(() => {
     console.log("Year ID from URL:", yearId);
     console.log("Class ID from URL:", classId);
-  }, [yearId, classId]);
+    console.log("Is Class Years Context:", isClassYearsContext);
+  }, [yearId, classId, isClassYearsContext]);
 
   return (
     <div className="space-y-6">

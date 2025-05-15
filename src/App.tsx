@@ -59,6 +59,8 @@ function App() {
                 {/* Class years navigation structure */}
                 <Route path="/class-years" element={<ClassYearsPage />} />
                 <Route path="/class-years/:yearId" element={<ClassYearsPage />} />
+                {/* New route for sections accessed from class years */}
+                <Route path="/class-years/sections/:classId" element={<SectionsPage />} />
                 
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/subjects" element={<SubjectsPage />} />

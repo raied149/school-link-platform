@@ -16,6 +16,9 @@ export function ActiveClassBreadcrumb() {
   const location = useLocation();
   const yearId = new URLSearchParams(location.search).get('yearId') || 
                 (location.state as any)?.yearId;
+  
+  // Check if we're in the class-years context
+  const isClassYearsContext = location.pathname.includes('/class-years');
 
   // Fetch data for breadcrumbs
   const { data, isLoading } = useQuery({
@@ -89,11 +92,15 @@ export function ActiveClassBreadcrumb() {
     return null;
   }
 
+  // Determine the root link based on context
+  const rootPath = isClassYearsContext ? "/class-years" : "/classes";
+  const rootLabel = isClassYearsContext ? "Class Years" : "Classes";
+
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbItem>
         <BreadcrumbLink asChild>
-          <Link to="/class-years">Class Years</Link>
+          <Link to={rootPath}>{rootLabel}</Link>
         </BreadcrumbLink>
       </BreadcrumbItem>
       
@@ -104,7 +111,7 @@ export function ActiveClassBreadcrumb() {
           </BreadcrumbSeparator>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/class-years/${data.academicYear.id}`}>
+              <Link to={`${rootPath}/${data.academicYear.id}`}>
                 {data.academicYear.name}
               </Link>
             </BreadcrumbLink>
@@ -119,7 +126,7 @@ export function ActiveClassBreadcrumb() {
           </BreadcrumbSeparator>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}>
+              <Link to={`${isClassYearsContext ? '/class-years' : ''}/sections/${data.class.id}${yearId ? `?yearId=${yearId}` : ''}`}>
                 {data.class.name}
               </Link>
             </BreadcrumbLink>

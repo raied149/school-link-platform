@@ -32,9 +32,7 @@ const MainLayout = () => {
   // Check if the current path is related to class years, classes, or sections
   const isClassYearsRelated = 
     location.pathname.includes('/class-years') || 
-    location.pathname.includes('/classes') ||
-    location.pathname.includes('/class/') ||
-    location.pathname.includes('/sections/');
+    (location.pathname.includes('/sections/') && location.pathname.includes('/class-years/'));
 
   // Update gradient based on current route
   useEffect(() => {
@@ -133,10 +131,21 @@ const MainLayout = () => {
 
   // Function to determine if a menu item is active
   const isMenuItemActive = (path: string) => {
+    // Special case for class-years to handle nested routes
     if (path === '/class-years' && isClassYearsRelated) {
       return true;
     }
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    // Special case for classes to prevent class-years routes from triggering it
+    if (path === '/classes' && !isClassYearsRelated && (
+      location.pathname === '/classes' || 
+      location.pathname.startsWith('/classes/') ||
+      location.pathname.includes('/sections/') && !location.pathname.includes('/class-years/')
+    )) {
+      return true;
+    }
+    // Default case
+    return location.pathname === path || 
+           (location.pathname.startsWith(`${path}/`) && !path.includes('class-years'));
   };
 
   // Function to handle navigation
