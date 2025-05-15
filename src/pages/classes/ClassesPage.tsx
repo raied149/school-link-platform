@@ -210,7 +210,7 @@ const ClassesPage = () => {
 
   const navigateToSections = (classItem: Class) => {
     if (!yearId) return;
-    navigate(`/sections/${classItem.id}`);
+    navigate(`/sections/${classItem.id}?yearId=${yearId}`);
   };
 
   return (

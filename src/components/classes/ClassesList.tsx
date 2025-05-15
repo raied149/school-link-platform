@@ -1,3 +1,4 @@
+
 import { Class } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash, EyeIcon, School } from "lucide-react";
@@ -43,7 +44,8 @@ export function ClassesList({
   };
 
   const handleView = (classItem: Class) => {
-    navigate(`/class-years/${yearId}/classes/${classItem.id}`);
+    // Updated to navigate to the sections page with proper parameters
+    navigate(`/sections/${classItem.id}?yearId=${yearId}`);
   };
 
   const handleCreateClass = async (data: Partial<Class>) => {

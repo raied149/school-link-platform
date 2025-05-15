@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Section } from "@/types/section";
 import { useToast } from "@/hooks/use-toast";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { SectionFormDialog } from "@/components/sections/SectionFormDialog";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -56,7 +56,9 @@ function useStudentCounts(sections: Section[]) {
 }
 
 const SectionsPage = () => {
-  const { yearId, classId } = useParams<{ yearId: string, classId: string }>();
+  const { classId } = useParams<{ classId: string }>();
+  const [searchParams] = useSearchParams();
+  const yearId = searchParams.get('yearId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();

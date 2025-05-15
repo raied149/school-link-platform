@@ -55,12 +55,18 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/academic-years" element={<AcademicYearsPage />} />
                 <Route path="/classes" element={<ClassYearsPage />} />
-                <Route path="/classes/:yearId" element={<ClassYearsPage />} />
+                <Route path="/classes/:yearId" element={<ClassesPage />} />
                 <Route path="/class/:classId" element={<ClassDetailsPage />} />
+                
+                {/* Fixed route for sections */}
                 <Route path="/sections/:classId" element={<SectionsPage />} />
-                {/* Redirect for class-years to classes - DO NOT CHANGE THIS ROUTE */}
+                
+                {/* Redirect for class-years to classes */}
                 <Route path="/class-years" element={<ClassYearsPage />} />
                 <Route path="/class-years/:yearId" element={<ClassYearsPage />} />
+                <Route path="/class-years/:yearId/classes/:classId" 
+                       element={<Navigate to="/sections/:classId" replace />} />
+                
                 <Route path="/class/:classId/section/:sectionId" element={<ClassDetailsPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/subjects" element={<SubjectsPage />} />
