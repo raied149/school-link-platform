@@ -40,12 +40,8 @@ const TeacherDetailsPage = () => {
         <div className="space-y-4">
           <TeacherSearch onSearch={handleSearch} />
           <TeacherTable 
-            searchFilters={{
-              idSearch: "",
-              nameSearch: "",
-              globalSearch: ""
-            }} 
-            isTeacherView={true}
+            searchFilters={searchFilters} 
+            isTeacherView={isTeacher}
           />
         </div>
       </Card>

@@ -41,6 +41,8 @@ const MainLayout = () => {
       setGradient('calendar');
     } else if (location.pathname.includes('/subjects')) {
       setGradient('subjects');
+    } else if (location.pathname.includes('/academic-years')) {
+      setGradient('calendar');
     } else {
       setGradient('default');
     }
@@ -69,6 +71,7 @@ const MainLayout = () => {
     const adminItems = [
       { icon: Users, label: 'Student Details', path: '/users' },
       { icon: Users, label: 'Teacher Details', path: '/teachers/all' },
+      { icon: Calendar, label: 'Academic Years', path: '/academic-years' },
       { icon: GraduationCap, label: 'Class Years', path: '/class-years' },
       { icon: BookOpen, label: 'Subjects', path: '/subjects' },
       { icon: Clock, label: 'Timetable', path: '/timetable' },
@@ -136,7 +139,7 @@ const MainLayout = () => {
             </div>
           )}
         </div>
-        <nav className="flex-1 space-y-1 mt-4">
+        <nav className="flex-1 space-y-1 mt-4 overflow-y-auto">
           {menuItems.map((item) => (
             <Button
               key={item.path}
@@ -158,7 +161,7 @@ const MainLayout = () => {
           </Button>
         </div>
       </div>
-      <main className="flex-1 p-8 bg-white/70 backdrop-blur-sm shadow-lg rounded-l-3xl">
+      <main className="flex-1 p-8 bg-white/70 backdrop-blur-sm shadow-lg rounded-l-3xl overflow-y-auto">
         <Outlet />
       </main>
     </div>

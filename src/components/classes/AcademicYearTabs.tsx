@@ -47,7 +47,7 @@ export function AcademicYearTabs({
                   <TabsTrigger
                     key={year.id}
                     value={year.id}
-                    onClick={() => navigate(`/class-years/${year.id}`)}
+                    onClick={() => navigate(`/classes/${year.id}`)}
                     className={
                       year.isActive
                         ? "border-2 border-primary text-primary font-medium"
