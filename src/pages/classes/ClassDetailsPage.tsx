@@ -55,7 +55,10 @@ const ClassDetailsPage = () => {
         if (data) {
           // Safely access the academic_years object
           const academicYearData = data.academic_years || {};
-          const academicYearName = academicYearData.name || 'Unknown Year';
+          // Use optional chaining to safely access the name property
+          const academicYearName = typeof academicYearData === 'object' && academicYearData !== null 
+            ? (academicYearData as any).name || 'Unknown Year' 
+            : 'Unknown Year';
           
           return {
             id: data.id,
