@@ -15,6 +15,7 @@ interface ClassesListProps {
   onUpdateClass: (id: string, classData: Partial<Class>) => Promise<void>;
   onDeleteClass: (id: string) => Promise<void>;
   isTeacherView?: boolean;
+  isStudentView?: boolean;
 }
 
 export function ClassesList({
@@ -25,6 +26,7 @@ export function ClassesList({
   onUpdateClass,
   onDeleteClass,
   isTeacherView = false,
+  isStudentView = false,
 }: ClassesListProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,9 +106,11 @@ export function ClassesList({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <School className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-medium">Classes</h3>
+          <h3 className="text-lg font-medium">
+            {isStudentView ? "My Classes" : "Classes"}
+          </h3>
         </div>
-        {!isTeacherView && (
+        {!isTeacherView && !isStudentView && (
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Class
@@ -126,7 +130,9 @@ export function ClassesList({
       ) : classes.length === 0 ? (
         <div className="py-8 text-center">
           <p className="text-muted-foreground">
-            {isTeacherView 
+            {isStudentView 
+              ? "You are not assigned to any classes in this academic year."
+              : isTeacherView 
               ? "You are not assigned to any classes in this academic year."
               : "No classes have been created yet."}
           </p>
@@ -149,7 +155,7 @@ export function ClassesList({
                 >
                   <EyeIcon className="h-4 w-4" />
                 </Button>
-                {!isTeacherView && (
+                {!isTeacherView && !isStudentView && (
                   <>
                     <Button
                       size="sm"
@@ -173,7 +179,7 @@ export function ClassesList({
         </div>
       )}
 
-      {!isTeacherView && (
+      {!isTeacherView && !isStudentView && (
         <>
           <ClassFormDialog
             open={isCreateOpen}

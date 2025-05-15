@@ -82,21 +82,80 @@ const ClassYearsPage = () => {
   // Map raw database years to our model format
   const academicYears: AcademicYear[] = academicYearsRaw.map(mapDatabaseYearToModel);
 
-  // Fetch classes for the selected academic year
+  // Fetch classes for the selected academic year, with filtering for student users
   const { data: classesRaw = [], isLoading: classesLoading } = useQuery({
-    queryKey: ['classes', yearId || (activeYear?.id)],
+    queryKey: ['classes', yearId || (activeYear?.id), user?.role, user?.id],
     queryFn: async () => {
       const selectedYearId = yearId || activeYear?.id;
       if (!selectedYearId) return [];
       
-      // For admins, get all classes for the selected academic year
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .eq('year_id', selectedYearId);
+      // For students, only get classes they're assigned to
+      if (isStudentView && user?.id) {
+        console.log("Fetching classes for student:", user.id);
         
-      if (error) throw error;
-      return data || [];
+        // First get the student's sections
+        const { data: studentSections, error: sectionsError } = await supabase
+          .from('student_sections')
+          .select('section_id')
+          .eq('student_id', user.id);
+          
+        if (sectionsError) {
+          console.error("Error fetching student sections:", sectionsError);
+          throw sectionsError;
+        }
+        
+        if (!studentSections || studentSections.length === 0) {
+          console.log("Student is not assigned to any sections");
+          return [];
+        }
+        
+        // Extract section IDs
+        const sectionIds = studentSections.map(row => row.section_id);
+        
+        // Get the classes these sections belong to
+        const { data: sections, error: sectionError } = await supabase
+          .from('sections')
+          .select('class_id')
+          .in('id', sectionIds);
+          
+        if (sectionError) {
+          console.error("Error fetching sections:", sectionError);
+          throw sectionError;
+        }
+        
+        if (!sections || sections.length === 0) {
+          console.log("No classes found for student's sections");
+          return [];
+        }
+        
+        // Extract class IDs
+        const classIds = [...new Set(sections.map(row => row.class_id))];
+        
+        // Finally get the classes
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .in('id', classIds)
+          .eq('year_id', selectedYearId);
+          
+        if (error) {
+          console.error("Error fetching classes for student:", error);
+          throw error;
+        }
+        
+        console.log("Student's classes:", data);
+        return data || [];
+      } 
+      // For teachers or admins, get all classes for the selected academic year
+      else {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('year_id', selectedYearId);
+          
+        if (error) throw error;
+        return data || [];
+      }
     },
     enabled: !!yearId || !!activeYear?.id
   });
@@ -308,7 +367,7 @@ const ClassYearsPage = () => {
           academicYears={academicYears} 
           selectedYearId={selectedYear.id} 
           onYearCreate={handleCreateYear}
-          isTeacherView={false}
+          isTeacherView={isTeacherView}
         />
       </div>
 
@@ -320,7 +379,8 @@ const ClassYearsPage = () => {
           onCreateClass={handleCreateClass}
           onUpdateClass={handleUpdateClass}
           onDeleteClass={handleDeleteClass}
-          isTeacherView={false}
+          isTeacherView={isTeacherView}
+          isStudentView={isStudentView}
         />
       </Card>
     </div>
