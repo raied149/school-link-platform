@@ -2,11 +2,22 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState<UserRole | null>(null);
 
   const roles: UserRole[] = ['admin', 'teacher', 'student', 'parent'];
+
+  const handleLogin = async (role: UserRole) => {
+    setIsLoading(role);
+    try {
+      await login(role);
+    } finally {
+      setIsLoading(null);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -26,16 +37,22 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Choose your role to continue
           </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            (Student login uses Arkham Mohamed, Teacher login uses Linda Taylor)
+          </p>
         </div>
         
         <div className="flex flex-col space-y-4">
           {roles.map((role) => (
             <Button
               key={role}
-              onClick={() => login(role)}
+              onClick={() => handleLogin(role)}
               className="w-full capitalize"
+              disabled={isLoading !== null}
             >
-              Login as {role}
+              {isLoading === role ? 'Logging in...' : `Login as ${role}`}
+              {role === 'student' && ' (Arkham Mohamed)'}
+              {role === 'teacher' && ' (Linda Taylor)'}
             </Button>
           ))}
         </div>
