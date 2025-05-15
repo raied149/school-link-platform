@@ -9,7 +9,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { formSchema } from "./schema";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface DateReminderSelectionProps {
@@ -26,6 +26,20 @@ export function DateReminderSelection({
   setReminderDates
 }: DateReminderSelectionProps) {
   const [showReminderTime, setShowReminderTime] = useState(form.watch('reminderSet') || false);
+  
+  // Safe date formatting function
+  const formatSafeDate = (dateStr: string): string => {
+    try {
+      const parsedDate = parseISO(dateStr);
+      if (isValid(parsedDate)) {
+        return format(parsedDate, "PPP");
+      }
+      return "Select a date";
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Select a date";
+    }
+  };
   
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -46,7 +60,7 @@ export function DateReminderSelection({
                     )}
                   >
                     {field.value ? (
-                      format(new Date(field.value), "PPP")
+                      formatSafeDate(field.value)
                     ) : (
                       <span>Pick a date</span>
                     )}
@@ -57,8 +71,14 @@ export function DateReminderSelection({
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={field.value ? new Date(field.value) : undefined}
-                  onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                  selected={field.value ? parseISO(field.value) : undefined}
+                  onSelect={(selectedDate) => {
+                    if (selectedDate) {
+                      field.onChange(format(selectedDate, 'yyyy-MM-dd'));
+                    } else {
+                      field.onChange('');
+                    }
+                  }}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />
@@ -98,7 +118,13 @@ export function DateReminderSelection({
                   <Calendar
                     mode="multiple"
                     selected={reminderDates}
-                    onSelect={setReminderDates}
+                    onSelect={(dates) => {
+                      // Filter out any invalid dates
+                      const validDates = (dates || []).filter(date => 
+                        date instanceof Date && !isNaN(date.getTime())
+                      );
+                      setReminderDates(validDates);
+                    }}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />

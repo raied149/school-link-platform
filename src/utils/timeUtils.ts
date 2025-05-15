@@ -1,4 +1,3 @@
-
 export const normalizeTimeString = (timeString?: string): string | null => {
   if (!timeString) return null;
 
@@ -80,7 +79,7 @@ export const timeToMinutes = (time: string): number => {
   return hours * 60 + minutes;
 };
 
-// Format time for display
+// Format time for display with better error handling
 export const formatTimeDisplay = (timeString: string): string => {
   try {
     if (!isValidTimeFormat(timeString)) {
@@ -88,6 +87,12 @@ export const formatTimeDisplay = (timeString: string): string => {
     }
     
     const [hours, minutes] = timeString.split(':').map(Number);
+    
+    // Validate hours and minutes
+    if (isNaN(hours) || hours < 0 || hours > 23 || isNaN(minutes) || minutes < 0 || minutes > 59) {
+      return 'Invalid Time';
+    }
+    
     const date = new Date();
     date.setHours(hours);
     date.setMinutes(minutes);
@@ -100,5 +105,30 @@ export const formatTimeDisplay = (timeString: string): string => {
   } catch (error) {
     console.error('Error formatting time:', error);
     return 'Invalid Time';
+  }
+};
+
+// Safe date formatter that handles invalid dates
+export const formatDateSafe = (dateString: string, formatPattern: string = 'MMM d, yyyy'): string => {
+  try {
+    if (!dateString) return 'No date';
+    
+    // Try to create a valid date object
+    const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    // Format the date using the built-in toLocaleDateString
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
   }
 };

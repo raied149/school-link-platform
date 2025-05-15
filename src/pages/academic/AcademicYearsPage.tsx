@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { academicYearService } from "@/services/academicYearService";
 import { AcademicYearFormDialog } from "@/components/academic/AcademicYearFormDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 
 const AcademicYearsPage = () => {
   const queryClient = useQueryClient();
@@ -124,8 +125,23 @@ const AcademicYearsPage = () => {
     setIsDeleteDialogOpen(true);
   };
   
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM d, yyyy');
+  // Safely format dates with validation
+  const formatDate = (dateString: string): string => {
+    try {
+      // Try to parse the date string
+      const date = parseISO(dateString);
+      
+      // Validate the date is actually valid
+      if (!isValid(date)) {
+        return 'Invalid date';
+      }
+      
+      // Format the valid date
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error("Error formatting date:", dateString, error);
+      return 'Invalid date';
+    }
   };
 
   return (
