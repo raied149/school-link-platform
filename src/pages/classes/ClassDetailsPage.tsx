@@ -53,7 +53,9 @@ const ClassDetailsPage = () => {
         
         // Check if data exists and has the expected structure
         if (data) {
-          const academicYearName = data.academic_years?.name || 'Unknown Year';
+          // Safely access the academic_years object
+          const academicYearData = data.academic_years || {};
+          const academicYearName = academicYearData.name || 'Unknown Year';
           
           return {
             id: data.id,

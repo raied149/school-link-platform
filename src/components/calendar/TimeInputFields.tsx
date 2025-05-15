@@ -24,17 +24,19 @@ export function TimeInputFields({ form, prefix, label }: TimeInputFieldsProps) {
     // Only allow digits
     const sanitized = value.replace(/\D/g, '');
     
-    // Ensure within valid range
-    if (prefix === 'startHour' || prefix === 'endHour') {
+    // Ensure within valid range for hours or minutes
+    const fieldName = `${prefix}Hour`;
+    const isHourField = fieldName.endsWith('Hour');
+    
+    if (isHourField) {
       const hours = parseInt(sanitized, 10);
       if (isNaN(hours)) return '';
       return Math.min(12, Math.max(1, hours)).toString().padStart(2, '0');
-    } else if (prefix === 'startMinute' || prefix === 'endMinute') {
+    } else {
       const minutes = parseInt(sanitized, 10);
       if (isNaN(minutes)) return '';
       return Math.min(59, Math.max(0, minutes)).toString().padStart(2, '0');
     }
-    return sanitized;
   };
 
   return (
