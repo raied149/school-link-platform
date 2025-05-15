@@ -14,6 +14,12 @@ interface BreadcrumbData {
 export function ActiveClassBreadcrumb() {
   const { classId, sectionId } = useParams();
   const location = useLocation();
+  
+  // Don't show breadcrumb on section details page
+  if (location.pathname.includes('/class/') && location.pathname.includes('/section/')) {
+    return null;
+  }
+  
   const yearId = new URLSearchParams(location.search).get('yearId') || 
                 (location.state as any)?.yearId;
   
