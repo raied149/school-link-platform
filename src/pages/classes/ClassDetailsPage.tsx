@@ -9,9 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrumb";
-import { WeeklyTimetableView } from "@/components/timetable/WeeklyTimetableView"; 
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
+import { TimetableManagement } from "@/components/timetable/TimetableManagement";
 import { TimeSlot, SlotType, WeekDay } from "@/types/timetable";
 
 interface StudentDetail {
@@ -226,79 +226,6 @@ const ClassDetailsPage = () => {
     return weekDays[adjustedIndex] || 'Monday'; // Default to Monday if out of range
   };
 
-  // Fetch timetable slots for the section/class
-  const { data: timeSlotsData = [], isLoading: isTimetableLoading } = useQuery({
-    queryKey: ['timetable', entityType, entityId],
-    queryFn: async () => {
-      if (!entityId) return [];
-      
-      let sectionIds: string[] = [];
-      
-      if (viewingSection) {
-        sectionIds = [entityId as string];
-      } else {
-        // For class, fetch all sections
-        const { data, error } = await supabase
-          .from('sections')
-          .select('id')
-          .eq('class_id', entityId);
-          
-        if (error) {
-          console.error("Error fetching sections for timetable:", error);
-          throw error;
-        }
-        
-        sectionIds = data.map(section => section.id);
-      }
-      
-      if (sectionIds.length === 0) return [];
-      
-      // Fetch timetable slots for these sections
-      const { data: timetableData, error: timetableError } = await supabase
-        .from('timetable')
-        .select(`
-          *,
-          subjects:subject_id (
-            id,
-            name,
-            code
-          )
-        `)
-        .in('section_id', sectionIds);
-        
-      if (timetableError) {
-        console.error("Error fetching timetable:", timetableError);
-        throw timetableError;
-      }
-      
-      // Map the data to match the TimeSlot interface - use type assertion for slotType
-      const mappedData: TimeSlot[] = timetableData.map(slot => {
-        // Convert the day_of_week number to a WeekDay string enum value
-        const weekDay: WeekDay = mapNumberToWeekDay(slot.day_of_week);
-        
-        return {
-          id: slot.id,
-          startTime: slot.start_time,
-          endTime: slot.end_time,
-          sectionId: slot.section_id,
-          subjectId: slot.subject_id,
-          teacherId: slot.teacher_id,
-          title: slot.subjects?.name || 'Unknown Subject',
-          slotType: 'subject' as SlotType,
-          dayOfWeek: weekDay,
-          classId: '',
-          academicYearId: '',
-          isRecurring: true,
-          createdAt: slot.created_at || new Date().toISOString(),
-          updatedAt: slot.created_at || new Date().toISOString()
-        };
-      });
-      
-      return mappedData;
-    },
-    enabled: !!entityId
-  });
-
   // Determine if current user can edit students
   const isAdminOrTeacher = user?.role === 'admin' || user?.role === 'teacher';
   console.log("User role:", user?.role);
@@ -405,22 +332,6 @@ const ClassDetailsPage = () => {
     }
   };
 
-  // Handlers for timetable actions
-  const handleEditTimeSlot = (timeSlot: TimeSlot) => {
-    console.log("Edit time slot:", timeSlot);
-    // Would normally open a dialog to edit the time slot
-  };
-
-  const handleDeleteTimeSlot = (id: string) => {
-    console.log("Delete time slot:", id);
-    // Would normally show a confirmation dialog and then delete
-  };
-
-  const handleAddTimeSlot = () => {
-    console.log("Add new time slot");
-    // Would normally open a dialog to add a new time slot
-  };
-
   // Determine loading state and details
   const isLoading = isClassLoading || isSectionLoading;
   const details = viewingSection ? sectionDetails : classDetails;
@@ -468,13 +379,10 @@ const ClassDetailsPage = () => {
           </TabsContent>
           
           <TabsContent value="timetable" className="p-4">
-            <WeeklyTimetableView
-              timeSlots={timeSlotsData}
-              isLoading={isTimetableLoading}
-              onEdit={isAdminOrTeacher ? handleEditTimeSlot : undefined}
-              onDelete={isAdminOrTeacher ? handleDeleteTimeSlot : undefined}
-              onAdd={isAdminOrTeacher ? handleAddTimeSlot : undefined}
-              user={user}
+            <TimetableManagement 
+              classId={viewingSection ? sectionDetails?.classId : classId} 
+              sectionId={sectionId}
+              academicYearId={academicYearId || ""}
             />
           </TabsContent>
           
