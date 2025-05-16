@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Task } from "./types";
@@ -12,15 +13,40 @@ export async function getTasksForUser(userId: string, userRole: UserRole): Promi
       return [];
     }
     
-    // Fetch all tasks without RLS filtering
-    // We'll still keep some basic filtering based on role for UI purposes
     let query = supabase.from('tasks').select('*');
-      
-    // Since RLS is disabled, we'll apply filters in the query instead
-    // These filters are now optional and just for UI/UX purposes
+    
+    // Apply different filters based on user role
     if (userRole === 'student') {
-      // Students should only see tasks assigned to them
-      query = query.eq('assigned_to_user_id', userId);
+      // First, get the student's section to include section-assigned tasks
+      const { data: studentSection, error: sectionError } = await supabase
+        .from('student_sections')
+        .select('section_id, sections!inner (class_id)')
+        .eq('student_id', userId)
+        .maybeSingle();
+      
+      if (sectionError) {
+        console.error("Error fetching student section:", sectionError);
+      }
+      
+      // For students, we need to show:
+      // 1. Tasks directly assigned to them
+      // 2. Tasks assigned to their section
+      // 3. Tasks assigned to their class
+      if (studentSection) {
+        const sectionId = studentSection.section_id;
+        const classId = studentSection.sections.class_id;
+        
+        console.log("Found student section:", sectionId, "and class:", classId);
+        
+        // Query tasks where:
+        // - Task is assigned directly to this student, OR
+        // - Task is assigned to their section, OR
+        // - Task is assigned to their class
+        query = query.or(`assigned_to_user_id.eq.${userId},assigned_to_section_id.eq.${sectionId},assigned_to_class_id.eq.${classId}`);
+      } else {
+        // If we couldn't find the student's section, just show tasks assigned to them directly
+        query = query.eq('assigned_to_user_id', userId);
+      }
     } else if (userRole === 'teacher') {
       // Teachers see tasks they created or tasks assigned to them
       query = query.or(`created_by.eq.${userId},assigned_to_user_id.eq.${userId}`);
