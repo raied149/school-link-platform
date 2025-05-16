@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { StudentDetail } from "@/types";
+
+// Create a simpler student type that only includes what we need
+interface SimpleStudentInfo {
+  name: string;
+  admissionNumber?: string;
+}
 
 interface TestResultFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  student: StudentDetail;
+  student: SimpleStudentInfo;
   maxMarks: number;
   testName: string;
   onSave: (marks: number, feedback: string) => void;
@@ -57,7 +62,7 @@ export function TestResultFormDialog({
         <DialogHeader>
           <DialogTitle>Update Marks for {testName}</DialogTitle>
           <DialogDescription>
-            Student: {student.name} (ID: {student.admissionNumber})
+            Student: {student.name} (ID: {student.admissionNumber || 'N/A'})
           </DialogDescription>
         </DialogHeader>
         
