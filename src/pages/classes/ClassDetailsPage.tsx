@@ -12,7 +12,7 @@ import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrum
 import { WeeklyTimetableView } from "@/components/timetable/WeeklyTimetableView"; 
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
-import { TimeSlot, SlotType } from "@/types/timetable";
+import { TimeSlot, SlotType, WeekDay } from "@/types/timetable";
 
 interface StudentDetail {
   id: string;
@@ -215,6 +215,17 @@ const ClassDetailsPage = () => {
     enabled: !!entityId
   });
 
+  // Helper function to convert day number to WeekDay type
+  const mapNumberToWeekDay = (dayNumber: number): WeekDay => {
+    const weekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    // Adjust dayNumber if it's 0-6 (Sunday-Saturday) to match our WeekDay format (Monday-Sunday)
+    const adjustedIndex = dayNumber >= 1 && dayNumber <= 7 
+      ? dayNumber - 1  // If 1-7, subtract 1 to get 0-6 index
+      : dayNumber % 7; // Otherwise use modulo to handle any number
+      
+    return weekDays[adjustedIndex] || 'Monday'; // Default to Monday if out of range
+  };
+
   // Fetch timetable slots for the section/class
   const { data: timeSlotsData = [], isLoading: isTimetableLoading } = useQuery({
     queryKey: ['timetable', entityType, entityId],
@@ -261,27 +272,29 @@ const ClassDetailsPage = () => {
       }
       
       // Map the data to match the TimeSlot interface - use type assertion for slotType
-      const mappedData = timetableData.map(slot => ({
-        id: slot.id,
-        day: slot.day_of_week,
-        startTime: slot.start_time,
-        endTime: slot.end_time,
-        sectionId: slot.section_id,
-        subjectId: slot.subject_id,
-        teacherId: slot.teacher_id,
-        title: slot.subjects?.name || 'Unknown Subject',
-        // Fix the slotType to match the expected SlotType type
-        slotType: 'subject' as SlotType,
-        dayOfWeek: slot.day_of_week,
-        classId: '',
-        academicYearId: '',
-        isRecurring: true,
-        // Add the required createdAt and updatedAt properties
-        createdAt: slot.created_at || new Date().toISOString(),
-        updatedAt: slot.created_at || new Date().toISOString()
-      }));
+      const mappedData: TimeSlot[] = timetableData.map(slot => {
+        // Convert the day_of_week number to a WeekDay string enum value
+        const weekDay: WeekDay = mapNumberToWeekDay(slot.day_of_week);
+        
+        return {
+          id: slot.id,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          sectionId: slot.section_id,
+          subjectId: slot.subject_id,
+          teacherId: slot.teacher_id,
+          title: slot.subjects?.name || 'Unknown Subject',
+          slotType: 'subject' as SlotType,
+          dayOfWeek: weekDay,
+          classId: '',
+          academicYearId: '',
+          isRecurring: true,
+          createdAt: slot.created_at || new Date().toISOString(),
+          updatedAt: slot.created_at || new Date().toISOString()
+        };
+      });
       
-      return mappedData as TimeSlot[];
+      return mappedData;
     },
     enabled: !!entityId
   });
