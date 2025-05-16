@@ -57,6 +57,40 @@ function useStudentCounts(sections: Section[]) {
   });
 }
 
+// New hook to get student assigned sections
+function useStudentSections(userId: string | undefined, classId: string | undefined) {
+  return useQuery({
+    queryKey: ["student-sections", userId, classId],
+    queryFn: async () => {
+      if (!userId || !classId) return [];
+      
+      // First get all sections for this class
+      const { data: sections, error: sectionsError } = await supabase
+        .from('sections')
+        .select('id')
+        .eq('class_id', classId);
+        
+      if (sectionsError) throw sectionsError;
+      
+      if (!sections || sections.length === 0) return [];
+      
+      const sectionIds = sections.map(s => s.id);
+      
+      // Then get which of these sections the student is assigned to
+      const { data, error } = await supabase
+        .from('student_sections')
+        .select('section_id')
+        .eq('student_id', userId)
+        .in('section_id', sectionIds);
+        
+      if (error) throw error;
+      
+      return data.map(row => row.section_id);
+    },
+    enabled: !!userId && !!classId
+  });
+}
+
 const SectionsPage = () => {
   const { classId } = useParams<{ classId: string }>();
   const [searchParams] = useSearchParams();
@@ -77,8 +111,31 @@ const SectionsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
 
+  const isStudent = user?.role === 'student';
+  
   console.log("Current user role:", user?.role);
   console.log("Is Class Years Context:", isClassYearsContext);
+  
+  // For students, get their assigned sections
+  const { data: studentAssignedSectionIds = [] } = useStudentSections(
+    isStudent ? user?.id : undefined,
+    classId
+  );
+  
+  // Auto-navigate to section if student has only one assignment in this class
+  useEffect(() => {
+    if (isStudent && studentAssignedSectionIds.length === 1) {
+      // If student has exactly one section, navigate directly to it
+      const sectionId = studentAssignedSectionIds[0];
+      
+      // Get the section details for the navigation
+      const sectionInList = sections?.find(s => s.id === sectionId);
+      
+      if (sectionInList) {
+        navigateToSectionDetails(sectionInList);
+      }
+    }
+  }, [isStudent, studentAssignedSectionIds, classId]);
   
   // Fetch academic year details
   const { data: academicYear } = useQuery({
@@ -329,10 +386,10 @@ const SectionsPage = () => {
     }
   });
   
-  // Filter sections by search term
-  const filteredSections = sections.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter sections for regular users & students
+  const filteredSections = sections
+    .filter(s => isStudent ? studentAssignedSectionIds.includes(s.id) : true) // For students, only show assigned sections
+    .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())); // Apply search filter
   
   // Handlers
   const handleSaveSection = async (sectionData: any) => {
@@ -427,7 +484,10 @@ const SectionsPage = () => {
     console.log("Year ID from URL:", yearId);
     console.log("Class ID from URL:", classId);
     console.log("Is Class Years Context:", isClassYearsContext);
-  }, [yearId, classId, isClassYearsContext]);
+    if (isStudent) {
+      console.log("Student assigned sections:", studentAssignedSectionIds);
+    }
+  }, [yearId, classId, isClassYearsContext, studentAssignedSectionIds]);
 
   return (
     <div className="space-y-6">
@@ -435,26 +495,35 @@ const SectionsPage = () => {
       
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Sections</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isStudent ? "My Sections" : "Sections"}
+          </h1>
           <p className="text-muted-foreground">
             {academicYear?.name || 'Loading...'} | {classDetails?.name || 'Loading...'}
           </p>
         </div>
-        <Button onClick={() => {
-          setSelectedSection(null);
-          setIsCreateDialogOpen(true);
-        }}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Section
-        </Button>
+        {!isStudent && (
+          <Button onClick={() => {
+            setSelectedSection(null);
+            setIsCreateDialogOpen(true);
+          }}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Section
+          </Button>
+        )}
       </div>
 
       <Card className="p-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-semibold">All Sections</h2>
+            <h2 className="text-xl font-semibold">
+              {isStudent ? "My Assigned Sections" : "All Sections"}
+            </h2>
             <p className="text-muted-foreground">
-              Manage sections for {classDetails?.name} in {academicYear?.name}
+              {isStudent 
+                ? `Your sections in ${classDetails?.name || ''} for ${academicYear?.name || ''}`
+                : `Manage sections for ${classDetails?.name} in ${academicYear?.name}`
+              }
             </p>
           </div>
           <div className="w-72">
@@ -514,22 +583,26 @@ const SectionsPage = () => {
                           View Details
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => openEditDialog(section)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => openDeleteDialog(section)}
-                        >
-                          <Trash className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
+                        {!isStudent && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openEditDialog(section)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openDeleteDialog(section)}
+                            >
+                              <Trash className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -539,32 +612,40 @@ const SectionsPage = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No sections found for this class. Create your first section!</p>
+            <p className="text-muted-foreground">
+              {isStudent 
+                ? "You are not assigned to any sections in this class." 
+                : "No sections found for this class. Create your first section!"}
+            </p>
           </div>
         )}
       </Card>
       
-      <SectionFormDialog
-        open={isCreateDialogOpen || isEditDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsCreateDialogOpen(false);
-            setIsEditDialogOpen(false);
-          }
-        }}
-        onSave={handleSaveSection}
-        defaultValues={selectedSection}
-      />
-      
-      <ConfirmationDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        title="Delete Section"
-        description={`Are you sure you want to delete ${selectedSection?.name}? This action cannot be undone.`}
-        confirmText="Delete"
-        onConfirm={handleDeleteSection}
-        isProcessing={deleteSectionMutation.isPending}
-      />
+      {!isStudent && (
+        <>
+          <SectionFormDialog
+            open={isCreateDialogOpen || isEditDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setIsCreateDialogOpen(false);
+                setIsEditDialogOpen(false);
+              }
+            }}
+            onSave={handleSaveSection}
+            defaultValues={selectedSection}
+          />
+          
+          <ConfirmationDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            title="Delete Section"
+            description={`Are you sure you want to delete ${selectedSection?.name}? This action cannot be undone.`}
+            confirmText="Delete"
+            onConfirm={handleDeleteSection}
+            isProcessing={deleteSectionMutation.isPending}
+          />
+        </>
+      )}
     </div>
   );
 };

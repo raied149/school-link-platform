@@ -217,7 +217,7 @@ const ClassDetailsPage = () => {
   });
 
   // Fetch timetable slots for the section/class
-  const { data: timeSlots = [], isLoading: isTimetableLoading } = useQuery({
+  const { data: timeSlotsData = [], isLoading: isTimetableLoading } = useQuery({
     queryKey: ['timetable', entityType, entityId],
     queryFn: async () => {
       if (!entityId) return [];
@@ -269,7 +269,13 @@ const ClassDetailsPage = () => {
         sectionId: slot.section_id,
         subjectId: slot.subject_id,
         teacherId: slot.teacher_id,
-        title: slot.subjects?.name || 'Unknown Subject'
+        title: slot.subjects?.name || 'Unknown Subject',
+        // Add missing TimeSlot properties with default values
+        slotType: 'regular',
+        dayOfWeek: slot.day_of_week,
+        classId: '',
+        academicYearId: '',
+        isRecurring: true
       })) as TimeSlot[];
     },
     enabled: !!entityId
@@ -409,7 +415,7 @@ const ClassDetailsPage = () => {
 
   // Get the academicYearId for subject management
   const academicYearId = viewingSection 
-    ? sectionDetails?.classes?.year_id 
+    ? classDetails?.yearId || sectionDetails?.classId 
     : classDetails?.yearId;
 
   console.log("onEdit function:", isAdminOrTeacher);
@@ -445,7 +451,7 @@ const ClassDetailsPage = () => {
           
           <TabsContent value="timetable" className="p-4">
             <WeeklyTimetableView
-              timeSlots={timeSlots}
+              timeSlots={timeSlotsData}
               isLoading={isTimetableLoading}
               onEdit={isAdminOrTeacher ? handleEditTimeSlot : undefined}
               onDelete={isAdminOrTeacher ? handleDeleteTimeSlot : undefined}
