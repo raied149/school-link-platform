@@ -12,7 +12,7 @@ import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrum
 import { WeeklyTimetableView } from "@/components/timetable/WeeklyTimetableView"; 
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
-import { TimeSlot } from "@/types/timetable";
+import { TimeSlot, SlotType } from "@/types/timetable";
 
 interface StudentDetail {
   id: string;
@@ -260,8 +260,8 @@ const ClassDetailsPage = () => {
         throw timetableError;
       }
       
-      // Map the data to match the TimeSlot interface
-      return timetableData.map(slot => ({
+      // Map the data to match the TimeSlot interface - use type assertion for slotType
+      const mappedData = timetableData.map(slot => ({
         id: slot.id,
         day: slot.day_of_week,
         startTime: slot.start_time,
@@ -270,8 +270,8 @@ const ClassDetailsPage = () => {
         subjectId: slot.subject_id,
         teacherId: slot.teacher_id,
         title: slot.subjects?.name || 'Unknown Subject',
-        // Add missing TimeSlot properties with default values
-        slotType: 'regular',
+        // Fix the slotType to match the expected SlotType type
+        slotType: 'subject' as SlotType,
         dayOfWeek: slot.day_of_week,
         classId: '',
         academicYearId: '',
@@ -279,7 +279,9 @@ const ClassDetailsPage = () => {
         // Add the required createdAt and updatedAt properties
         createdAt: slot.created_at || new Date().toISOString(),
         updatedAt: slot.created_at || new Date().toISOString()
-      })) as TimeSlot[];
+      }));
+      
+      return mappedData as TimeSlot[];
     },
     enabled: !!entityId
   });
