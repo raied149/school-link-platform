@@ -11,8 +11,9 @@ import { toast } from "@/hooks/use-toast";
 import { ActiveClassBreadcrumb } from "@/components/classes/ActiveClassBreadcrumb";
 import { SubjectManagement } from "@/components/subjects/SubjectManagement";
 import { StudentAttendanceView } from "@/components/students/StudentAttendanceView";
-import { TimetableManagement } from "@/components/timetable/TimetableManagement";
 import { TimeSlot, SlotType, WeekDay } from "@/types/timetable";
+import { format, isValid, parse } from "date-fns";
+import { WeeklyView } from "@/components/timetable/WeeklyView";
 
 interface StudentDetail {
   id: string;
@@ -215,6 +216,78 @@ const ClassDetailsPage = () => {
     enabled: !!entityId
   });
 
+  // Fetch timetable slots for the section/class
+  const { data: timeSlots = [], isLoading: isTimetableLoading } = useQuery({
+    queryKey: ['timetable', entityType, entityId],
+    queryFn: async () => {
+      if (!entityId) return [];
+      
+      let sectionIds: string[] = [];
+      
+      if (viewingSection) {
+        sectionIds = [entityId as string];
+      } else {
+        // For class, fetch all sections
+        const { data, error } = await supabase
+          .from('sections')
+          .select('id')
+          .eq('class_id', entityId);
+          
+        if (error) {
+          console.error("Error fetching sections for timetable:", error);
+          throw error;
+        }
+        
+        sectionIds = data.map(section => section.id);
+      }
+      
+      if (sectionIds.length === 0) return [];
+      
+      // Fetch timetable slots for these sections
+      const { data: timetableData, error: timetableError } = await supabase
+        .from('timetable')
+        .select(`
+          *,
+          subjects:subject_id (
+            id,
+            name,
+            code
+          )
+        `)
+        .in('section_id', sectionIds);
+        
+      if (timetableError) {
+        console.error("Error fetching timetable:", timetableError);
+        throw timetableError;
+      }
+      
+      // Map the data to match the TimeSlot interface
+      const mappedData: TimeSlot[] = timetableData.map(slot => {
+        // Convert the day_of_week number to a WeekDay string enum value
+        const weekDay = mapNumberToWeekDay(slot.day_of_week);
+        
+        return {
+          id: slot.id,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          dayOfWeek: weekDay,
+          slotType: 'subject' as SlotType, // Most entries in timetable are subjects
+          title: slot.subjects?.name || '',
+          subjectId: slot.subject_id,
+          teacherId: slot.teacher_id,
+          classId: viewingSection ? sectionDetails?.classId || "" : classId || "",
+          sectionId: slot.section_id,
+          academicYearId: academicYearId || "",
+          createdAt: slot.created_at || new Date().toISOString(),
+          updatedAt: slot.created_at || new Date().toISOString(),
+        };
+      });
+      
+      return mappedData;
+    },
+    enabled: !!entityId
+  });
+
   // Helper function to convert day number to WeekDay type
   const mapNumberToWeekDay = (dayNumber: number): WeekDay => {
     const weekDays: WeekDay[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -332,6 +405,58 @@ const ClassDetailsPage = () => {
     }
   };
 
+  // Timetable helper functions
+  const formatTimeString = (timeString: string) => {
+    try {
+      if (!timeString || typeof timeString !== 'string' || !timeString.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+        return 'Invalid Time';
+      }
+      
+      const [hours, minutes] = timeString.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10));
+      date.setMinutes(parseInt(minutes, 10));
+      
+      if (!isValid(date)) {
+        return 'Invalid Time';
+      }
+      
+      return format(date, 'h:mm a');
+    } catch (error) {
+      console.error("Error formatting time:", timeString, error);
+      return 'Invalid Time';
+    }
+  };
+
+  const getSubjectName = (subjectId?: string) => {
+    const slot = timeSlots.find(s => s.subjectId === subjectId);
+    return slot?.title || 'Unknown Subject';
+  };
+
+  const getClassName = (classId: string) => {
+    return className || classDetails?.name || "Unknown Class";
+  };
+
+  const getSectionName = (sectionId: string) => {
+    return sectionName || sectionDetails?.name || "Unknown Section";
+  };
+
+  const getTeacherName = (teacherId?: string) => {
+    if (!teacherId) return 'No Teacher';
+    return `Teacher ${teacherId.substring(0, 6)}`;
+  };
+
+  // Handlers for timetable actions
+  const handleEditTimeSlot = (timeSlot: TimeSlot) => {
+    // Would navigate to timetable page to edit
+    window.location.href = `/timetable/${timeSlot.classId}/${timeSlot.sectionId}`;
+  };
+
+  const handleDeleteTimeSlot = (id: string) => {
+    // Not implementing direct delete - redirect to timetable page
+    window.location.href = `/timetable/${viewingSection ? sectionDetails?.classId : classId}/${sectionId || ""}`;
+  };
+
   // Determine loading state and details
   const isLoading = isClassLoading || isSectionLoading;
   const details = viewingSection ? sectionDetails : classDetails;
@@ -379,10 +504,30 @@ const ClassDetailsPage = () => {
           </TabsContent>
           
           <TabsContent value="timetable" className="p-4">
-            <TimetableManagement 
-              classId={viewingSection ? sectionDetails?.classId : classId} 
-              sectionId={sectionId}
-              academicYearId={academicYearId || ""}
+            <div className="mb-4 flex justify-between items-center">
+              <h3 className="text-lg font-medium">Class Timetable</h3>
+              {isAdminOrTeacher && (
+                <Button 
+                  onClick={() => window.location.href = `/timetable/${viewingSection ? sectionDetails?.classId : classId}/${sectionId || ""}`}
+                  variant="outline"
+                >
+                  Manage Timetable
+                </Button>
+              )}
+            </div>
+            <WeeklyView 
+              timeSlots={timeSlots} 
+              weekDays={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']} 
+              isLoading={isTimetableLoading} 
+              formatTime={formatTimeString}
+              getSubjectName={getSubjectName}
+              getClassName={getClassName}
+              getSectionName={getSectionName}
+              getTeacherName={getTeacherName}
+              user={user}
+              showTeacher={true}
+              onEdit={isAdminOrTeacher ? handleEditTimeSlot : undefined}
+              onDelete={isAdminOrTeacher ? handleDeleteTimeSlot : undefined}
             />
           </TabsContent>
           
