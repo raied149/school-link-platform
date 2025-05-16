@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClassHeader } from "@/components/classes/ClassHeader";
@@ -261,6 +260,7 @@ const ClassDetailsPage = () => {
         throw timetableError;
       }
       
+      // Map the data to match the TimeSlot interface
       return timetableData.map(slot => ({
         id: slot.id,
         day: slot.day_of_week,
@@ -275,7 +275,10 @@ const ClassDetailsPage = () => {
         dayOfWeek: slot.day_of_week,
         classId: '',
         academicYearId: '',
-        isRecurring: true
+        isRecurring: true,
+        // Add the required createdAt and updatedAt properties
+        createdAt: slot.created_at || new Date().toISOString(),
+        updatedAt: slot.created_at || new Date().toISOString()
       })) as TimeSlot[];
     },
     enabled: !!entityId
