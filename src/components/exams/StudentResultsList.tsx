@@ -14,15 +14,9 @@ interface StudentResultsListProps {
   examId: string;
 }
 
-// Define a simple student info type matching what TestResultFormDialog expects
-interface SimpleStudentInfo {
-  name: string;
-  admissionNumber?: string;
-}
-
 export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }) => {
   const [selectedSection, setSelectedSection] = useState<string>("");
-  const [selectedStudent, setSelectedStudent] = useState<SimpleStudentInfo | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { user } = useAuth();
   const isTeacherOrAdmin = user?.role === 'teacher' || user?.role === 'admin';
@@ -124,8 +118,8 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
   });
 
   const handleEditMarks = (student: any, result: any, maxScore: number) => {
-    // Create a simple student info object that matches what our dialog expects
     setSelectedStudent({
+      id: student.id,
       name: `${student.first_name} ${student.last_name}`,
       admissionNumber: student.student_details?.admission_number || student.id.substring(0, 8)
     });
@@ -136,23 +130,11 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
     if (!selectedStudent || !examId) return;
     
     try {
-      // Find the student ID from results array based on admission number
-      const studentItem = results.find(item => 
-        (item.student.student_details?.admission_number || item.student.id.substring(0, 8)) === selectedStudent.admissionNumber
-      );
-      
-      if (!studentItem) {
-        console.error("Could not find student ID for the selected student");
-        return false;
-      }
-      
-      const studentId = studentItem.student.id;
-      
       await supabase
         .from('student_exam_results')
         .upsert({
           exam_id: examId,
-          student_id: studentId,
+          student_id: selectedStudent.id,
           marks_obtained: marks,
           feedback,
           updated_at: new Date().toISOString()
@@ -296,18 +278,15 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
         <TestResultFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          student={selectedStudent}
-          maxMarks={results.find((r: any) => 
-            (r.student.student_details?.admission_number || r.student.id.substring(0, 8)) === selectedStudent.admissionNumber
-          )?.maxScore || 100}
+          student={{
+            name: selectedStudent.name,
+            admissionNumber: selectedStudent.admissionNumber,
+          }}
+          maxMarks={results.find((r: any) => r.student.id === selectedStudent.id)?.maxScore || 100}
           testName={examId}
           onSave={handleSaveMarks}
-          initialMarks={results.find((r: any) => 
-            (r.student.student_details?.admission_number || r.student.id.substring(0, 8)) === selectedStudent.admissionNumber
-          )?.result?.marks_obtained || 0}
-          initialFeedback={results.find((r: any) => 
-            (r.student.student_details?.admission_number || r.student.id.substring(0, 8)) === selectedStudent.admissionNumber
-          )?.result?.feedback || ""}
+          initialMarks={results.find((r: any) => r.student.id === selectedStudent.id)?.result?.marks_obtained || 0}
+          initialFeedback={results.find((r: any) => r.student.id === selectedStudent.id)?.result?.feedback || ""}
         />
       )}
     </div>
