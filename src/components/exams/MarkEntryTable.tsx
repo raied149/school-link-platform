@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stats } from "@/hooks/useMarkEntry";
 import { Card } from "@/components/ui/card";
 import { useMarkEntry } from "@/hooks/useMarkEntry";
+import { useToast } from "@/hooks/use-toast";
 
 interface MarkEntryTableProps {
   examId: string;
@@ -30,14 +31,23 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
     stats,
     handleMarkChange,
     handleFeedbackChange,
-    updateSingleMark
-  } = useMarkEntry(examId);
+    updateSingleMark,
+    handleSave
+  } = useMarkEntry(examId, sectionId);  // Pass sectionId here
   
+  const { toast } = useToast();
   const [editingStudent, setEditingStudent] = useState<string | null>(null);
+  
+  useEffect(() => {
+    console.log("MarkEntryTable rendered with examId:", examId, "sectionId:", sectionId);
+    console.log("Students data:", students);
+  }, [examId, sectionId, students]);
   
   // Handle inline editing for a student mark
   const handleSaveStudentMark = async (studentId: string) => {
     if (!updateSingleMark) return;
+    
+    setEditingStudent(studentId);
     
     const success = await updateSingleMark(
       studentId,
@@ -48,6 +58,10 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
     if (success) {
       setEditingStudent(null);
       onMarksUpdated();
+      toast({
+        title: "Success",
+        description: "Mark updated successfully"
+      });
     }
   };
   
@@ -61,7 +75,12 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
   }
   
   if (!students || students.length === 0) {
-    return <div className="text-center py-8">No students found in this section.</div>;
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground mb-2">No students found in this section.</p>
+        <p className="text-sm">Make sure students are properly assigned to this section.</p>
+      </div>
+    );
   }
 
   return (
@@ -85,6 +104,18 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
           <p className="text-2xl font-bold">{stats.passPercentage.toFixed(1)}%</p>
         </Card>
       </div>
+
+      {/* Save All Button */}
+      {handleSave && (
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save All Marks'}
+          </Button>
+        </div>
+      )}
 
       {/* Marks Entry Table */}
       <div className="border rounded-md">
@@ -148,4 +179,4 @@ export const MarkEntryTable: React.FC<MarkEntryTableProps> = ({
       </div>
     </div>
   );
-};
+}

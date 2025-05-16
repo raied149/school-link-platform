@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,49 +16,74 @@ export interface Stats {
 
 // Function to get students in section with their exam results
 const getStudentsInSection = async (examId: string, sectionId: string) => {
-  const { data, error } = await supabase
-    .from('student_sections')
-    .select(`
-      student_id,
-      student:profiles!student_id (
-        id,
-        first_name,
-        last_name,
-        student_details (
-          admission_number
+  console.log("Fetching students for examId:", examId, "sectionId:", sectionId);
+  
+  if (!sectionId) {
+    console.log("No section ID provided, returning empty array");
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('student_sections')
+      .select(`
+        student_id,
+        student:profiles!student_id (
+          id,
+          first_name,
+          last_name,
+          student_details (
+            admission_number
+          )
         )
-      )
-    `)
-    .eq('section_id', sectionId);
+      `)
+      .eq('section_id', sectionId);
+      
+    if (error) throw error;
     
-  if (error) throw error;
-  
-  // Get exam data once
-  const { data: examData, error: examError } = await supabase
-    .from('exams')
-    .select('*')
-    .eq('id', examId)
-    .single();
-  
-  if (examError) throw examError;
-  
-  // Get results for students in this section
-  const studentIds = data.map(item => item.student_id);
-  
-  const { data: resultsData, error: resultsError } = await supabase
-    .from('student_exam_results')
-    .select('*')
-    .eq('exam_id', examId)
-    .in('student_id', studentIds);
+    console.log("Found student sections:", data);
     
-  if (resultsError) throw resultsError;
-  
-  // Map results to students
-  return data.map(item => ({
-    student: item.student,
-    exam: examData,
-    result: resultsData.find(r => r.student_id === item.student_id)
-  }));
+    if (!data || data.length === 0) {
+      console.log("No students found in section:", sectionId);
+      return [];
+    }
+    
+    // Get exam data once
+    const { data: examData, error: examError } = await supabase
+      .from('exams')
+      .select('*')
+      .eq('id', examId)
+      .single();
+    
+    if (examError) throw examError;
+    
+    // Get results for students in this section
+    const studentIds = data.map(item => item.student_id);
+    console.log("Student IDs:", studentIds);
+    
+    const { data: resultsData, error: resultsError } = await supabase
+      .from('student_exam_results')
+      .select('*')
+      .eq('exam_id', examId)
+      .in('student_id', studentIds);
+      
+    if (resultsError) throw resultsError;
+    
+    console.log("Exam results:", resultsData);
+    
+    // Map results to students
+    const studentsWithResults = data.map(item => ({
+      student: item.student,
+      exam: examData,
+      result: resultsData.find(r => r.student_id === item.student_id)
+    }));
+    
+    console.log("Students with results:", studentsWithResults);
+    return studentsWithResults;
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    throw error;
+  }
 };
 
 // Function to save a single student exam result
@@ -108,8 +134,8 @@ const bulkSaveStudentExamResults = async (params: {
   return data;
 };
 
-export function useMarkEntry(examId: string) {
-  const [selectedSection, setSelectedSection] = useState<string>("");
+export function useMarkEntry(examId: string, initialSectionId: string = "") {
+  const [selectedSection, setSelectedSection] = useState<string>(initialSectionId);
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [originalMarks, setOriginalMarks] = useState<Record<string, number>>({});
@@ -118,6 +144,13 @@ export function useMarkEntry(examId: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Update selected section when initialSectionId changes
+  useEffect(() => {
+    if (initialSectionId) {
+      setSelectedSection(initialSectionId);
+    }
+  }, [initialSectionId]);
+  
   const {
     data: students = [],
     isLoading,
@@ -125,7 +158,7 @@ export function useMarkEntry(examId: string) {
   } = useQuery({
     queryKey: ['students', examId, selectedSection],
     queryFn: () => selectedSection ? getStudentsInSection(examId, selectedSection) : Promise.resolve([]),
-    enabled: !!selectedSection
+    enabled: !!selectedSection && !!examId
   });
   
   // Initialize marks and feedback when students data changes
