@@ -193,19 +193,18 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
               <TableHead>Percentage</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden md:table-cell">Feedback</TableHead>
-              {isTeacherOrAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loadingResults ? (
               <TableRow>
-                <TableCell colSpan={isTeacherOrAdmin ? 7 : 6} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Loading results...
                 </TableCell>
               </TableRow>
             ) : results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isTeacherOrAdmin ? 7 : 6} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   No results found for this section.
                 </TableCell>
               </TableRow>
@@ -255,17 +254,6 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
                     <TableCell className="hidden md:table-cell">
                       {result?.feedback || <span className="text-muted-foreground">No feedback</span>}
                     </TableCell>
-                    {isTeacherOrAdmin && (
-                      <TableCell className="text-right">
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditMarks(student, result, maxScore)}
-                        >
-                          {result ? 'Edit Marks' : 'Add Marks'}
-                        </Button>
-                      </TableCell>
-                    )}
                   </TableRow>
                 );
               })
@@ -274,7 +262,7 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
         </Table>
       </Card>
       
-      {selectedStudent && (
+      {isTeacherOrAdmin && selectedStudent && (
         <TestResultFormDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
