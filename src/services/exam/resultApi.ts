@@ -9,6 +9,7 @@ export const getStudentExams = async (studentId: string) => {
     .select(`
       score,
       exams (
+        id,
         name,
         date,
         max_score,
@@ -73,7 +74,15 @@ export const getStudentExamResults = async (examId: string, sectionId: string) =
   
   const { data: results, error } = await supabase
     .from('student_exam_results')
-    .select('*')
+    .select(`
+      *,
+      student:student_id (
+        id,
+        first_name,
+        last_name,
+        student_details (*)
+      )
+    `)
     .eq('exam_id', examId)
     .in('student_id', studentIds);
 
@@ -85,13 +94,7 @@ export const getStudentExamResults = async (examId: string, sectionId: string) =
   console.log("Retrieved student results:", results);
 
   // Combine student data with their results
-  return students.map(student => {
-    const result = results?.find(r => r.student_id === student.id);
-    return {
-      student,
-      result: result || null
-    };
-  });
+  return results || [];
 };
 
 export const saveStudentExamResult = async (resultData: {
@@ -108,18 +111,17 @@ export const saveStudentExamResult = async (resultData: {
     .eq('student_id', resultData.student_id)
     .maybeSingle();
 
-  // Remove updated_by field - no longer using authenticated user
-  const dataToSave = {
-    ...resultData
-  };
-
   let result;
   
   if (existingResult) {
     // Update existing result
     const { data, error } = await supabase
       .from('student_exam_results')
-      .update(dataToSave)
+      .update({
+        marks_obtained: resultData.marks_obtained,
+        feedback: resultData.feedback || '',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', existingResult.id)
       .select();
 
@@ -133,7 +135,14 @@ export const saveStudentExamResult = async (resultData: {
     // Insert new result
     const { data, error } = await supabase
       .from('student_exam_results')
-      .insert(dataToSave)
+      .insert({
+        exam_id: resultData.exam_id,
+        student_id: resultData.student_id,
+        marks_obtained: resultData.marks_obtained,
+        feedback: resultData.feedback || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select();
 
     if (error) {
@@ -153,13 +162,8 @@ export const bulkSaveStudentExamResults = async (results: {
   marks_obtained: number;
   feedback?: string;
 }[]) => {
-  // Remove updated_by field from all results
-  const dataToSave = results.map(result => ({
-    ...result
-  }));
-
   // For each result, upsert (update if exists, insert if not)
-  const promises = dataToSave.map(async (result) => {
+  const promises = results.map(async (result) => {
     const { data: existingResult } = await supabase
       .from('student_exam_results')
       .select('id')
@@ -172,13 +176,21 @@ export const bulkSaveStudentExamResults = async (results: {
         .from('student_exam_results')
         .update({
           marks_obtained: result.marks_obtained,
-          feedback: result.feedback
+          feedback: result.feedback || '',
+          updated_at: new Date().toISOString()
         })
         .eq('id', existingResult.id);
     } else {
       return supabase
         .from('student_exam_results')
-        .insert(result);
+        .insert({
+          exam_id: result.exam_id,
+          student_id: result.student_id,
+          marks_obtained: result.marks_obtained,
+          feedback: result.feedback || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
     }
   });
 

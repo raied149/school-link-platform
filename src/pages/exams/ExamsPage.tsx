@@ -2,11 +2,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Search, CalendarDays } from "lucide-react";
+import { PlusCircle, Search, CalendarDays, Edit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
+import { Link, useNavigate } from "react-router-dom";
 import { TestExamFormDialog } from "@/components/exams/TestExamFormDialog";
 import { getAllExams } from "@/services/exam/examApi";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,7 @@ const ExamsPage = () => {
   const [examDialogOpen, setExamDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const isStudent = user?.role === 'student';
 
   // Fetch exams
@@ -44,6 +46,10 @@ const ExamsPage = () => {
         description: "Exam was created successfully",
       });
     }
+  };
+
+  const handleExamClick = (examId: string) => {
+    navigate(`/exams/${examId}`);
   };
 
   return (
@@ -93,11 +99,16 @@ const ExamsPage = () => {
                   <th className="text-left py-3 px-4">Subject</th>
                   <th className="text-left py-3 px-4">Max Score</th>
                   <th className="text-left py-3 px-4">Status</th>
+                  <th className="text-right py-3 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredExams.map((exam) => (
-                  <tr key={exam.id} className="border-b hover:bg-muted/50">
+                  <tr 
+                    key={exam.id} 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={() => handleExamClick(exam.id)}
+                  >
                     <td className="py-3 px-4 font-medium">
                       <div className="flex items-center gap-2">
                         {exam.name}
@@ -116,6 +127,19 @@ const ExamsPage = () => {
                     </td>
                     <td className="py-3 px-4">
                       <Badge className="bg-green-600 hover:bg-green-700">Active</Badge>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExamClick(exam.id);
+                        }}
+                      >
+                        <Edit size={16} className="mr-1" />
+                        View / Edit
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -3,9 +3,12 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { TestResultFormDialog } from "@/components/exams/TestResultFormDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StudentResultsListProps {
   examId: string;
@@ -13,6 +16,10 @@ interface StudentResultsListProps {
 
 export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }) => {
   const [selectedSection, setSelectedSection] = useState<string>("");
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const isTeacherOrAdmin = user?.role === 'teacher' || user?.role === 'admin';
   
   // Get all sections assigned to this exam
   const { data: sections = [], isLoading: loadingSections } = useQuery({
@@ -42,7 +49,7 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
   }, [sections, selectedSection]);
   
   // Get student results for selected section
-  const { data: results = [], isLoading: loadingResults } = useQuery({
+  const { data: results = [], isLoading: loadingResults, refetch: refetchResults } = useQuery({
     queryKey: ['student-results', examId, selectedSection],
     queryFn: async () => {
       if (!selectedSection) return [];
@@ -59,35 +66,89 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
       
       if (studentIds.length === 0) return [];
       
-      // Then get results with student profiles
-      const { data, error } = await supabase
-        .from('student_exam_results')
+      // Get student information for all students in this section
+      const { data: students, error: studentsError } = await supabase
+        .from('profiles')
         .select(`
           id,
-          marks_obtained,
-          feedback,
-          student_id,
-          student:student_id (
-            id,
-            first_name,
-            last_name,
-            student_details (
-              admission_number
-            )
-          ),
-          exams (
-            max_score
+          first_name,
+          last_name,
+          student_details (
+            admission_number
           )
         `)
-        .eq('exam_id', examId)
-        .in('student_id', studentIds)
-        .order('marks_obtained', { ascending: false });
+        .in('id', studentIds);
         
-      if (error) throw error;
-      return data || [];
+      if (studentsError) throw studentsError;
+      
+      // Get exam info to access max_score
+      const { data: examData, error: examError } = await supabase
+        .from('exams')
+        .select('*')
+        .eq('id', examId)
+        .single();
+        
+      if (examError) throw examError;
+      
+      // Then get results for students
+      const { data: resultsData, error: resultsError } = await supabase
+        .from('student_exam_results')
+        .select('*')
+        .eq('exam_id', examId)
+        .in('student_id', studentIds);
+        
+      if (resultsError) throw resultsError;
+      
+      // Combine student data with their results (or null if no result)
+      return students.map(student => {
+        const result = resultsData?.find(r => r.student_id === student.id);
+        return {
+          student,
+          result: result || null,
+          maxScore: examData.max_score
+        };
+      }).sort((a, b) => {
+        // Sort by marks (highest first), handling null results
+        const marksA = a.result ? a.result.marks_obtained : 0;
+        const marksB = b.result ? b.result.marks_obtained : 0;
+        return marksB - marksA;
+      });
     },
     enabled: !!selectedSection
   });
+
+  const handleEditMarks = (student: any, result: any, maxScore: number) => {
+    setSelectedStudent({
+      id: student.id,
+      name: `${student.first_name} ${student.last_name}`,
+      admissionNumber: student.student_details?.admission_number || student.id.substring(0, 8)
+    });
+    setEditDialogOpen(true);
+  };
+  
+  const handleSaveMarks = async (marks: number, feedback: string) => {
+    if (!selectedStudent || !examId) return;
+    
+    try {
+      await supabase
+        .from('student_exam_results')
+        .upsert({
+          exam_id: examId,
+          student_id: selectedStudent.id,
+          marks_obtained: marks,
+          feedback,
+          updated_at: new Date().toISOString()
+        });
+      
+      // Refresh results list
+      refetchResults();
+      
+      return true;
+    } catch (error) {
+      console.error("Error saving marks:", error);
+      return false;
+    }
+  };
 
   if (loadingSections) {
     return <div className="text-center py-4">Loading sections...</div>;
@@ -126,56 +187,85 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-              <TableHead className="hidden md:table-cell">Percentage</TableHead>
+              <TableHead>Student ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Percentage</TableHead>
+              <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden md:table-cell">Feedback</TableHead>
+              {isTeacherOrAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loadingResults ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={isTeacherOrAdmin ? 7 : 6} className="text-center py-8">
                   Loading results...
                 </TableCell>
               </TableRow>
             ) : results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={isTeacherOrAdmin ? 7 : 6} className="text-center py-8">
                   No results found for this section.
                 </TableCell>
               </TableRow>
             ) : (
-              results.map((result: any) => {
-                const maxScore = result.exams?.max_score || 100;
-                const percentage = maxScore > 0 ? Math.round((result.marks_obtained / maxScore) * 100) : 0;
+              results.map((item: any) => {
+                const student = item.student;
+                const result = item.result;
+                const maxScore = item.maxScore;
+                const score = result ? result.marks_obtained : 0;
+                const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+                
+                let statusClass = "bg-red-500";
+                let statusText = "Needs Improvement";
+                
+                if (percentage >= 80) {
+                  statusClass = "bg-green-500";
+                  statusText = "Excellent";
+                } else if (percentage >= 60) {
+                  statusClass = "bg-blue-500";
+                  statusText = "Good";
+                } else if (percentage >= 40) {
+                  statusClass = "bg-amber-500";
+                  statusText = "Pass";
+                }
                 
                 return (
-                  <TableRow key={result.id}>
+                  <TableRow key={student.id}>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {result.student?.first_name} {result.student?.last_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {result.student?.student_details?.admission_number || result.student_id.substring(0, 8)}
-                        </p>
-                      </div>
+                      {student.student_details?.admission_number || student.id.substring(0, 8)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="font-medium">{result.marks_obtained} / {maxScore}</div>
+                    <TableCell>
+                      {student.first_name} {student.last_name}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge 
-                        variant={percentage >= 40 ? "default" : "destructive"}
-                        className="mt-1"
-                      >
-                        {percentage}%
-                      </Badge>
+                    <TableCell>
+                      {result ? `${score} / ${maxScore}` : 'Not Graded'}
+                    </TableCell>
+                    <TableCell>
+                      {result ? `${percentage}%` : '-'}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {result.feedback || <span className="text-muted-foreground">No feedback</span>}
+                      {result ? (
+                        <Badge className={statusClass}>
+                          {statusText}
+                        </Badge>
+                      ) : '-'}
                     </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {result?.feedback || <span className="text-muted-foreground">No feedback</span>}
+                    </TableCell>
+                    {isTeacherOrAdmin && (
+                      <TableCell className="text-right">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditMarks(student, result, maxScore)}
+                        >
+                          {result ? 'Edit Marks' : 'Add Marks'}
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -183,6 +273,22 @@ export const StudentResultsList: React.FC<StudentResultsListProps> = ({ examId }
           </TableBody>
         </Table>
       </Card>
+      
+      {selectedStudent && (
+        <TestResultFormDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          student={{
+            name: selectedStudent.name,
+            admissionNumber: selectedStudent.admissionNumber,
+          }}
+          maxMarks={results.find((r: any) => r.student.id === selectedStudent.id)?.maxScore || 100}
+          testName={examId}
+          onSave={handleSaveMarks}
+          initialMarks={results.find((r: any) => r.student.id === selectedStudent.id)?.result?.marks_obtained || 0}
+          initialFeedback={results.find((r: any) => r.student.id === selectedStudent.id)?.result?.feedback || ""}
+        />
+      )}
     </div>
   );
 };

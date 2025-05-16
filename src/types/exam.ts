@@ -27,6 +27,11 @@ export interface ExamAssignment {
   exam_id: string;
   section_id: string;
   academic_year_id: string;
+  sections?: {
+    id: string;
+    name: string;
+    class_id?: string;
+  };
 }
 
 export interface StudentExamResult {
@@ -38,6 +43,14 @@ export interface StudentExamResult {
   created_at: string;
   updated_at: string;
   updated_by?: string;
+  student?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    student_details?: {
+      admission_number?: string;
+    };
+  };
 }
 
 export interface ExamWithSubject {

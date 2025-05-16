@@ -31,7 +31,7 @@ export function StudentExamResults({ studentId }: StudentExamResultsProps) {
     return (
       <div className="py-4 text-center text-destructive flex items-center justify-center gap-2">
         <AlertCircle size={16} />
-        <span>Error loading exam results</span>
+        <span>Error loading exam results: {error instanceof Error ? error.message : "Unknown error"}</span>
       </div>
     );
   }
