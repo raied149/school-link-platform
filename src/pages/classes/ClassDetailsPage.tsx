@@ -14,6 +14,7 @@ import { StudentAttendanceView } from "@/components/students/StudentAttendanceVi
 import { TimeSlot, SlotType, WeekDay } from "@/types/timetable";
 import { format, isValid, parse } from "date-fns";
 import { WeeklyView } from "@/components/timetable/WeeklyView";
+import { Button } from "@/components/ui/button";
 
 interface StudentDetail {
   id: string;
