@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -22,17 +22,60 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGradient } from '@/contexts/GradientContext';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
   const { currentGradient, setGradient } = useGradient();
+  const [studentSectionData, setStudentSectionData] = useState<{ classId: string, sectionId: string } | null>(null);
 
   // Check if the current path is related to class years, classes, or sections
   const isClassYearsRelated = 
     location.pathname.includes('/class-years') || 
     (location.pathname.includes('/sections/') && location.pathname.includes('/class-years/'));
+
+  // Fetch student's section if user is a student
+  useQuery({
+    queryKey: ['student-section', user?.id],
+    queryFn: async () => {
+      if (!user || user.role !== 'student') return null;
+      
+      // Get the section assignment for this student
+      const { data: sectionData, error: sectionError } = await supabase
+        .from('student_sections')
+        .select(`
+          section_id,
+          sections (
+            id,
+            class_id
+          )
+        `)
+        .eq('student_id', user.id)
+        .maybeSingle();
+        
+      if (sectionError) {
+        console.error("Error fetching student section:", sectionError);
+        return null;
+      }
+      
+      if (sectionData && sectionData.sections) {
+        setStudentSectionData({
+          classId: sectionData.sections.class_id,
+          sectionId: sectionData.section_id
+        });
+        return { 
+          classId: sectionData.sections.class_id, 
+          sectionId: sectionData.section_id 
+        };
+      }
+      
+      return null;
+    },
+    enabled: !!user && user.role === 'student'
+  });
 
   // Update gradient based on current route
   useEffect(() => {
@@ -106,7 +149,13 @@ const MainLayout = () => {
     // Student-specific items
     const studentItems = [
       { icon: Users, label: 'My Profile', path: '/users' },
-      { icon: GraduationCap, label: 'My Class', path: '/class-years' },
+      { 
+        icon: GraduationCap, 
+        label: 'My Class', 
+        path: studentSectionData 
+          ? `/class/${studentSectionData.classId}/section/${studentSectionData.sectionId}` 
+          : '/class-years' 
+      },
     ];
 
     if (user?.role === 'admin') {
@@ -128,6 +177,12 @@ const MainLayout = () => {
 
   // Function to determine if a menu item is active
   const isMenuItemActive = (path: string) => {
+    // Special case for My Class links for students
+    if (user?.role === 'student' && studentSectionData && 
+        path.includes(`/class/${studentSectionData.classId}/section/${studentSectionData.sectionId}`)) {
+      return location.pathname.includes(`/class/${studentSectionData.classId}/section/${studentSectionData.sectionId}`);
+    }
+    
     // Special case for class-years to handle nested routes
     if (path === '/class-years' && (
       isClassYearsRelated || 
@@ -173,7 +228,7 @@ const MainLayout = () => {
           )}
         </div>
         <nav className="flex-1 space-y-1 mt-4 overflow-y-auto">
-          {menuItems.map((item) => (
+          {getMenuItems().map((item) => (
             <Button
               key={item.path}
               variant={isMenuItemActive(item.path) ? "default" : "ghost"}
