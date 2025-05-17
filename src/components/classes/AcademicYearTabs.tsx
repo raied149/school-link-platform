@@ -58,13 +58,26 @@ export function AcademicYearTabs({
     { label: "Grade 12", value: "Grade 12" },
   ];
 
+  // Function to extract the numeric level from grade name
+  const getGradeLevel = (gradeName: string): number => {
+    if (gradeName === "LKG") return 0;
+    if (gradeName === "UKG") return 1;
+    // For "Grade X", extract the number and add 1 (since LKG is 0 and UKG is 1)
+    const match = gradeName.match(/Grade (\d+)/);
+    if (match && match[1]) {
+      return parseInt(match[1]) + 1;
+    }
+    return 0; // Default value if parsing fails
+  };
+
   const handleCreateClass = async (gradeName: string) => {
     if (selectedYearId) {
       try {
         // Create the class using the imported classService
         const classData = {
           name: gradeName,
-          academicYearId: selectedYearId
+          academicYearId: selectedYearId,
+          level: getGradeLevel(gradeName) // Add the level property based on the grade name
         };
         
         // Close the dialog
