@@ -12,6 +12,8 @@ import {
   DialogTitle, 
   DialogHeader 
 } from "@/components/ui/dialog";
+import { classService } from "@/services/classService";
+import { toast } from "sonner";
 
 interface AcademicYearTabsProps {
   academicYears: AcademicYear[];
@@ -56,24 +58,28 @@ export function AcademicYearTabs({
     { label: "Grade 12", value: "Grade 12" },
   ];
 
-  const handleCreateClass = (gradeName: string) => {
+  const handleCreateClass = async (gradeName: string) => {
     if (selectedYearId) {
-      // Here you would call the createClass function with the selected grade
-      const classData = {
-        name: gradeName,
-        academicYearId: selectedYearId
-      };
-      
-      // Close the dialog
-      setIsGradeDialogOpen(false);
-      
-      // You would implement this in the parent component and pass it as a prop
-      // For now, we'll assume the parent has a function to create classes
-      if (window.classService && window.classService.createClass) {
-        window.classService.createClass(classData);
-      } else {
-        console.log("Creating class:", classData);
+      try {
+        // Create the class using the imported classService
+        const classData = {
+          name: gradeName,
+          academicYearId: selectedYearId
+        };
+        
+        // Close the dialog
+        setIsGradeDialogOpen(false);
+        
+        // Call the createClass function from the properly imported service
+        await classService.createClass(classData);
+        
+        toast.success(`Grade ${gradeName} created successfully`);
+      } catch (error) {
+        console.error("Error creating class:", error);
+        toast.error("Failed to create grade");
       }
+    } else {
+      toast.error("Please select an academic year first");
     }
   };
 
