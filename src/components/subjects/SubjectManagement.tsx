@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -83,37 +82,34 @@ export function SubjectManagement({
       // Get section-specific teacher assignments if a section is selected
       let sectionTeacherAssignments = {};
       if (sectionId) {
-        // Use the client directly without type checking for the new table
-        const { data: sectionTeachers, error: sectionTeachersError } = await supabase
-          .rpc('get_section_subject_teachers', { 
-            section_id_param: sectionId,
-            subject_ids_param: subjectIds
-          }).catch(() => {
-            // Fallback if the RPC doesn't exist yet
-            return supabase
-              .from('subject_section_teachers')
-              .select(`
-                subject_id,
-                teacher_id,
-                profiles:teacher_id (
-                  first_name,
-                  last_name
-                )
-              `)
-              .eq('section_id', sectionId)
-              .in('subject_id', subjectIds);
-          });
-          
-        if (sectionTeachersError) {
-          console.error("Error fetching section teacher assignments:", sectionTeachersError);
-        } else if (sectionTeachers) {
-          // Create a map of subject_id to section teacher
-          sectionTeachers.forEach(item => {
-            sectionTeacherAssignments[item.subject_id] = {
-              id: item.teacher_id,
-              name: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : 'Unknown'
-            };
-          });
+        try {
+          // Use direct query instead of RPC function
+          const { data: sectionTeachers, error: sectionTeachersError } = await supabase
+            .from('subject_section_teachers')
+            .select(`
+              subject_id,
+              teacher_id,
+              profiles:teacher_id (
+                first_name,
+                last_name
+              )
+            `)
+            .eq('section_id', sectionId)
+            .in('subject_id', subjectIds);
+            
+          if (sectionTeachersError) {
+            console.error("Error fetching section teacher assignments:", sectionTeachersError);
+          } else if (sectionTeachers) {
+            // Create a map of subject_id to section teacher
+            sectionTeachers.forEach(item => {
+              sectionTeacherAssignments[item.subject_id] = {
+                id: item.teacher_id,
+                name: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : 'Unknown'
+              };
+            });
+          }
+        } catch (error) {
+          console.error("Error in section teacher query:", error);
         }
       }
       
