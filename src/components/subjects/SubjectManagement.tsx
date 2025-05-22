@@ -11,10 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash, Users } from "lucide-react";
+import { Plus, Pencil, Trash, Users, UserCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SubjectFormDialog } from "./SubjectFormDialog";
 import { SubjectTeacherAssignment } from "./SubjectTeacherAssignment";
+import { SectionTeacherAssignment } from "./SectionTeacherAssignment";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SubjectManagementProps {
@@ -32,11 +33,12 @@ export function SubjectManagement({
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAssignTeacherOpen, setIsAssignTeacherOpen] = useState(false);
+  const [isAssignSectionTeacherOpen, setIsAssignSectionTeacherOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
 
   // Fetch subjects for this class from Supabase using the subject_classes join table
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['subjects', classId],
+    queryKey: ['subjects', classId, sectionId],
     queryFn: async () => {
       if (!classId) return [];
       
@@ -77,6 +79,35 @@ export function SubjectManagement({
         console.error("Error fetching subjects:", subjectsError);
         throw subjectsError;
       }
+
+      // Get section-specific teacher assignments if a section is selected
+      let sectionTeacherAssignments = {};
+      if (sectionId) {
+        const { data: sectionTeachers, error: sectionTeachersError } = await supabase
+          .from('subject_section_teachers')
+          .select(`
+            subject_id,
+            teacher_id,
+            profiles:teacher_id (
+              first_name,
+              last_name
+            )
+          `)
+          .eq('section_id', sectionId)
+          .in('subject_id', subjectIds);
+          
+        if (sectionTeachersError) {
+          console.error("Error fetching section teacher assignments:", sectionTeachersError);
+        } else if (sectionTeachers) {
+          // Create a map of subject_id to section teacher
+          sectionTeachers.forEach(item => {
+            sectionTeacherAssignments[item.subject_id] = {
+              id: item.teacher_id,
+              name: item.profiles ? `${item.profiles.first_name} ${item.profiles.last_name}` : 'Unknown'
+            };
+          });
+        }
+      }
       
       // Transform the data for easier use in the UI
       return (subjectsData || []).map(subject => ({
@@ -84,7 +115,8 @@ export function SubjectManagement({
         assignedTeachers: subject.teacher_subjects?.map((ts: any) => ({
           id: ts.teacher_id,
           name: ts.profiles ? `${ts.profiles.first_name} ${ts.profiles.last_name}` : 'Unknown'
-        })) || []
+        })) || [],
+        sectionTeacher: sectionTeacherAssignments[subject.id] || null
       }));
     },
     enabled: !!classId
@@ -207,6 +239,11 @@ export function SubjectManagement({
     setIsAssignTeacherOpen(true);
   };
 
+  const handleAssignSectionTeacher = (subject: any) => {
+    setSelectedSubject(subject);
+    setIsAssignSectionTeacherOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-6">
@@ -233,7 +270,8 @@ export function SubjectManagement({
               <TableRow>
                 <TableHead>Subject Name</TableHead>
                 <TableHead>Code</TableHead>
-                <TableHead>Assigned Teacher</TableHead>
+                <TableHead>Subject Teachers</TableHead>
+                {sectionId && <TableHead>Section Teacher</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -247,6 +285,13 @@ export function SubjectManagement({
                       ? subject.assignedTeachers.map((teacher: any) => teacher.name).join(', ')
                       : "Not assigned"}
                   </TableCell>
+                  {sectionId && (
+                    <TableCell>
+                      {subject.sectionTeacher 
+                        ? subject.sectionTeacher.name 
+                        : "Not assigned"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
@@ -255,8 +300,18 @@ export function SubjectManagement({
                         onClick={() => handleAssignTeacher(subject)}
                       >
                         <Users className="h-4 w-4 mr-1" />
-                        Assign Teacher
+                        Assign Teachers
                       </Button>
+                      {sectionId && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleAssignSectionTeacher(subject)}
+                        >
+                          <UserCog className="h-4 w-4 mr-1" />
+                          Assign to Section
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -299,6 +354,17 @@ export function SubjectManagement({
         sectionId={sectionId}
         academicYearId={academicYearId}
       />
+
+      {sectionId && (
+        <SectionTeacherAssignment
+          open={isAssignSectionTeacherOpen}
+          onOpenChange={setIsAssignSectionTeacherOpen}
+          subjectId={selectedSubject?.id}
+          classId={classId}
+          sectionId={sectionId}
+          academicYearId={academicYearId}
+        />
+      )}
     </div>
   );
 }
