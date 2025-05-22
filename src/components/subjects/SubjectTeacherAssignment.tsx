@@ -17,131 +17,21 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Subject, Teacher, TeacherAssignment } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 interface SubjectTeacherAssignmentProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  subject: Subject | null;
+  subject: any | null;
   sectionId?: string;
   academicYearId?: string;
 }
 
-// Mock teacher data - in a real app, you'd fetch this from a service
-const mockTeachers: Teacher[] = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john@school.com",
-    role: "teacher",
-    firstName: "John",
-    lastName: "Smith",
-    gender: "male",
-    dateOfBirth: "1980-01-01",
-    nationality: "USA",
-    contactInformation: {
-      currentAddress: "123 Main St",
-      personalPhone: "123-456-7890",
-      personalEmail: "john@school.com",
-      schoolEmail: "john.smith@school.com",
-    },
-    professionalDetails: {
-      employeeId: "T001",
-      designation: "Senior Teacher",
-      department: "Mathematics",
-      subjects: ["Mathematics"],
-      classesAssigned: ["10", "11"],
-      joiningDate: "2019-01-01",
-      qualifications: ["M.Sc Mathematics"],
-      employmentType: "Full-time",
-      specializations: [],
-      previousExperience: []
-    },
-    attendance: {
-      present: 90,
-      absent: 5,
-      leave: 5,
-    },
-    leaveBalance: {
-      sick: 10,
-      casual: 5,
-      vacation: 15,
-    },
-    emergency: {
-      contactName: "Jane Smith",
-      relationship: "Spouse",
-      phone: "123-456-7891",
-    },
-    performance: {
-      lastReviewDate: "2022-01-01",
-      rating: 4.5,
-      feedback: "Excellent teacher",
-      awards: ["Best Teacher 2021"]
-    },
-    medicalInformation: {
-      conditions: [],
-      allergies: []
-    },
-    createdAt: "2019-01-01",
-    updatedAt: "2022-01-01",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah@school.com",
-    role: "teacher",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    gender: "female",
-    dateOfBirth: "1985-05-15",
-    nationality: "USA",
-    contactInformation: {
-      currentAddress: "456 Oak St",
-      personalPhone: "123-456-7892",
-      personalEmail: "sarah@school.com",
-      schoolEmail: "sarah.johnson@school.com",
-    },
-    professionalDetails: {
-      employeeId: "T002",
-      designation: "Teacher",
-      department: "Science",
-      subjects: ["Physics", "Chemistry"],
-      classesAssigned: ["9", "10"],
-      joiningDate: "2020-01-01",
-      qualifications: ["M.Sc Physics"],
-      employmentType: "Full-time",
-      specializations: [],
-      previousExperience: []
-    },
-    attendance: {
-      present: 85,
-      absent: 10,
-      leave: 5,
-    },
-    leaveBalance: {
-      sick: 8,
-      casual: 5,
-      vacation: 15,
-    },
-    emergency: {
-      contactName: "Mike Johnson",
-      relationship: "Spouse",
-      phone: "123-456-7893",
-    },
-    performance: {
-      lastReviewDate: "2022-01-01",
-      rating: 4.2,
-      feedback: "Good teaching methods",
-      awards: []
-    },
-    medicalInformation: {
-      conditions: [],
-      allergies: []
-    },
-    createdAt: "2020-01-01",
-    updatedAt: "2022-01-01",
-  },
-];
+interface Teacher {
+  id: string;
+  name: string;
+}
 
 export function SubjectTeacherAssignment({
   open,
@@ -154,36 +44,111 @@ export function SubjectTeacherAssignment({
   const queryClient = useQueryClient();
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
 
-  // In a real app, fetch teachers from API
-  const { data: teachers = mockTeachers } = useQuery({
-    queryKey: ['teachers'],
-    queryFn: () => Promise.resolve(mockTeachers),
-  });
-
   // Reset selected teacher when dialog opens
   useEffect(() => {
     if (open) {
+      // Initialize with empty selection
       setSelectedTeacherId("");
     }
   }, [open]);
 
-  const handleAssign = () => {
-    if (!selectedTeacherId || !subject || !sectionId || !academicYearId) {
+  // Fetch real teachers from Supabase
+  const { data: teachers = [], isLoading } = useQuery({
+    queryKey: ['teachers'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            teacher_details (
+              professional_info
+            )
+          `)
+          .eq('role', 'teacher');
+
+        if (error) throw error;
+        
+        return data.map(teacher => {
+          // Safely access employeeId with proper type checking
+          const professionalInfo = teacher.teacher_details?.professional_info;
+          let employeeId = 'N/A';
+          
+          if (professionalInfo && 
+              typeof professionalInfo === 'object' && 
+              'employeeId' in professionalInfo) {
+            employeeId = professionalInfo.employeeId as string || 'N/A';
+          }
+          
+          return {
+            id: teacher.id,
+            name: `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim() || 'Unnamed Teacher',
+            employeeId: employeeId
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching teachers:", error);
+        return [];
+      }
+    },
+    enabled: open
+  });
+
+  // Mutation to assign teacher to subject
+  const assignTeacherMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedTeacherId || !subject?.id) return;
+      
+      try {
+        // First check if this teacher is already assigned to this subject
+        const { data: existingAssignment, error: checkError } = await supabase
+          .from('teacher_subjects')
+          .select('*')
+          .eq('teacher_id', selectedTeacherId)
+          .eq('subject_id', subject.id)
+          .maybeSingle();
+          
+        if (checkError) throw checkError;
+        
+        // If not already assigned, create the assignment
+        if (!existingAssignment) {
+          const { error: insertError } = await supabase
+            .from('teacher_subjects')
+            .insert({
+              teacher_id: selectedTeacherId,
+              subject_id: subject.id
+            });
+            
+          if (insertError) throw insertError;
+        }
+        
+        return true;
+      } catch (error: any) {
+        console.error("Error assigning teacher:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
+      toast({
+        title: "Teacher Assigned",
+        description: `Teacher has been assigned to ${subject?.name}`
+      });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Please select a teacher to assign",
-        variant: "destructive",
+        description: `Failed to assign teacher: ${handleDatabaseError(error)}`,
+        variant: "destructive"
       });
-      return;
     }
+  });
 
-    // In a real app, you'd send this to an API
-    toast({
-      title: "Teacher Assigned",
-      description: `Teacher has been assigned to ${subject.name}`,
-    });
-    
-    onOpenChange(false);
+  const handleAssign = () => {
+    assignTeacherMutation.mutate();
   };
 
   return (
@@ -210,10 +175,7 @@ export function SubjectTeacherAssignment({
               <SelectContent>
                 {teachers.map((teacher) => (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.firstName} {teacher.lastName} 
-                    {teacher.professionalDetails?.department ? 
-                      ` (${teacher.professionalDetails.department})` : 
-                      ''}
+                    {teacher.name} ({teacher.employeeId})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -225,7 +187,7 @@ export function SubjectTeacherAssignment({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleAssign}>
+          <Button onClick={handleAssign} disabled={!selectedTeacherId || isLoading}>
             Assign Teacher
           </Button>
         </DialogFooter>

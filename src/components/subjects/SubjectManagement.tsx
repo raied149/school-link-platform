@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -37,7 +38,7 @@ export function SubjectManagement({
 
   // Fetch subjects for this class from Supabase using the subject_classes join table
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ['subjects', classId, sectionId],
+    queryKey: ['subjects', classId, sectionId, academicYearId],
     queryFn: async () => {
       if (!classId) return [];
       
