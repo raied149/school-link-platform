@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 const formSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -55,6 +55,7 @@ const formSchema = z.object({
       relationship: z.string().min(1, "Emergency contact relationship is required"),
     }),
   }),
+  admission_number: z.string().optional(), // Add admission_number if it exists
 });
 
 interface AddStudentDialogProps {
@@ -109,16 +110,19 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
 
       if (profileError) throw profileError;
 
-      // Fix: Changed the RPC function name from 'insert_teacher_details' to 'insert_student_details'
-      const { error: detailsError } = await supabase.rpc('insert_student_details', {
+      const admissionData = {
         profile_id: profileData.id,
         nationality: values.nationality,
         language_pref: values.language,
         date_of_birth: values.dateOfBirth,
         gender_type: values.gender,
         guardian_info: values.guardian,
-        medical_info: values.medical
-      });
+        medical_info: values.medical,
+        admission_number: values.admission_number // Add admission_number if it exists
+      };
+
+      // Fix: Changed the RPC function name from 'insert_teacher_details' to 'insert_student_details'
+      const { error: detailsError } = await supabase.rpc('insert_student_details', admissionData);
 
       if (detailsError) throw detailsError;
 
@@ -130,9 +134,10 @@ export function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) 
       form.reset();
       onOpenChange(false);
     } catch (error) {
+      const errorMessage = handleDatabaseError(error);
       toast({
         title: "Error",
-        description: "Failed to add student. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       console.error("Error adding student:", error);

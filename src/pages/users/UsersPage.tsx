@@ -5,12 +5,14 @@ import { useState } from "react";
 import { AddStudentDialog } from "@/components/users/AddStudentDialog";
 import { ImportStudentsDialog } from "@/components/users/ImportStudentsDialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Import } from "lucide-react";
+import { PlusCircle, Import, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { AddTeacherDialog } from "@/components/users/AddTeacherDialog";
 
 const UsersPage = () => {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false);
   const { user } = useAuth();
   
   const isTeacher = user?.role === 'teacher';
@@ -27,6 +29,10 @@ const UsersPage = () => {
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Import className="mr-2 h-4 w-4" />
               Import from Excel
+            </Button>
+            <Button variant="outline" onClick={() => setIsAddTeacherOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Teacher
             </Button>
             <Button onClick={() => setIsAddStudentOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -67,6 +73,10 @@ const UsersPage = () => {
           <ImportStudentsDialog 
             open={isImportDialogOpen}
             onOpenChange={setIsImportDialogOpen}
+          />
+          <AddTeacherDialog
+            open={isAddTeacherOpen}
+            onOpenChange={setIsAddTeacherOpen}
           />
         </>
       )}

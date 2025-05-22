@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 interface EditStudentDialogProps {
   open: boolean;
@@ -177,9 +177,10 @@ export function EditStudentDialog({
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating student:', error);
+      const errorMessage = handleDatabaseError(error);
       toast({
         title: "Error",
-        description: "Failed to update student details. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

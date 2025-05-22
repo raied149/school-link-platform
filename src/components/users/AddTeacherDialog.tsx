@@ -20,6 +20,7 @@ import { PersonalInfoSection } from "./teacher-form/PersonalInfoSection";
 import { ProfessionalInfoSection } from "./teacher-form/ProfessionalInfoSection";
 import { ContactInfoSection } from "./teacher-form/ContactInfoSection";
 import { EmergencyInfoSection } from "./teacher-form/EmergencyInfoSection";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 const formSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -166,9 +167,10 @@ export function AddTeacherDialog({ open, onOpenChange }: AddTeacherDialogProps) 
       onOpenChange(false);
     } catch (error) {
       console.error("Error in teacher form submission:", error);
+      const errorMessage = handleDatabaseError(error);
       toast({
         title: "Error",
-        description: `Failed to add teacher: ${(error as Error).message || "Unknown error"}`,
+        description: errorMessage,
         variant: "destructive",
       });
     }

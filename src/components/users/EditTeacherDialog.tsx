@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +18,7 @@ import { PersonalInfoSection } from "./teacher-form/PersonalInfoSection";
 import { ProfessionalInfoSection } from "./teacher-form/ProfessionalInfoSection";
 import { ContactInfoSection } from "./teacher-form/ContactInfoSection";
 import { EmergencyInfoSection } from "./teacher-form/EmergencyInfoSection";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 interface EditTeacherDialogProps {
   open: boolean;
@@ -181,9 +181,10 @@ export function EditTeacherDialog({
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating teacher:', error);
+      const errorMessage = handleDatabaseError(error);
       toast({
         title: "Error",
-        description: "Failed to update teacher details. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
