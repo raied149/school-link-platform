@@ -83,18 +83,26 @@ export function SubjectManagement({
       // Get section-specific teacher assignments if a section is selected
       let sectionTeacherAssignments = {};
       if (sectionId) {
+        // Use the client directly without type checking for the new table
         const { data: sectionTeachers, error: sectionTeachersError } = await supabase
-          .from('subject_section_teachers')
-          .select(`
-            subject_id,
-            teacher_id,
-            profiles:teacher_id (
-              first_name,
-              last_name
-            )
-          `)
-          .eq('section_id', sectionId)
-          .in('subject_id', subjectIds);
+          .rpc('get_section_subject_teachers', { 
+            section_id_param: sectionId,
+            subject_ids_param: subjectIds
+          }).catch(() => {
+            // Fallback if the RPC doesn't exist yet
+            return supabase
+              .from('subject_section_teachers')
+              .select(`
+                subject_id,
+                teacher_id,
+                profiles:teacher_id (
+                  first_name,
+                  last_name
+                )
+              `)
+              .eq('section_id', sectionId)
+              .in('subject_id', subjectIds);
+          });
           
         if (sectionTeachersError) {
           console.error("Error fetching section teacher assignments:", sectionTeachersError);

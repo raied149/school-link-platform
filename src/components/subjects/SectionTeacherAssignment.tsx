@@ -18,6 +18,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 interface SectionTeacherAssignmentProps {
   open: boolean;
@@ -58,12 +59,13 @@ export function SectionTeacherAssignment({
     if (!subjectId || !sectionId) return;
     
     try {
+      // Use the client without type checking for the new table
       const { data, error } = await supabase
         .from('subject_section_teachers')
         .select('teacher_id')
         .eq('subject_id', subjectId)
         .eq('section_id', sectionId)
-        .single();
+        .maybeSingle();
       
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         console.error("Error fetching assignment:", error);
@@ -122,9 +124,10 @@ export function SectionTeacherAssignment({
           .from('subject_section_teachers')
           .select('*')
           .eq('subject_id', subjectId)
-          .eq('section_id', sectionId);
+          .eq('section_id', sectionId)
+          .maybeSingle();
           
-        if (existing && existing.length > 0) {
+        if (existing) {
           // Update existing assignment
           if (selectedTeacherId) {
             const { error: updateError } = await supabase
@@ -160,7 +163,7 @@ export function SectionTeacherAssignment({
         }
         
         return true;
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error assigning teacher:", error);
         throw error;
       }
@@ -176,10 +179,10 @@ export function SectionTeacherAssignment({
       });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: `Failed to assign teacher: ${error.message}`,
+        description: `Failed to assign teacher: ${handleDatabaseError(error)}`,
         variant: "destructive"
       });
     }

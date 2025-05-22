@@ -999,6 +999,72 @@ export type Database = {
           },
         ]
       }
+      subject_section_teachers: {
+        Row: {
+          academic_year_id: string | null
+          class_id: string | null
+          created_at: string | null
+          id: string
+          section_id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string | null
+          id?: string
+          section_id: string
+          subject_id: string
+          teacher_id: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string | null
+          id?: string
+          section_id?: string
+          subject_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_section_teachers_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_section_teachers_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_section_teachers_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_section_teachers_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subject_section_teachers_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           code: string
